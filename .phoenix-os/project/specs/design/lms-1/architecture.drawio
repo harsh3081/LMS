@@ -1,0 +1,660 @@
+<mxfile host="brd-to-design" agent="Phoenix-OS" version="24.7.17">
+  <diagram name="Context" id="page-1">
+    <mxGraphModel dx="800" dy="600" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="ctx-system" value="Lead &amp; Enquiry Management System" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;fontStyle=1;" vertex="1" parent="1" tooltip="Context — Lead &amp; Enquiry Management System — INTERNAL">
+          <mxGeometry x="480" y="330" width="320" height="160" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ctx-dse" value="DSE&#10;(Dealer Sales Executive)" style="shape=actor;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1" tooltip="Context — DSE — INTERNAL">
+          <mxGeometry x="60" y="130" width="120" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="ctx-tl" value="Team Lead (TL)" style="shape=actor;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1" tooltip="Context — Team Lead (TL) — INTERNAL">
+          <mxGeometry x="60" y="330" width="120" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="ctx-smgm" value="Sales Manager / GM&#10;(SM/GM)" style="shape=actor;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1" tooltip="Context — Sales Manager / GM (SM/GM) — INTERNAL">
+          <mxGeometry x="60" y="530" width="120" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ctx-booking" value="Booking Management Module&#10;[Future Integration]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;" vertex="1" parent="1" tooltip="Context — Booking Management Module — CONFIDENTIAL (integration-ready only; not connected in Phase 1)">
+          <mxGeometry x="1040" y="40" width="220" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="ctx-booking-badge" value="CONFIDENTIAL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=8;fontStyle=1;labelBackgroundColor=#fff2cc;align=center;verticalAlign=middle;" vertex="1" parent="1" tooltip="Data classification: CONFIDENTIAL">
+          <mxGeometry x="1192" y="44" width="64" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ctx-invoicing" value="Invoicing Module&#10;[Future Integration]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;" vertex="1" parent="1" tooltip="Context — Invoicing Module — CONFIDENTIAL (integration-ready only; not connected in Phase 1)">
+          <mxGeometry x="1040" y="150" width="220" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="ctx-invoicing-badge" value="CONFIDENTIAL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=8;fontStyle=1;labelBackgroundColor=#fff2cc;align=center;verticalAlign=middle;" vertex="1" parent="1" tooltip="Data classification: CONFIDENTIAL">
+          <mxGeometry x="1192" y="154" width="64" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ctx-payments" value="Payments Module&#10;[Future Integration]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;" vertex="1" parent="1" tooltip="Context — Payments Module — RESTRICTED (financial data; integration-ready only; not connected in Phase 1)">
+          <mxGeometry x="1040" y="260" width="220" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="ctx-payments-badge" value="RESTRICTED" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=8;fontStyle=1;labelBackgroundColor=#f8cecc;align=center;verticalAlign=middle;" vertex="1" parent="1" tooltip="Data classification: RESTRICTED">
+          <mxGeometry x="1192" y="264" width="64" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ctx-crm" value="Customer Master / CRM&#10;[Future Integration]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;" vertex="1" parent="1" tooltip="Context — Customer Master / CRM — CONFIDENTIAL (integration-ready only; not connected in Phase 1)">
+          <mxGeometry x="1040" y="370" width="220" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="ctx-crm-badge" value="CONFIDENTIAL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=8;fontStyle=1;labelBackgroundColor=#fff2cc;align=center;verticalAlign=middle;" vertex="1" parent="1" tooltip="Data classification: CONFIDENTIAL">
+          <mxGeometry x="1192" y="374" width="64" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ctx-vehicle" value="Vehicle / Inventory Master&#10;[Future Integration]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;" vertex="1" parent="1" tooltip="Context — Vehicle / Inventory Master — CONFIDENTIAL (integration-ready only; not connected in Phase 1)">
+          <mxGeometry x="1040" y="480" width="220" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="ctx-vehicle-badge" value="CONFIDENTIAL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=8;fontStyle=1;labelBackgroundColor=#fff2cc;align=center;verticalAlign=middle;" vertex="1" parent="1" tooltip="Data classification: CONFIDENTIAL">
+          <mxGeometry x="1192" y="484" width="64" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ctx-idp" value="Identity Provider / SSO&#10;[Future Integration]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;" vertex="1" parent="1" tooltip="Context — Identity Provider / SSO — RESTRICTED (identity/auth data; integration-ready only; not connected in Phase 1)">
+          <mxGeometry x="1040" y="590" width="220" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="ctx-idp-badge" value="RESTRICTED" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=8;fontStyle=1;labelBackgroundColor=#f8cecc;align=center;verticalAlign=middle;" vertex="1" parent="1" tooltip="Data classification: RESTRICTED">
+          <mxGeometry x="1192" y="594" width="64" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ctx-notif" value="Notification Channels&#10;Email / SMS / WhatsApp [LIVE]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;" vertex="1" parent="1" tooltip="Context — Notification Channels — CONFIDENTIAL (customer PII in transit; live in Phase 1)">
+          <mxGeometry x="1040" y="700" width="220" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="ctx-notif-badge" value="CONFIDENTIAL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=8;fontStyle=1;labelBackgroundColor=#fff2cc;align=center;verticalAlign=middle;" vertex="1" parent="1" tooltip="Data classification: CONFIDENTIAL">
+          <mxGeometry x="1192" y="704" width="64" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ctx-e1" value="HTTPS (Web Browser)" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;labelBackgroundColor=#ffffff;fontSize=10;endArrow=block;endFill=1;strokeColor=#333333;exitX=1;exitY=0.3;exitDx=0;exitDy=0;entryX=0;entryY=0.2;entryDx=0;entryDy=0;" edge="1" source="ctx-dse" target="ctx-system" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ctx-e2" value="HTTPS (Web Browser)" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;labelBackgroundColor=#ffffff;fontSize=10;endArrow=block;endFill=1;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="ctx-tl" target="ctx-system" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ctx-e3" value="HTTPS (Web Browser)" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;labelBackgroundColor=#ffffff;fontSize=10;endArrow=block;endFill=1;strokeColor=#333333;exitX=1;exitY=0.7;exitDx=0;exitDy=0;entryX=0;entryY=0.8;entryDx=0;entryDy=0;" edge="1" source="ctx-smgm" target="ctx-system" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ctx-e4" value="REST/Webhook (planned; not live in Phase 1)" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;dashed=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#666666;exitX=1;exitY=0.1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="ctx-system" target="ctx-booking" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ctx-e5" value="REST/Webhook (planned; not live in Phase 1)" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;dashed=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#666666;exitX=1;exitY=0.25;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="ctx-system" target="ctx-invoicing" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ctx-e6" value="REST/Webhook (planned; not live in Phase 1)" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;dashed=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#666666;exitX=1;exitY=0.4;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="ctx-system" target="ctx-payments" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ctx-e7" value="REST (planned; not live in Phase 1)" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;dashed=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#666666;exitX=1;exitY=0.55;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="ctx-system" target="ctx-crm" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ctx-e8" value="REST (planned; not live in Phase 1)" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;dashed=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#666666;exitX=1;exitY=0.7;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="ctx-system" target="ctx-vehicle" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ctx-e9" value="OAuth2/SSO (planned; not live in Phase 1)" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;dashed=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#666666;exitX=1;exitY=0.85;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="ctx-system" target="ctx-idp" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ctx-e10" value="HTTPS/API — Email (SMTP/SES), SMS+WhatsApp gateway [LIVE]" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#333333;exitX=1;exitY=0.95;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="ctx-system" target="ctx-notif" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram name="Container" id="page-2">
+    <mxGraphModel dx="800" dy="600" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="ctr-boundary" value="Lead &amp; Enquiry Management System — Container Boundary" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;fillColor=none;strokeColor=#000000;strokeWidth=2;fontStyle=1;fontSize=12;verticalAlign=top;align=left;spacingLeft=10;spacingTop=6;" vertex="1" parent="1" tooltip="Container — System Boundary — INTERNAL">
+          <mxGeometry x="220" y="60" width="940" height="560" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ctr-dse" value="DSE" style="shape=actor;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1" tooltip="Container — DSE — INTERNAL">
+          <mxGeometry x="20" y="110" width="140" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="ctr-tl" value="Team Lead (TL)" style="shape=actor;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1" tooltip="Container — Team Lead (TL) — INTERNAL">
+          <mxGeometry x="20" y="250" width="140" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="ctr-smgm" value="SM/GM" style="shape=actor;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1" tooltip="Container — Sales Manager / GM (SM/GM) — INTERNAL">
+          <mxGeometry x="20" y="390" width="140" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ctr-spa" value="React (Vite) SPA&#10;[React 18 + Vite]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1" tooltip="Container — React (Vite) SPA — INTERNAL">
+          <mxGeometry x="260" y="110" width="190" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="ctr-spa-badge" value="INTERNAL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=8;fontStyle=1;labelBackgroundColor=#d5e8d4;align=center;verticalAlign=middle;" vertex="1" parent="1" tooltip="Data classification: INTERNAL">
+          <mxGeometry x="382" y="114" width="64" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ctr-api" value="NestJS Backend API&#10;[NestJS / Node.js / TypeScript — REST, OpenAPI 3.1]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1" tooltip="Container — NestJS Backend API — INTERNAL">
+          <mxGeometry x="520" y="110" width="230" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="ctr-api-badge" value="INTERNAL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=8;fontStyle=1;labelBackgroundColor=#d5e8d4;align=center;verticalAlign=middle;" vertex="1" parent="1" tooltip="Data classification: INTERNAL">
+          <mxGeometry x="682" y="114" width="64" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ctr-auth" value="Auth / Session Layer&#10;[Server-side sessions; bcrypt/Argon2]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1" tooltip="Container — Auth / Session Layer — RESTRICTED (credential and session data)">
+          <mxGeometry x="820" y="110" width="200" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="ctr-auth-badge" value="RESTRICTED" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=8;fontStyle=1;labelBackgroundColor=#f8cecc;align=center;verticalAlign=middle;" vertex="1" parent="1" tooltip="Data classification: RESTRICTED">
+          <mxGeometry x="952" y="114" width="64" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ctr-db" value="PostgreSQL Database&#10;[Managed PostgreSQL, incl. audit_log]" style="shape=cylinder;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;boundedLbl=1;" vertex="1" parent="1" tooltip="Container — PostgreSQL Database — CONFIDENTIAL (customer/lead PII, immutable audit trail, multi-outlet row-level scoping)">
+          <mxGeometry x="470" y="280" width="190" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="ctr-db-badge" value="CONFIDENTIAL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=8;fontStyle=1;labelBackgroundColor=#fff2cc;align=center;verticalAlign=middle;" vertex="1" parent="1" tooltip="Data classification: CONFIDENTIAL">
+          <mxGeometry x="592" y="284" width="64" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ctr-storage" value="Object Storage&#10;[S3-compatible: brochures, quotation PDFs, Excel exports]" style="shape=cylinder;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;boundedLbl=1;" vertex="1" parent="1" tooltip="Container — Object Storage — CONFIDENTIAL (quotation and customer-facing documents)">
+          <mxGeometry x="700" y="280" width="190" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="ctr-storage-badge" value="CONFIDENTIAL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=8;fontStyle=1;labelBackgroundColor=#fff2cc;align=center;verticalAlign=middle;" vertex="1" parent="1" tooltip="Data classification: CONFIDENTIAL">
+          <mxGeometry x="822" y="284" width="64" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ctr-dispatcher" value="Event / Webhook Dispatcher&#10;[Transactional Outbox]" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;fixedSize=1;" vertex="1" parent="1" tooltip="Container — Event / Webhook Dispatcher — INTERNAL (publishes business events; no live subscriber in Phase 1)">
+          <mxGeometry x="930" y="280" width="200" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="ctr-dispatcher-badge" value="INTERNAL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=8;fontStyle=1;labelBackgroundColor=#d5e8d4;align=center;verticalAlign=middle;" vertex="1" parent="1" tooltip="Data classification: INTERNAL">
+          <mxGeometry x="1062" y="284" width="64" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ctr-notif" value="Notification Gateway&#10;Email (SMTP/SES) + SMS/WhatsApp&#10;(Twilio/Gupshup/MSG91) [LIVE]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;" vertex="1" parent="1" tooltip="Container — Notification Gateway — CONFIDENTIAL (live external integration; customer PII in transit)">
+          <mxGeometry x="1240" y="110" width="220" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="ctr-notif-badge" value="CONFIDENTIAL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=8;fontStyle=1;labelBackgroundColor=#fff2cc;align=center;verticalAlign=middle;" vertex="1" parent="1" tooltip="Data classification: CONFIDENTIAL">
+          <mxGeometry x="1392" y="114" width="64" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ctr-booking" value="Booking Management Module&#10;[Future — not live]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;" vertex="1" parent="1" tooltip="Container — Booking Management Module — CONFIDENTIAL (integration-ready only; not live in Phase 1)">
+          <mxGeometry x="1240" y="250" width="220" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="ctr-booking-badge" value="CONFIDENTIAL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=8;fontStyle=1;labelBackgroundColor=#fff2cc;align=center;verticalAlign=middle;" vertex="1" parent="1" tooltip="Data classification: CONFIDENTIAL">
+          <mxGeometry x="1392" y="254" width="64" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ctr-invoicing" value="Invoicing Module&#10;[Future — not live]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;" vertex="1" parent="1" tooltip="Container — Invoicing Module — CONFIDENTIAL (integration-ready only; not live in Phase 1)">
+          <mxGeometry x="1240" y="360" width="220" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="ctr-invoicing-badge" value="CONFIDENTIAL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=8;fontStyle=1;labelBackgroundColor=#fff2cc;align=center;verticalAlign=middle;" vertex="1" parent="1" tooltip="Data classification: CONFIDENTIAL">
+          <mxGeometry x="1392" y="364" width="64" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ctr-payments" value="Payments Module&#10;[Future — not live]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;" vertex="1" parent="1" tooltip="Container — Payments Module — RESTRICTED (financial data; integration-ready only; not live in Phase 1)">
+          <mxGeometry x="1240" y="470" width="220" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="ctr-payments-badge" value="RESTRICTED" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=8;fontStyle=1;labelBackgroundColor=#f8cecc;align=center;verticalAlign=middle;" vertex="1" parent="1" tooltip="Data classification: RESTRICTED">
+          <mxGeometry x="1392" y="474" width="64" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ctr-idp" value="Identity Provider / SSO&#10;[Future — not live]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;" vertex="1" parent="1" tooltip="Container — Identity Provider / SSO — RESTRICTED (identity/auth data; integration-ready only; not live in Phase 1)">
+          <mxGeometry x="1240" y="580" width="220" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="ctr-idp-badge" value="RESTRICTED" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=8;fontStyle=1;labelBackgroundColor=#f8cecc;align=center;verticalAlign=middle;" vertex="1" parent="1" tooltip="Data classification: RESTRICTED">
+          <mxGeometry x="1392" y="584" width="64" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ctr-e1" value="HTTPS" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;labelBackgroundColor=#ffffff;fontSize=10;endArrow=block;endFill=1;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.3;entryDx=0;entryDy=0;" edge="1" source="ctr-dse" target="ctr-spa" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ctr-e2" value="HTTPS" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;labelBackgroundColor=#ffffff;fontSize=10;endArrow=block;endFill=1;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="ctr-tl" target="ctr-spa" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ctr-e3" value="HTTPS" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;labelBackgroundColor=#ffffff;fontSize=10;endArrow=block;endFill=1;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.7;entryDx=0;entryDy=0;" edge="1" source="ctr-smgm" target="ctr-spa" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ctr-e4" value="REST/HTTPS (JSON, OpenAPI 3.1)" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;labelBackgroundColor=#ffffff;fontSize=10;endArrow=block;endFill=1;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="ctr-spa" target="ctr-api" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ctr-e5" value="SQL/TCP" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;labelBackgroundColor=#ffffff;fontSize=10;endArrow=block;endFill=1;strokeColor=#333333;exitX=0.4;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" source="ctr-api" target="ctr-db" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ctr-e6" value="S3 API / HTTPS" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;labelBackgroundColor=#ffffff;fontSize=10;endArrow=block;endFill=1;strokeColor=#333333;exitX=0.6;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" source="ctr-api" target="ctr-storage" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ctr-e7" value="Internal call (publish; transactional outbox)" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#333333;exitX=0.9;exitY=1;exitDx=0;exitDy=0;entryX=0.3;entryY=0;entryDx=0;entryDy=0;" edge="1" source="ctr-api" target="ctr-dispatcher" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ctr-e8" value="Internal call (session validate/create)" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="ctr-api" target="ctr-auth" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ctr-e9" value="HTTPS/API — Email/SMS/WhatsApp [LIVE]" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#333333;exitX=1;exitY=0.3;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="ctr-api" target="ctr-notif" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ctr-e10" value="Webhook (planned; not live)" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;dashed=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#666666;exitX=1;exitY=0.3;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="ctr-dispatcher" target="ctr-booking" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ctr-e11" value="Webhook (planned; not live)" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;dashed=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#666666;exitX=1;exitY=0.6;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="ctr-dispatcher" target="ctr-invoicing" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ctr-e12" value="Webhook (planned; not live)" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;dashed=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#666666;exitX=1;exitY=0.9;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="ctr-dispatcher" target="ctr-payments" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ctr-e13" value="OAuth2/SSO (planned; not live)" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;dashed=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#666666;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="ctr-auth" target="ctr-idp" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram name="Component (primary container)" id="page-3">
+    <mxGraphModel dx="800" dy="600" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="cmp-boundary" value="NestJS Backend API — Container Boundary" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;fillColor=none;strokeColor=#000000;strokeWidth=2;fontStyle=1;fontSize=12;verticalAlign=top;align=left;spacingLeft=10;spacingTop=6;" vertex="1" parent="1" tooltip="Component — Backend API Container Boundary — INTERNAL">
+          <mxGeometry x="200" y="60" width="1000" height="460" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cmp-lead" value="Lead / Enquiry Management&#10;[Service Module]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1" tooltip="Component — Lead/Enquiry Management Module — INTERNAL">
+          <mxGeometry x="240" y="110" width="190" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp-lead-badge" value="INTERNAL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=8;fontStyle=1;labelBackgroundColor=#d5e8d4;align=center;verticalAlign=middle;" vertex="1" parent="1" tooltip="Data classification: INTERNAL">
+          <mxGeometry x="362" y="114" width="64" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cmp-followup" value="Follow-up Management&#10;[Service Module]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1" tooltip="Component — Follow-up Management Module — INTERNAL">
+          <mxGeometry x="460" y="110" width="190" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp-followup-badge" value="INTERNAL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=8;fontStyle=1;labelBackgroundColor=#d5e8d4;align=center;verticalAlign=middle;" vertex="1" parent="1" tooltip="Data classification: INTERNAL">
+          <mxGeometry x="582" y="114" width="64" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cmp-testdrive" value="Test Drive Scheduler&#10;[Service Module]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1" tooltip="Component — Test Drive Scheduler Module — INTERNAL">
+          <mxGeometry x="680" y="110" width="190" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp-testdrive-badge" value="INTERNAL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=8;fontStyle=1;labelBackgroundColor=#d5e8d4;align=center;verticalAlign=middle;" vertex="1" parent="1" tooltip="Data classification: INTERNAL">
+          <mxGeometry x="802" y="114" width="64" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cmp-sharing" value="Digital Sharing&#10;(Brochure / Quotation) [Service Module]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1" tooltip="Component — Digital Sharing Module — INTERNAL">
+          <mxGeometry x="900" y="110" width="210" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp-sharing-badge" value="INTERNAL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=8;fontStyle=1;labelBackgroundColor=#d5e8d4;align=center;verticalAlign=middle;" vertex="1" parent="1" tooltip="Data classification: INTERNAL">
+          <mxGeometry x="1042" y="114" width="64" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cmp-dashboard" value="Dashboard / Reporting&#10;[Service Module]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1" tooltip="Component — Dashboard/Reporting Module — INTERNAL">
+          <mxGeometry x="240" y="230" width="190" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp-dashboard-badge" value="INTERNAL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=8;fontStyle=1;labelBackgroundColor=#d5e8d4;align=center;verticalAlign=middle;" vertex="1" parent="1" tooltip="Data classification: INTERNAL">
+          <mxGeometry x="362" y="234" width="64" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cmp-team" value="Team Management&#10;(TL/SM-GM Reassignment) [Service Module]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1" tooltip="Component — Team Management Module — INTERNAL">
+          <mxGeometry x="460" y="230" width="190" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp-team-badge" value="INTERNAL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=8;fontStyle=1;labelBackgroundColor=#d5e8d4;align=center;verticalAlign=middle;" vertex="1" parent="1" tooltip="Data classification: INTERNAL">
+          <mxGeometry x="582" y="234" width="64" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cmp-auth" value="Auth / Session&#10;[Guard / Middleware Module]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1" tooltip="Component — Auth/Session Module — RESTRICTED (credential/session handling)">
+          <mxGeometry x="680" y="230" width="190" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp-auth-badge" value="RESTRICTED" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=8;fontStyle=1;labelBackgroundColor=#f8cecc;align=center;verticalAlign=middle;" vertex="1" parent="1" tooltip="Data classification: RESTRICTED">
+          <mxGeometry x="802" y="234" width="64" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cmp-eventpub" value="Event Publisher&#10;[Outbox Publisher Module]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1" tooltip="Component — Event Publisher Module — INTERNAL">
+          <mxGeometry x="900" y="230" width="210" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp-eventpub-badge" value="INTERNAL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=8;fontStyle=1;labelBackgroundColor=#d5e8d4;align=center;verticalAlign=middle;" vertex="1" parent="1" tooltip="Data classification: INTERNAL">
+          <mxGeometry x="1042" y="234" width="64" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cmp-notifdispatch" value="Notification Dispatcher&#10;[Gateway Client Module]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1" tooltip="Component — Notification Dispatcher Module — INTERNAL">
+          <mxGeometry x="460" y="350" width="190" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp-notifdispatch-badge" value="INTERNAL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=8;fontStyle=1;labelBackgroundColor=#d5e8d4;align=center;verticalAlign=middle;" vertex="1" parent="1" tooltip="Data classification: INTERNAL">
+          <mxGeometry x="582" y="354" width="64" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cmp-db-leaf" value="PostgreSQL Database&#10;[Container]" style="shape=cylinder;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;boundedLbl=1;" vertex="1" parent="1" tooltip="Component — PostgreSQL Database (external container reference) — CONFIDENTIAL">
+          <mxGeometry x="240" y="580" width="190" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp-db-leaf-badge" value="CONFIDENTIAL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=8;fontStyle=1;labelBackgroundColor=#fff2cc;align=center;verticalAlign=middle;" vertex="1" parent="1" tooltip="Data classification: CONFIDENTIAL">
+          <mxGeometry x="362" y="584" width="64" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cmp-storage-leaf" value="Object Storage&#10;[Container]" style="shape=cylinder;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;boundedLbl=1;" vertex="1" parent="1" tooltip="Component — Object Storage (external container reference) — CONFIDENTIAL">
+          <mxGeometry x="460" y="580" width="190" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp-storage-leaf-badge" value="CONFIDENTIAL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=8;fontStyle=1;labelBackgroundColor=#fff2cc;align=center;verticalAlign=middle;" vertex="1" parent="1" tooltip="Data classification: CONFIDENTIAL">
+          <mxGeometry x="582" y="584" width="64" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cmp-dispatcher-leaf" value="Event/Webhook Dispatcher&#10;[Container]" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;fixedSize=1;" vertex="1" parent="1" tooltip="Component — Event/Webhook Dispatcher (external container reference) — INTERNAL">
+          <mxGeometry x="680" y="580" width="190" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp-dispatcher-leaf-badge" value="INTERNAL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=8;fontStyle=1;labelBackgroundColor=#d5e8d4;align=center;verticalAlign=middle;" vertex="1" parent="1" tooltip="Data classification: INTERNAL">
+          <mxGeometry x="802" y="584" width="64" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cmp-notif-leaf" value="Notification Gateway&#10;[External Container]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;" vertex="1" parent="1" tooltip="Component — Notification Gateway (external container reference) — CONFIDENTIAL">
+          <mxGeometry x="900" y="580" width="210" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp-notif-leaf-badge" value="CONFIDENTIAL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=8;fontStyle=1;labelBackgroundColor=#fff2cc;align=center;verticalAlign=middle;" vertex="1" parent="1" tooltip="Data classification: CONFIDENTIAL">
+          <mxGeometry x="1042" y="584" width="64" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cmp-e1" value="creates follow-up task" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="cmp-lead" target="cmp-followup" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp-e2" value="schedules test drive" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#333333;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.3;entryY=0;entryDx=0;entryDy=0;" edge="1" source="cmp-followup" target="cmp-testdrive" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp-e3" value="shares brochure/quotation" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="cmp-testdrive" target="cmp-sharing" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp-e4" value="publishes EnquiryConverted (and other) events" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#333333;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.3;entryY=0;entryDx=0;entryDy=0;" edge="1" source="cmp-lead" target="cmp-eventpub" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp-e5" value="reassigns / shuffles leads" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#333333;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" source="cmp-team" target="cmp-lead" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp-e6" value="due follow-up notification" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#333333;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" source="cmp-followup" target="cmp-notifdispatch" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp-e7" value="test drive reminder notification" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#333333;exitX=0.3;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0.3;entryDx=0;entryDy=0;" edge="1" source="cmp-testdrive" target="cmp-notifdispatch" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp-e8" value="reassignment notification" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#333333;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" source="cmp-team" target="cmp-notifdispatch" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp-e9" value="reads aggregated data" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;dashed=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#666666;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.3;entryY=1;entryDx=0;entryDy=0;" edge="1" source="cmp-dashboard" target="cmp-lead" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp-e10" value="reads aggregated data" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;dashed=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#666666;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.7;entryDx=0;entryDy=0;" edge="1" source="cmp-dashboard" target="cmp-followup" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp-e11" value="reads aggregated data" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;dashed=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#666666;exitX=0.7;exitY=0;exitDx=0;exitDy=0;entryX=0.7;entryY=1;entryDx=0;entryDy=0;" edge="1" source="cmp-dashboard" target="cmp-testdrive" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp-e12" value="session validation guard" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#333333;exitX=0;exitY=0.3;exitDx=0;exitDy=0;entryX=1;entryY=0.3;entryDx=0;entryDy=0;" edge="1" source="cmp-auth" target="cmp-lead" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp-e13" value="session validation guard" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#333333;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="cmp-auth" target="cmp-team" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp-e14" value="session validation guard" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#333333;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.7;entryY=1;entryDx=0;entryDy=0;" edge="1" source="cmp-auth" target="cmp-sharing" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp-e15" value="relays outbox events" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#333333;exitX=0.7;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="cmp-eventpub" target="cmp-dispatcher-leaf" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp-e16" value="sends via gateway" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#333333;exitX=0.7;exitY=1;exitDx=0;exitDy=0;entryX=0.3;entryY=0;entryDx=0;entryDy=0;" edge="1" source="cmp-notifdispatch" target="cmp-notif-leaf" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp-e17" value="fetch/store document" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#333333;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.7;entryY=0;entryDx=0;entryDy=0;" edge="1" source="cmp-sharing" target="cmp-storage-leaf" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp-e18" value="persists enquiry data" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#333333;exitX=0.3;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" source="cmp-lead" target="cmp-db-leaf" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp-e19" value="persists follow-up data" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#333333;exitX=0.3;exitY=1;exitDx=0;exitDy=0;entryX=0.7;entryY=0;entryDx=0;entryDy=0;" edge="1" source="cmp-followup" target="cmp-db-leaf" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp-e20" value="persists schedule data" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#333333;exitX=0.3;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0.3;entryDx=0;entryDy=0;" edge="1" source="cmp-testdrive" target="cmp-db-leaf" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp-e21" value="persists reassignment data" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#333333;exitX=0.3;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0.7;entryDx=0;entryDy=0;" edge="1" source="cmp-team" target="cmp-db-leaf" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram name="Sequence (key scenario)" id="page-4">
+    <mxGraphModel dx="800" dy="600" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="seq-title" value="Sequence: Enquiry Conversion → Event Publish" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;fontStyle=1;fontSize=14;align=left;" vertex="1" parent="1" tooltip="Sequence — Diagram Title — INTERNAL">
+          <mxGeometry x="60" y="10" width="600" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="seq-dse" value="DSE" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=1;" vertex="1" parent="1" tooltip="Sequence — DSE — INTERNAL">
+          <mxGeometry x="60" y="50" width="140" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="seq-spa" value="React (Vite) SPA" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=1;" vertex="1" parent="1" tooltip="Sequence — React (Vite) SPA — INTERNAL">
+          <mxGeometry x="320" y="50" width="140" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="seq-api" value="Backend API&#10;(Lead/Enquiry Mgmt + Event Publisher)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;" vertex="1" parent="1" tooltip="Sequence — Backend API — INTERNAL">
+          <mxGeometry x="590" y="50" width="140" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="seq-db" value="PostgreSQL Database" style="shape=cylinder;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1;boundedLbl=1;" vertex="1" parent="1" tooltip="Sequence — PostgreSQL Database — CONFIDENTIAL">
+          <mxGeometry x="850" y="50" width="140" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="seq-dispatcher" value="Event/Webhook Dispatcher" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;fontStyle=1;fixedSize=1;" vertex="1" parent="1" tooltip="Sequence — Event/Webhook Dispatcher — INTERNAL">
+          <mxGeometry x="1070" y="50" width="160" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="seq-ll-dse" value="" style="endArrow=none;html=1;dashed=1;strokeColor=#666666;" edge="1" source="seq-dse" parent="1" tooltip="Sequence — DSE lifeline — N/A">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="130" y="760" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="seq-ll-spa" value="" style="endArrow=none;html=1;dashed=1;strokeColor=#666666;" edge="1" source="seq-spa" parent="1" tooltip="Sequence — React (Vite) SPA lifeline — N/A">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="390" y="760" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="seq-ll-api" value="" style="endArrow=none;html=1;dashed=1;strokeColor=#666666;" edge="1" source="seq-api" parent="1" tooltip="Sequence — Backend API lifeline — N/A">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="660" y="760" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="seq-ll-db" value="" style="endArrow=none;html=1;dashed=1;strokeColor=#666666;" edge="1" source="seq-db" parent="1" tooltip="Sequence — PostgreSQL Database lifeline — N/A">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="920" y="760" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="seq-ll-dispatcher" value="" style="endArrow=none;html=1;dashed=1;strokeColor=#666666;" edge="1" source="seq-dispatcher" parent="1" tooltip="Sequence — Event/Webhook Dispatcher lifeline — N/A">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1150" y="760" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="seq-act-api" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#333333;" vertex="1" parent="1" tooltip="Sequence — Backend API activation — N/A">
+          <mxGeometry x="655" y="200" width="10" height="460" as="geometry" />
+        </mxCell>
+        <mxCell id="seq-act-db" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#333333;" vertex="1" parent="1" tooltip="Sequence — PostgreSQL Database activation — N/A">
+          <mxGeometry x="915" y="230" width="10" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="seq-act-dispatcher" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#333333;" vertex="1" parent="1" tooltip="Sequence — Event/Webhook Dispatcher activation — N/A">
+          <mxGeometry x="1145" y="390" width="10" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="seq-alt" value="alt&#10;[Phase 1: no live subscriber → event persisted in outbox only]&#10;else [future: Booking/Invoicing/Payments module subscribes — post-Phase 1]" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;fillColor=none;strokeColor=#990000;fontSize=9;fontStyle=1;verticalAlign=top;align=left;spacingLeft=6;spacingTop=4;" vertex="1" parent="1" tooltip="Sequence — Alt Fragment: live subscriber conditional — N/A">
+          <mxGeometry x="640" y="385" width="540" height="150" as="geometry" />
+        </mxCell>
+
+        <mxCell id="seq-m1" value="Update enquiry status → Converted (UI action)" style="edgeStyle=orthogonalEdgeStyle;html=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#333333;" edge="1" parent="1" tooltip="Sequence — Message: DSE to SPA — N/A">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="130" y="140" as="sourcePoint" />
+            <mxPoint x="390" y="140" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="seq-m2" value="PATCH /enquiries/{id} {status: Converted} [HTTPS/REST]" style="edgeStyle=orthogonalEdgeStyle;html=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#333333;" edge="1" parent="1" tooltip="Sequence — Message: SPA to Backend API — N/A">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="390" y="190" as="sourcePoint" />
+            <mxPoint x="655" y="190" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="seq-m3" value="BEGIN; UPDATE enquiry SET status='Converted' [SQL]" style="edgeStyle=orthogonalEdgeStyle;html=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#333333;" edge="1" parent="1" tooltip="Sequence — Message: Backend API to PostgreSQL Database — N/A">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="665" y="240" as="sourcePoint" />
+            <mxPoint x="915" y="240" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="seq-m4" value="INSERT INTO outbox_events(EnquiryConverted) — same txn [SQL]" style="edgeStyle=orthogonalEdgeStyle;html=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#333333;" edge="1" parent="1" tooltip="Sequence — Message: Backend API to PostgreSQL Database — N/A">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="665" y="290" as="sourcePoint" />
+            <mxPoint x="915" y="290" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="seq-m5" value="COMMIT OK" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#666666;" edge="1" parent="1" tooltip="Sequence — Return: PostgreSQL Database to Backend API — N/A">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="915" y="340" as="sourcePoint" />
+            <mxPoint x="665" y="340" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="seq-m6" value="relay/poll outbox → publish EnquiryConverted [Async/Internal]" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#333333;" edge="1" parent="1" tooltip="Sequence — Message: Backend API to Event/Webhook Dispatcher — N/A">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="665" y="410" as="sourcePoint" />
+            <mxPoint x="1145" y="410" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="seq-m7" value="ACK: event dispatched (outbox marked sent) [Async]" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#666666;" edge="1" parent="1" tooltip="Sequence — Return: Event/Webhook Dispatcher to Backend API — N/A">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1145" y="460" as="sourcePoint" />
+            <mxPoint x="665" y="460" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="seq-m8" value="200 OK {enquiry updated} [HTTPS/REST]" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#666666;" edge="1" parent="1" tooltip="Sequence — Return: Backend API to SPA — N/A">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="655" y="580" as="sourcePoint" />
+            <mxPoint x="390" y="580" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="seq-m9" value="Show conversion confirmation" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#666666;" edge="1" parent="1" tooltip="Sequence — Return: SPA to DSE — N/A">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="390" y="630" as="sourcePoint" />
+            <mxPoint x="130" y="630" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram name="Deployment" id="page-6">
+    <mxGraphModel dx="800" dy="600" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="dep-internet" value="Internet Zone" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;fillColor=none;strokeColor=#000000;strokeWidth=2;fontStyle=1;fontSize=12;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;" vertex="1" parent="1" tooltip="Deployment — Internet Zone — PUBLIC">
+          <mxGeometry x="40" y="250" width="220" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="dep-browser" value="Client Browser&#10;(DSE / TL / SM-GM)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1" tooltip="Deployment — Client Browser — INTERNAL">
+          <mxGeometry x="70" y="300" width="160" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="dep-dmz" value="DMZ" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;fillColor=none;strokeColor=#000000;strokeWidth=2;fontStyle=1;fontSize=12;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;" vertex="1" parent="1" tooltip="Deployment — DMZ — INTERNAL">
+          <mxGeometry x="320" y="250" width="220" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="dep-lb" value="Load Balancer / Ingress&#10;(TLS termination)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1" tooltip="Deployment — Load Balancer / Ingress — INTERNAL">
+          <mxGeometry x="350" y="300" width="160" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="dep-lb-badge" value="INTERNAL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=8;fontStyle=1;labelBackgroundColor=#d5e8d4;align=center;verticalAlign=middle;" vertex="1" parent="1" tooltip="Data classification: INTERNAL">
+          <mxGeometry x="442" y="304" width="64" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="dep-internal" value="Internal Zone — Cloud Region (single region, containerized)" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;fillColor=none;strokeColor=#000000;strokeWidth=2;fontStyle=1;fontSize=12;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;" vertex="1" parent="1" tooltip="Deployment — Internal Zone / Cloud Region — CONFIDENTIAL">
+          <mxGeometry x="600" y="60" width="680" height="600" as="geometry" />
+        </mxCell>
+
+        <mxCell id="dep-container-node" value="Managed Container Service&#10;[Docker — e.g. AWS ECS Fargate / Azure Container Apps]" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;fillColor=none;strokeColor=#666666;strokeWidth=1;fontStyle=1;fontSize=11;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;" vertex="1" parent="1" tooltip="Deployment — Managed Container Service — INTERNAL">
+          <mxGeometry x="630" y="110" width="620" height="240" as="geometry" />
+        </mxCell>
+
+        <mxCell id="dep-spa" value="React (Vite) SPA&#10;[Static build, served via container]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1" tooltip="Deployment — React (Vite) SPA — INTERNAL">
+          <mxGeometry x="660" y="160" width="170" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="dep-spa-badge" value="INTERNAL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=8;fontStyle=1;labelBackgroundColor=#d5e8d4;align=center;verticalAlign=middle;" vertex="1" parent="1" tooltip="Data classification: INTERNAL">
+          <mxGeometry x="762" y="164" width="64" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="dep-api" value="Backend API&#10;[node:20-alpine Docker image]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1" tooltip="Deployment — Backend API — INTERNAL">
+          <mxGeometry x="860" y="160" width="170" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="dep-api-badge" value="INTERNAL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=8;fontStyle=1;labelBackgroundColor=#d5e8d4;align=center;verticalAlign=middle;" vertex="1" parent="1" tooltip="Data classification: INTERNAL">
+          <mxGeometry x="962" y="164" width="64" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="dep-auth" value="Auth / Session Layer&#10;[in-process module]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1" tooltip="Deployment — Auth / Session Layer — RESTRICTED (credential and session data)">
+          <mxGeometry x="1060" y="160" width="170" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="dep-auth-badge" value="RESTRICTED" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=8;fontStyle=1;labelBackgroundColor=#f8cecc;align=center;verticalAlign=middle;" vertex="1" parent="1" tooltip="Data classification: RESTRICTED">
+          <mxGeometry x="1162" y="164" width="64" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="dep-dispatcher" value="Event/Webhook Dispatcher&#10;[in-process, outbox poller]" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;fixedSize=1;" vertex="1" parent="1" tooltip="Deployment — Event/Webhook Dispatcher — INTERNAL (no live subscriber in Phase 1)">
+          <mxGeometry x="860" y="270" width="170" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="dep-dispatcher-badge" value="INTERNAL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=8;fontStyle=1;labelBackgroundColor=#d5e8d4;align=center;verticalAlign=middle;" vertex="1" parent="1" tooltip="Data classification: INTERNAL">
+          <mxGeometry x="962" y="274" width="64" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="dep-pg-node" value="Managed PostgreSQL&#10;[e.g. AWS RDS / Azure Database for PostgreSQL]" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;fillColor=none;strokeColor=#666666;strokeWidth=1;fontStyle=1;fontSize=11;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;" vertex="1" parent="1" tooltip="Deployment — Managed PostgreSQL — INTERNAL">
+          <mxGeometry x="630" y="380" width="300" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="dep-db" value="PostgreSQL Database&#10;(Primary + audit_log)" style="shape=cylinder;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;boundedLbl=1;" vertex="1" parent="1" tooltip="Deployment — PostgreSQL Database — CONFIDENTIAL (customer/lead PII, immutable audit trail)">
+          <mxGeometry x="660" y="420" width="240" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="dep-db-badge" value="CONFIDENTIAL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=8;fontStyle=1;labelBackgroundColor=#fff2cc;align=center;verticalAlign=middle;" vertex="1" parent="1" tooltip="Data classification: CONFIDENTIAL">
+          <mxGeometry x="832" y="424" width="64" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="dep-storage-node" value="Object Storage&#10;[S3-compatible bucket]" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;fillColor=none;strokeColor=#666666;strokeWidth=1;fontStyle=1;fontSize=11;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;" vertex="1" parent="1" tooltip="Deployment — Object Storage Node — INTERNAL">
+          <mxGeometry x="950" y="380" width="280" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="dep-storage" value="Object Storage&#10;(brochures, quotations, Excel exports)" style="shape=cylinder;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;boundedLbl=1;" vertex="1" parent="1" tooltip="Deployment — Object Storage — CONFIDENTIAL (quotation and customer-facing documents)">
+          <mxGeometry x="980" y="420" width="220" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="dep-storage-badge" value="CONFIDENTIAL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=8;fontStyle=1;labelBackgroundColor=#fff2cc;align=center;verticalAlign=middle;" vertex="1" parent="1" tooltip="Data classification: CONFIDENTIAL">
+          <mxGeometry x="1132" y="424" width="64" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="dep-external-zone" value="External Zone (Public Internet)" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;fillColor=none;strokeColor=#000000;strokeWidth=2;fontStyle=1;fontSize=12;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;" vertex="1" parent="1" tooltip="Deployment — External Zone — CONFIDENTIAL">
+          <mxGeometry x="1340" y="200" width="260" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="dep-notif" value="Notification Gateway Providers&#10;(SES, Twilio/Gupshup/MSG91) [LIVE]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;" vertex="1" parent="1" tooltip="Deployment — Notification Gateway Providers — CONFIDENTIAL (live external; customer PII in transit)">
+          <mxGeometry x="1370" y="250" width="200" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="dep-notif-badge" value="CONFIDENTIAL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=8;fontStyle=1;labelBackgroundColor=#fff2cc;align=center;verticalAlign=middle;" vertex="1" parent="1" tooltip="Data classification: CONFIDENTIAL">
+          <mxGeometry x="1502" y="254" width="64" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="dep-e1" value="HTTPS/TLS" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;labelBackgroundColor=#ffffff;fontSize=10;endArrow=block;endFill=1;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="dep-browser" target="dep-lb" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dep-e2" value="HTTPS" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;labelBackgroundColor=#ffffff;fontSize=10;endArrow=block;endFill=1;strokeColor=#333333;exitX=1;exitY=0.3;exitDx=0;exitDy=0;entryX=0;entryY=0.4;entryDx=0;entryDy=0;" edge="1" source="dep-lb" target="dep-spa" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dep-e3" value="HTTPS/REST" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;labelBackgroundColor=#ffffff;fontSize=10;endArrow=block;endFill=1;strokeColor=#333333;exitX=1;exitY=0.7;exitDx=0;exitDy=0;entryX=0;entryY=0.6;entryDx=0;entryDy=0;" edge="1" source="dep-lb" target="dep-api" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dep-e4" value="SQL/TCP (private network)" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#333333;exitX=0.3;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" source="dep-api" target="dep-db" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dep-e5" value="S3 API (private network / VPC endpoint)" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#333333;exitX=0.7;exitY=1;exitDx=0;exitDy=0;entryX=0.3;entryY=0;entryDx=0;entryDy=0;" edge="1" source="dep-api" target="dep-storage" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dep-e6" value="HTTPS/API (public egress)" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="dep-api" target="dep-notif" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dep-e7" value="internal (outbox publish)" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#333333;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" source="dep-api" target="dep-dispatcher" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dep-e8" value="internal (session)" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;labelBackgroundColor=#ffffff;fontSize=9;endArrow=block;endFill=1;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="dep-api" target="dep-auth" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+</mxfile>
