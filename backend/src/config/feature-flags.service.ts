@@ -17,4 +17,10 @@ export class FeatureFlagsService {
   isConvertLeadEnabled(): boolean {
     return process.env.CONVERT_LEAD_ENABLED !== 'false';
   }
+
+  /** `DIRECT_ENQUIRY_ENABLED` gates the "New Enquiry" entry point (issue
+   * #26, mirrors isNewLeadEnabled/isConvertLeadEnabled precedent). */
+  isDirectEnquiryEnabled(): boolean {
+    return process.env.DIRECT_ENQUIRY_ENABLED !== 'false';
+  }
 }

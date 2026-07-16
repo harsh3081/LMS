@@ -7,23 +7,7 @@ import { Principal } from '../common/principal';
 import { EnquiriesService } from './enquiries.service';
 import { ConvertLeadDto } from './dto/convert-lead.dto';
 import { EnquiryResponseDto } from './dto/enquiry-response.dto';
-import { EnquiryEntity } from './entities/enquiry.entity';
-
-function toResponse(enquiry: EnquiryEntity): EnquiryResponseDto {
-  return {
-    enquiryId: enquiry.enquiryId,
-    leadId: enquiry.leadId,
-    budget: enquiry.budget,
-    variant: enquiry.variant,
-    exchangeInterest: enquiry.exchangeInterest,
-    financeInterest: enquiry.financeInterest,
-    convertedBy: enquiry.convertedBy,
-    convertedAt: enquiry.convertedAt instanceof Date ? enquiry.convertedAt.toISOString() : enquiry.convertedAt,
-    status: enquiry.status,
-    ownerId: enquiry.ownerId,
-    locationId: enquiry.locationId,
-  };
-}
+import { toEnquiryResponse as toResponse } from './enquiries.mapper';
 
 /**
  * Convert-a-Lead-into-an-Enquiry contract (tech-design.md Component 1). The

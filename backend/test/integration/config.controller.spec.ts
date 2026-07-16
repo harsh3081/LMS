@@ -52,4 +52,28 @@ describe('GET /api/v1/config (Task 3.2.2)', () => {
     const res = await request(ctx.app.getHttpServer()).get('/api/v1/config');
     expect(res.status).toBe(200);
   });
+
+  // -----------------------------------------------------------------
+  // ADDED (issue #26) — directEnquiryEnabled, mirrors convertLeadEnabled.
+  // -----------------------------------------------------------------
+  describe('directEnquiryEnabled (issue #26)', () => {
+    const originalDirectEnquiryFlag = process.env.DIRECT_ENQUIRY_ENABLED;
+
+    afterAll(() => {
+      if (originalDirectEnquiryFlag === undefined) delete process.env.DIRECT_ENQUIRY_ENABLED;
+      else process.env.DIRECT_ENQUIRY_ENABLED = originalDirectEnquiryFlag;
+    });
+
+    it('defaults to enabled', async () => {
+      delete process.env.DIRECT_ENQUIRY_ENABLED;
+      const res = await request(ctx.app.getHttpServer()).get('/api/v1/config');
+      expect(res.body.directEnquiryEnabled).toBe(true);
+    });
+
+    it('reflects DIRECT_ENQUIRY_ENABLED=false', async () => {
+      process.env.DIRECT_ENQUIRY_ENABLED = 'false';
+      const res = await request(ctx.app.getHttpServer()).get('/api/v1/config');
+      expect(res.body.directEnquiryEnabled).toBe(false);
+    });
+  });
 });

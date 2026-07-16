@@ -12,6 +12,7 @@ import { CreateFoundationalTables1700000000001 } from './migrations/170000000000
 import { CreateLeads1700000000002 } from './migrations/1700000000002-CreateLeads';
 import { CreateEnquiries1700000000003 } from './migrations/1700000000003-CreateEnquiries';
 import { SeedMasterData1700000000004 } from './migrations/1700000000004-SeedMasterData';
+import { DirectEnquiry1700000000005 } from './migrations/1700000000005-DirectEnquiry';
 
 /**
  * Real PostgreSQL 16 DataSource (tech-design.md: TypeORM, resolved) — used by
@@ -39,6 +40,7 @@ export const migrations = [
   CreateLeads1700000000002,
   CreateEnquiries1700000000003,
   SeedMasterData1700000000004,
+  DirectEnquiry1700000000005,
 ];
 
 export const dataSourceOptions: DataSourceOptions = {

@@ -91,4 +91,56 @@ describe('api client', () => {
     const result = await api.getConfig();
     expect(result).toEqual({ newLeadEnabled: true, convertLeadEnabled: false });
   });
+
+  // -----------------------------------------------------------------
+  // issue #26 — createDirectEnquiry + getMyEnquiries + getConfig's
+  // directEnquiryEnabled.
+  // -----------------------------------------------------------------
+  it('createDirectEnquiry posts to /api/v1/enquiries and returns the created Enquiry', async () => {
+    mockFetchOnce(201, { enquiryId: 'enq-direct-1', leadId: null, entryType: 'DIRECT', status: 'New' });
+    const result = await api.createDirectEnquiry({
+      customerName: 'Walk-in Customer',
+      mobile: '9876543210',
+      sourceId: 1,
+      modelId: 101,
+      budget: 300000,
+      variant: 'LX',
+      exchangeInterest: false,
+      financeInterest: true,
+    });
+    expect(result.enquiryId).toBe('enq-direct-1');
+    expect(result.leadId).toBeNull();
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/v1/enquiries',
+      expect.objectContaining({ method: 'POST', credentials: 'include' }),
+    );
+  });
+
+  it('createDirectEnquiry surfaces a 400 field error as ApiError.fieldErrors', async () => {
+    mockFetchOnce(400, [{ field: 'customerName', message: 'customerName is required' }]);
+    await expect(
+      api.createDirectEnquiry({
+        customerName: '',
+        mobile: '9876543210',
+        sourceId: 1,
+        modelId: 101,
+        budget: 300000,
+        variant: 'LX',
+        exchangeInterest: false,
+        financeInterest: true,
+      }),
+    ).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it('getMyEnquiries fetches /api/v1/enquiries', async () => {
+    mockFetchOnce(200, [{ enquiryId: 'enq-1', entryType: 'DIRECT' }]);
+    const result = await api.getMyEnquiries();
+    expect(result).toEqual([{ enquiryId: 'enq-1', entryType: 'DIRECT' }]);
+  });
+
+  it('getConfig returns directEnquiryEnabled', async () => {
+    mockFetchOnce(200, { newLeadEnabled: true, convertLeadEnabled: true, directEnquiryEnabled: false });
+    const result = await api.getConfig();
+    expect(result).toEqual({ newLeadEnabled: true, convertLeadEnabled: true, directEnquiryEnabled: false });
+  });
 });

@@ -4,9 +4,13 @@ import { EnquiriesRepository } from './enquiries.repository';
 import { LeadsRepository } from '../leads/leads.repository';
 import { AuditLogRepository } from '../audit-log/audit-log.repository';
 import { ConvertLeadDto } from './dto/convert-lead.dto';
-import { EnquiryEntity, ENQUIRY_STATUS_NEW } from './entities/enquiry.entity';
+import { CreateDirectEnquiryDto } from './dto/create-direct-enquiry.dto';
+import { EnquiryEntity, ENQUIRY_STATUS_NEW, ENQUIRY_ENTRY_TYPE_DIRECT } from './entities/enquiry.entity';
 import { LeadEntity, LEAD_STATUS_CONVERTED } from '../leads/entities/lead.entity';
+import { LeadSourceEntity } from '../lead-sources/entities/lead-source.entity';
+import { VehicleModelEntity } from '../vehicle-models/entities/vehicle-model.entity';
 import { LeadNotFoundError, LeadAlreadyConvertedError } from './enquiries.errors';
+import { ReferentialValidationError } from '../leads/leads.errors';
 import { Principal } from '../common/principal';
 
 /**
@@ -84,5 +88,92 @@ export class EnquiriesService {
       throw new LeadAlreadyConvertedError([{ field: 'leadId', message: `Lead ${leadId} is already converted` }]);
     }
     return lead;
+  }
+
+  /**
+   * Create-a-Direct-Enquiry use case (issue #26, "Create a Direct Enquiry
+   * (Walk-in/Referred)"). No Lead is created or referenced (AC1/AC4) — the
+   * Lead-equivalent fields (AC2) are persisted directly on the Enquiry row
+   * (migration 1700000000005). Referential validity is checked first (fail
+   * fast, mirrors LeadsService.create's convention), then the Enquiry +
+   * audit_log rows are persisted atomically in one transaction (ADR-009)
+   * with owner/tenant/convertedBy/status/entryType fully server-derived from
+   * the `Principal` — never from the client DTO (ADR-003/009).
+   */
+  async createDirect(dto: CreateDirectEnquiryDto, actor: Principal): Promise<EnquiryEntity> {
+    await this.assertSourceExists(dto.sourceId);
+    await this.assertModelExists(dto.modelId);
+
+    return this.dataSource.transaction(async (manager) => {
+      const enquiry = await this.enquiriesRepository.insert(
+        {
+          leadId: null,
+          entryType: ENQUIRY_ENTRY_TYPE_DIRECT,
+          customerName: dto.customerName,
+          mobile: dto.mobile,
+          sourceId: dto.sourceId,
+          modelId: dto.modelId,
+          budget: dto.budget,
+          variant: dto.variant,
+          exchangeInterest: dto.exchangeInterest,
+          financeInterest: dto.financeInterest,
+          // ---- server-derived, never from the client DTO ----
+          convertedBy: actor.userId,
+          ownerId: actor.userId,
+          locationId: actor.locationId,
+          dealerGroupId: actor.dealerGroupId,
+          status: ENQUIRY_STATUS_NEW,
+          customFields: {},
+        },
+        manager,
+      );
+
+      await this.auditLogRepository.record(
+        {
+          actor: actor.userId,
+          action: 'ENQUIRY_CREATED_DIRECT',
+          entityType: 'enquiry',
+          entityId: String(enquiry.enquiryId),
+          before: null,
+          after: { enquiryId: enquiry.enquiryId, entryType: ENQUIRY_ENTRY_TYPE_DIRECT, status: enquiry.status },
+          locationId: actor.locationId,
+          dealerGroupId: actor.dealerGroupId,
+        },
+        manager,
+      );
+
+      return enquiry;
+    });
+  }
+
+  /** Owner/tenant-scoped Enquiry list (Direct + Converted alike, AC5). */
+  async findOwnQueue(actor: Principal): Promise<EnquiryEntity[]> {
+    return this.enquiriesRepository.findOwnQueue(actor);
+  }
+
+  /** Duplicated from (rather than extracted out of) LeadsService's private
+   * equivalents — both are two-line existence checks and this keeps the
+   * #24/#25 LeadsService untouched (lower regression risk) for this
+   * fast-tracked Story. Throws the same ReferentialValidationError already
+   * mapped to 400 by the globally registered
+   * ReferentialValidationExceptionFilter, so no new filter is needed. */
+  private async assertSourceExists(sourceId: number): Promise<void> {
+    const exists = await this.dataSource
+      .getRepository(LeadSourceEntity)
+      .exist({ where: { sourceId, active: true } });
+    if (!exists) {
+      throw new ReferentialValidationError([
+        { field: 'sourceId', message: `sourceId ${sourceId} not found in the active lead_sources master` },
+      ]);
+    }
+  }
+
+  private async assertModelExists(modelId: number): Promise<void> {
+    const exists = await this.dataSource.getRepository(VehicleModelEntity).exist({ where: { modelId } });
+    if (!exists) {
+      throw new ReferentialValidationError([
+        { field: 'modelId', message: `modelId ${modelId} not found in the vehicle_models master` },
+      ]);
+    }
   }
 }

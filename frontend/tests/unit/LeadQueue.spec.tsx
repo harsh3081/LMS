@@ -67,7 +67,7 @@ describe('LeadQueue — Convert to Enquiry action (Task 4.5.1)', () => {
 
   it('EVAL-AC1-01: renders the Convert to Enquiry action for a non-Converted row, not for a Converted one', async () => {
     mockedApi.getMyLeads.mockResolvedValue([openLead, convertedLead]);
-    mockedApi.getConfig.mockResolvedValue({ newLeadEnabled: true, convertLeadEnabled: true });
+    mockedApi.getConfig.mockResolvedValue({ newLeadEnabled: true, convertLeadEnabled: true, directEnquiryEnabled: true });
 
     renderQueue();
 
@@ -80,7 +80,7 @@ describe('LeadQueue — Convert to Enquiry action (Task 4.5.1)', () => {
 
   it('CC-11: hides the Convert to Enquiry action entirely when convertLeadEnabled is false', async () => {
     mockedApi.getMyLeads.mockResolvedValue([openLead]);
-    mockedApi.getConfig.mockResolvedValue({ newLeadEnabled: true, convertLeadEnabled: false });
+    mockedApi.getConfig.mockResolvedValue({ newLeadEnabled: true, convertLeadEnabled: false, directEnquiryEnabled: true });
 
     renderQueue();
 
@@ -91,7 +91,7 @@ describe('LeadQueue — Convert to Enquiry action (Task 4.5.1)', () => {
 
   it('EVAL-AC1-02: clicking the action reveals the inline ConvertLeadForm for that row', async () => {
     mockedApi.getMyLeads.mockResolvedValue([openLead]);
-    mockedApi.getConfig.mockResolvedValue({ newLeadEnabled: true, convertLeadEnabled: true });
+    mockedApi.getConfig.mockResolvedValue({ newLeadEnabled: true, convertLeadEnabled: true, directEnquiryEnabled: true });
 
     renderQueue();
     const user = userEvent.setup();
@@ -103,10 +103,15 @@ describe('LeadQueue — Convert to Enquiry action (Task 4.5.1)', () => {
 
   it('EVAL-AC5-03: on a successful conversion, the row leaves the displayed queue (no full reload)', async () => {
     mockedApi.getMyLeads.mockResolvedValue([openLead]);
-    mockedApi.getConfig.mockResolvedValue({ newLeadEnabled: true, convertLeadEnabled: true });
+    mockedApi.getConfig.mockResolvedValue({ newLeadEnabled: true, convertLeadEnabled: true, directEnquiryEnabled: true });
     mockedApi.convertLead.mockResolvedValue({
       enquiryId: 'enq-1',
       leadId: 'lead-open',
+      entryType: 'CONVERTED',
+      customerName: null,
+      mobile: null,
+      sourceId: null,
+      modelId: null,
       budget: 500000,
       variant: 'VXi (O) CVT',
       exchangeInterest: true,

@@ -5,6 +5,7 @@ import { LeadsService } from './leads/leads.service';
 import { LeadsRepository } from './leads/leads.repository';
 import { AuditLogRepository } from './audit-log/audit-log.repository';
 import { EnquiriesController } from './enquiries/enquiries.controller';
+import { DirectEnquiryController } from './enquiries/direct-enquiry.controller';
 import { EnquiriesService } from './enquiries/enquiries.service';
 import { EnquiriesRepository } from './enquiries/enquiries.repository';
 import { LeadSourcesController } from './lead-sources/lead-sources.controller';
@@ -34,6 +35,7 @@ export class AppModule {
         ConfigController,
         LeadsController,
         EnquiriesController,
+        DirectEnquiryController,
         LeadSourcesController,
         VehicleModelsController,
       ],

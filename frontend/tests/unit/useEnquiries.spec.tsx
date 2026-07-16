@@ -68,6 +68,11 @@ describe('useConvertLead', () => {
     mockedApi.convertLead.mockResolvedValue({
       enquiryId: 'enq-1',
       leadId: 'lead-1',
+      entryType: 'CONVERTED',
+      customerName: null,
+      mobile: null,
+      sourceId: null,
+      modelId: null,
       budget: 500000,
       variant: 'VXi (O) CVT',
       exchangeInterest: true,
