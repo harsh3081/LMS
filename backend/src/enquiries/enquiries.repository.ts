@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource, DeepPartial, EntityManager } from 'typeorm';
 import { EnquiryEntity } from './entities/enquiry.entity';
+import { Principal } from '../common/principal';
 
 /**
  * Mirrors LeadsRepository's `repo(manager)` transactional pattern (ref-code.md
@@ -20,5 +21,16 @@ export class EnquiriesRepository {
     const repository = this.repo(manager);
     const entity = repository.create(data);
     return repository.save(entity);
+  }
+
+  /** NEW (issue #26) — owner/tenant-scoped Enquiry list (Direct + Converted
+   * alike), newest first. Mirrors LeadsRepository.findOwnQueue's tenant-scope
+   * choke-point convention (ADR-003). */
+  async findOwnQueue(actor: Principal, manager?: EntityManager): Promise<EnquiryEntity[]> {
+    const repository = this.repo(manager);
+    return repository.find({
+      where: { ownerId: actor.userId, locationId: actor.locationId, dealerGroupId: actor.dealerGroupId },
+      order: { convertedAt: 'DESC' },
+    });
   }
 }

@@ -13,15 +13,26 @@ export function LandingPage() {
       <main>
         <div className="mb-8 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-          {config?.newLeadEnabled !== false && (
-            <Link
-              to="/leads/new"
-              role="link"
-              className={`${buttonStyles.base} ${buttonStyles.primary}`}
-            >
-              New Lead
-            </Link>
-          )}
+          <div className="flex items-center gap-3">
+            {config?.directEnquiryEnabled !== false && (
+              <Link
+                to="/enquiries/new"
+                role="link"
+                className={`${buttonStyles.base} ${buttonStyles.secondary}`}
+              >
+                New Enquiry
+              </Link>
+            )}
+            {config?.newLeadEnabled !== false && (
+              <Link
+                to="/leads/new"
+                role="link"
+                className={`${buttonStyles.base} ${buttonStyles.primary}`}
+              >
+                New Lead
+              </Link>
+            )}
+          </div>
         </div>
         <h2 className="mb-4 text-lg font-semibold text-slate-700">My Leads</h2>
         <LeadQueue />

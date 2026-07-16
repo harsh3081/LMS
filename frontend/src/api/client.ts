@@ -40,10 +40,18 @@ export interface ConvertLeadInput {
   financeInterest: boolean;
 }
 
-/** Mirrors EnquiryResponseDto (dealerGroupId intentionally excluded). */
+/** Mirrors EnquiryResponseDto (dealerGroupId intentionally excluded).
+ * MODIFIED (issue #26): `leadId` is nullable (null for a Direct Enquiry);
+ * `entryType` and the Lead-equivalent fields were added (populated only for
+ * Direct Enquiries, null for ones converted from a Lead). */
 export interface Enquiry {
   enquiryId: string;
-  leadId: string;
+  leadId: string | null;
+  entryType: 'DIRECT' | 'CONVERTED';
+  customerName: string | null;
+  mobile: string | null;
+  sourceId: number | null;
+  modelId: number | null;
   budget: number;
   variant: string;
   exchangeInterest: boolean;
@@ -53,6 +61,20 @@ export interface Enquiry {
   status: string;
   ownerId: string;
   locationId: string;
+}
+
+/** CreateDirectEnquiryDto fields (issue #26) — the Lead-equivalent
+ * mandatory fields (mirrors CreateLeadInput) plus the qualifying details
+ * (mirrors ConvertLeadInput), captured in one step (AC2). */
+export interface CreateDirectEnquiryInput {
+  customerName: string;
+  mobile: string;
+  sourceId: number;
+  modelId: number;
+  budget: number;
+  variant: string;
+  exchangeInterest: boolean;
+  financeInterest: boolean;
 }
 
 export interface FieldError {
@@ -92,6 +114,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     } catch {
       // no JSON body — keep default message
     }
+    // No session (or an expired one): bounce to /login rather than letting
+    // every page silently render empty data with no visible explanation
+    // (the root cause of dropdowns/queues appearing "not populated" with no
+    // error shown). Skip this on the login endpoint itself so a wrong
+    // password shows its own error instead of looping back to /login.
+    if (response.status === 401 && path !== '/api/v1/auth/login' && window.location.pathname !== '/login') {
+      window.location.href = '/login';
+    }
     throw new ApiError(response.status, fieldErrors, message);
   }
 
@@ -103,7 +133,10 @@ export const api = {
   login: (email: string, password: string) =>
     request<{ ok: true }>('/api/v1/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
 
-  getConfig: () => request<{ newLeadEnabled: boolean; convertLeadEnabled: boolean }>('/api/v1/config'),
+  getConfig: () =>
+    request<{ newLeadEnabled: boolean; convertLeadEnabled: boolean; directEnquiryEnabled: boolean }>(
+      '/api/v1/config',
+    ),
 
   getLeadSources: () => request<LeadSource[]>('/api/v1/lead-sources'),
 
@@ -116,4 +149,9 @@ export const api = {
 
   convertLead: (leadId: string, input: ConvertLeadInput) =>
     request<Enquiry>(`/api/v1/leads/${leadId}/convert`, { method: 'POST', body: JSON.stringify(input) }),
+
+  createDirectEnquiry: (input: CreateDirectEnquiryInput) =>
+    request<Enquiry>('/api/v1/enquiries', { method: 'POST', body: JSON.stringify(input) }),
+
+  getMyEnquiries: () => request<Enquiry[]>('/api/v1/enquiries'),
 };

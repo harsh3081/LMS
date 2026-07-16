@@ -3,6 +3,13 @@ import { jsonbTransformer } from '../../common/jsonb.transformer';
 
 export const ENQUIRY_STATUS_NEW = 'New';
 
+/** Distinguishes a Direct Enquiry (issue #26, no parent Lead) from one
+ * converted from an existing Lead (issue #25). See migration
+ * 1700000000005-DirectEnquiry.ts "Schema decisions" for why this is an
+ * explicit column rather than inferred from `leadId === null`. */
+export const ENQUIRY_ENTRY_TYPE_DIRECT = 'DIRECT';
+export const ENQUIRY_ENTRY_TYPE_CONVERTED = 'CONVERTED';
+
 /**
  * `bigint` columns round-trip as JS strings by default (both real Postgres
  * and pg-mem) to avoid precision loss for values beyond Number.MAX_SAFE_INTEGER.
@@ -30,8 +37,34 @@ export class EnquiryEntity {
   @PrimaryGeneratedColumn('uuid', { name: 'enquiry_id' })
   enquiryId!: string;
 
-  @Column({ name: 'lead_id', type: 'uuid', unique: true })
-  leadId!: string;
+  /** MODIFIED (issue #26, migration 1700000000005): nullable — a Direct
+   * Enquiry (entryType DIRECT) has no parent Lead (AC4). Still carries a
+   * DB-level UNIQUE constraint for non-null values (one Enquiry per
+   * converted Lead, #25 Q2); Postgres treats every NULL as distinct so any
+   * number of Direct Enquiries can coexist. */
+  @Column({ name: 'lead_id', type: 'uuid', unique: true, nullable: true })
+  leadId!: string | null;
+
+  /** NEW (issue #26). Defaults to CONVERTED so pre-existing (#25) rows are
+   * backfilled without a data migration statement. */
+  @Column({ name: 'entry_type', type: 'varchar', default: ENQUIRY_ENTRY_TYPE_CONVERTED })
+  entryType!: string;
+
+  /** NEW (issue #26) — Lead-equivalent mandatory fields (AC2), populated
+   * only for Direct Enquiries (entryType DIRECT). NULL for Converted
+   * Enquiries, where this data is reachable via the (non-null) `leadId`
+   * join to `leads` instead of being duplicated here. */
+  @Column({ name: 'customer_name', type: 'text', nullable: true })
+  customerName!: string | null;
+
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  mobile!: string | null;
+
+  @Column({ name: 'source_id', type: 'int', nullable: true })
+  sourceId!: number | null;
+
+  @Column({ name: 'model_id', type: 'int', nullable: true })
+  modelId!: number | null;
 
   @Column({ type: 'bigint', transformer: bigintTransformer })
   budget!: number;

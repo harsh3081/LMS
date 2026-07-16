@@ -35,16 +35,33 @@ describe('LandingPage entry point / feature toggle (CC-10)', () => {
   });
 
   it('EVAL-CC-10: shows the New Lead entry point when the toggle is enabled', async () => {
-    mockedApi.getConfig.mockResolvedValue({ newLeadEnabled: true, convertLeadEnabled: true });
+    mockedApi.getConfig.mockResolvedValue({ newLeadEnabled: true, convertLeadEnabled: true, directEnquiryEnabled: true });
     renderLanding();
     const entry = await screen.findByRole('link', { name: /new lead/i });
     expect(entry).toHaveAttribute('href', '/leads/new');
   });
 
   it('hides the New Lead entry point when the toggle is disabled', async () => {
-    mockedApi.getConfig.mockResolvedValue({ newLeadEnabled: false, convertLeadEnabled: true });
+    mockedApi.getConfig.mockResolvedValue({ newLeadEnabled: false, convertLeadEnabled: true, directEnquiryEnabled: true });
     renderLanding();
     await waitFor(() => expect(mockedApi.getConfig).toHaveBeenCalled());
     await waitFor(() => expect(screen.queryByRole('link', { name: /new lead/i })).not.toBeInTheDocument());
+  });
+
+  // -----------------------------------------------------------------
+  // ADDED (issue #26) — New Enquiry entry point + its own feature toggle.
+  // -----------------------------------------------------------------
+  it('shows the New Enquiry entry point when directEnquiryEnabled is true', async () => {
+    mockedApi.getConfig.mockResolvedValue({ newLeadEnabled: true, convertLeadEnabled: true, directEnquiryEnabled: true });
+    renderLanding();
+    const entry = await screen.findByRole('link', { name: /new enquiry/i });
+    expect(entry).toHaveAttribute('href', '/enquiries/new');
+  });
+
+  it('hides the New Enquiry entry point when directEnquiryEnabled is false', async () => {
+    mockedApi.getConfig.mockResolvedValue({ newLeadEnabled: true, convertLeadEnabled: true, directEnquiryEnabled: false });
+    renderLanding();
+    await waitFor(() => expect(mockedApi.getConfig).toHaveBeenCalled());
+    await waitFor(() => expect(screen.queryByRole('link', { name: /new enquiry/i })).not.toBeInTheDocument());
   });
 });
