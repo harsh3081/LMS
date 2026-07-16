@@ -53,11 +53,14 @@ describe('leads migration (Task 1.2.1 / 1.2.2)', () => {
        VALUES ('m@x.com','h','DSE','M',$1,$2,'[]') RETURNING user_id`,
       [loc[0].location_id, dg[0].dealer_group_id],
     );
+    // source_id/model_id 901/901 avoid colliding with the seeded master data
+    // rows (source_id 1-5, model_id 101-103) that SeedMasterData1700000000004
+    // now inserts as part of migrating.
     const src = await dataSource.query(
-      "INSERT INTO lead_sources (source_id, name, active) VALUES (1, 'Walk-in', true) RETURNING source_id",
+      "INSERT INTO lead_sources (source_id, name, active) VALUES (901, 'Walk-in-Test', true) RETURNING source_id",
     );
     const model = await dataSource.query(
-      "INSERT INTO vehicle_models (model_id, name) VALUES (101, 'Hatch') RETURNING model_id",
+      "INSERT INTO vehicle_models (model_id, name) VALUES (901, 'Hatch') RETURNING model_id",
     );
 
     const lead = await dataSource.query(
@@ -71,9 +74,11 @@ describe('leads migration (Task 1.2.1 / 1.2.2)', () => {
 
   it('down-migration drops the leads table (reversibility)', async () => {
     dataSource = await createTestDataSource();
-    // issue #25 added CreateEnquiries1700000000003 after this migration, so
-    // undoLastMigration() now reverts the enquiries migration first; undo
-    // twice to reach and verify the leads migration's own reversibility.
+    // issue #25 added CreateEnquiries1700000000003 and the seed-data fix
+    // added SeedMasterData1700000000004, both after this migration, so
+    // undoLastMigration() now reverts them first; undo three times to reach
+    // and verify the leads migration's own reversibility.
+    await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
 
@@ -136,8 +141,10 @@ describe('enquiries migration (Task 1.1.1, issue #25)', () => {
        VALUES ('encq@x.com','h','DSE','M',$1,$2,'[]') RETURNING user_id`,
       [loc[0].location_id, dg[0].dealer_group_id],
     );
+    // source_id 902 avoids colliding with the seeded master data rows
+    // (source_id 1-5) that SeedMasterData1700000000004 now inserts.
     const src = await dataSource.query(
-      "INSERT INTO lead_sources (source_id, name, active) VALUES (2, 'Walk-in-2', true) RETURNING source_id",
+      "INSERT INTO lead_sources (source_id, name, active) VALUES (902, 'Walk-in-2', true) RETURNING source_id",
     );
     const model = await dataSource.query(
       "INSERT INTO vehicle_models (model_id, name) VALUES (201, 'Hatch2') RETURNING model_id",
@@ -161,6 +168,10 @@ describe('enquiries migration (Task 1.1.1, issue #25)', () => {
 
   it('down-migration drops the enquiries table (reversibility)', async () => {
     dataSource = await createTestDataSource();
+    // SeedMasterData1700000000004 was added after this migration, so
+    // undoLastMigration() now reverts the seed-data migration first; undo
+    // twice to reach and verify the enquiries migration's own reversibility.
+    await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
 
     const tables: { table_name: string }[] = await dataSource.query(
