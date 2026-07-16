@@ -92,6 +92,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     } catch {
       // no JSON body — keep default message
     }
+    // No session (or an expired one): bounce to /login rather than letting
+    // every page silently render empty data with no visible explanation
+    // (the root cause of dropdowns/queues appearing "not populated" with no
+    // error shown). Skip this on the login endpoint itself so a wrong
+    // password shows its own error instead of looping back to /login.
+    if (response.status === 401 && path !== '/api/v1/auth/login' && window.location.pathname !== '/login') {
+      window.location.href = '/login';
+    }
     throw new ApiError(response.status, fieldErrors, message);
   }
 
