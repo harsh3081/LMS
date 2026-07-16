@@ -1,0 +1,9 @@
+{
+  "_comment": "Seed rows required in vehicle_models before AC1/AC5 dropdown and referential-validation tests can run. This is the location-agnostic model master per tech-design (deliberately NOT the location-scoped demo-fleet Vehicle table).",
+  "models": [
+    { "modelId": 101, "name": "Compact Hatchback LX" },
+    { "modelId": 102, "name": "Sedan GT" },
+    { "modelId": 103, "name": "SUV Adventure Plus" }
+  ],
+  "nonExistentModelIdForNegativeTests": 999999
+}

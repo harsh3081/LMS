@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Test artifacts
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+
+# Env
+.env
+.env.local
+
+# Logs
+*.log

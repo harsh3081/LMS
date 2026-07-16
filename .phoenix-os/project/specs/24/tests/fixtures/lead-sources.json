@@ -1,0 +1,11 @@
+{
+  "_comment": "Seed rows required in lead_sources before AC5 tests can run. sourceId values are placeholders — the test-env seed script must produce these exact names as ACTIVE rows so EVAL-AC5-01 (dropdown options) can assert on stable display text. 'Discontinued' is inactive and must NOT appear in the dropdown or be accepted server-side, to exercise the 'active only' contract from tech-design Integration Points.",
+  "sources": [
+    { "sourceId": 1, "name": "Walk-in", "active": true },
+    { "sourceId": 2, "name": "Referral", "active": true },
+    { "sourceId": 3, "name": "Call", "active": true },
+    { "sourceId": 4, "name": "Online", "active": true },
+    { "sourceId": 5, "name": "Discontinued", "active": false }
+  ],
+  "nonExistentSourceIdForNegativeTests": 999999
+}
