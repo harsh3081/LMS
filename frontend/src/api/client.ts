@@ -32,6 +32,29 @@ export interface Lead {
   createdAt: string;
 }
 
+/** ConvertLeadDto qualifying fields (issue #25, tech-design.md Component 6). */
+export interface ConvertLeadInput {
+  budget: number;
+  variant: string;
+  exchangeInterest: boolean;
+  financeInterest: boolean;
+}
+
+/** Mirrors EnquiryResponseDto (dealerGroupId intentionally excluded). */
+export interface Enquiry {
+  enquiryId: string;
+  leadId: string;
+  budget: number;
+  variant: string;
+  exchangeInterest: boolean;
+  financeInterest: boolean;
+  convertedBy: string;
+  convertedAt: string;
+  status: string;
+  ownerId: string;
+  locationId: string;
+}
+
 export interface FieldError {
   field: string;
   message: string;
@@ -80,7 +103,7 @@ export const api = {
   login: (email: string, password: string) =>
     request<{ ok: true }>('/api/v1/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
 
-  getConfig: () => request<{ newLeadEnabled: boolean }>('/api/v1/config'),
+  getConfig: () => request<{ newLeadEnabled: boolean; convertLeadEnabled: boolean }>('/api/v1/config'),
 
   getLeadSources: () => request<LeadSource[]>('/api/v1/lead-sources'),
 
@@ -90,4 +113,7 @@ export const api = {
     request<Lead>('/api/v1/leads', { method: 'POST', body: JSON.stringify(input) }),
 
   getMyLeads: () => request<Lead[]>('/api/v1/leads'),
+
+  convertLead: (leadId: string, input: ConvertLeadInput) =>
+    request<Enquiry>(`/api/v1/leads/${leadId}/convert`, { method: 'POST', body: JSON.stringify(input) }),
 };

@@ -7,8 +7,10 @@ import { LeadSourceEntity } from './lead-sources/entities/lead-source.entity';
 import { VehicleModelEntity } from './vehicle-models/entities/vehicle-model.entity';
 import { AuditLogEntity } from './audit-log/entities/audit-log.entity';
 import { LeadEntity } from './leads/entities/lead.entity';
+import { EnquiryEntity } from './enquiries/entities/enquiry.entity';
 import { CreateFoundationalTables1700000000001 } from './migrations/1700000000001-CreateFoundationalTables';
 import { CreateLeads1700000000002 } from './migrations/1700000000002-CreateLeads';
+import { CreateEnquiries1700000000003 } from './migrations/1700000000003-CreateEnquiries';
 
 /**
  * Real PostgreSQL 16 DataSource (tech-design.md: TypeORM, resolved) — used by
@@ -28,9 +30,14 @@ export const entities = [
   VehicleModelEntity,
   AuditLogEntity,
   LeadEntity,
+  EnquiryEntity,
 ];
 
-export const migrations = [CreateFoundationalTables1700000000001, CreateLeads1700000000002];
+export const migrations = [
+  CreateFoundationalTables1700000000001,
+  CreateLeads1700000000002,
+  CreateEnquiries1700000000003,
+];
 
 export const dataSourceOptions: DataSourceOptions = {
   type: 'postgres',

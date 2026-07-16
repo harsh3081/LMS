@@ -4,6 +4,9 @@ import { LeadsController } from './leads/leads.controller';
 import { LeadsService } from './leads/leads.service';
 import { LeadsRepository } from './leads/leads.repository';
 import { AuditLogRepository } from './audit-log/audit-log.repository';
+import { EnquiriesController } from './enquiries/enquiries.controller';
+import { EnquiriesService } from './enquiries/enquiries.service';
+import { EnquiriesRepository } from './enquiries/enquiries.repository';
 import { LeadSourcesController } from './lead-sources/lead-sources.controller';
 import { VehicleModelsController } from './vehicle-models/vehicle-models.controller';
 import { AuthController } from './auth/auth.controller';
@@ -26,12 +29,21 @@ export class AppModule {
   static forRoot(dataSource: DataSource): DynamicModule {
     return {
       module: AppModule,
-      controllers: [AuthController, ConfigController, LeadsController, LeadSourcesController, VehicleModelsController],
+      controllers: [
+        AuthController,
+        ConfigController,
+        LeadsController,
+        EnquiriesController,
+        LeadSourcesController,
+        VehicleModelsController,
+      ],
       providers: [
         { provide: DataSource, useValue: dataSource },
         LeadsService,
         LeadsRepository,
         AuditLogRepository,
+        EnquiriesService,
+        EnquiriesRepository,
         AuthService,
         SessionStore,
         SessionAuthGuard,

@@ -80,4 +80,24 @@ describe('GET /api/v1/leads — owner-scoped queue (Task 3.3)', () => {
     const res = await request(ctx.app.getHttpServer()).get(LEADS_PATH);
     expect(res.status).toBe(401);
   });
+
+  // -------------------------------------------------------------------
+  // Task 3.1.1 (issue #25, AC5) — Converted leads excluded from the queue;
+  // non-Converted siblings remain (regression guard for the queue-exclusion
+  // change to findOwnQueue).
+  // -------------------------------------------------------------------
+  it('AC5: a Converted lead is absent from the owner queue; non-Converted siblings remain', async () => {
+    const toConvert = await dseAAgent.post(LEADS_PATH).send(payload());
+    const toKeepOpen = await dseAAgent.post(LEADS_PATH).send(payload());
+
+    const convertRes = await dseAAgent
+      .post(`${LEADS_PATH}/${toConvert.body.leadId}/convert`)
+      .send({ budget: 500000, variant: 'VXi (O) CVT', exchangeInterest: true, financeInterest: false });
+    expect(convertRes.status).toBe(201);
+
+    const queue = await dseAAgent.get(LEADS_PATH);
+    const ids = queue.body.map((l: { leadId: string }) => l.leadId);
+    expect(ids).not.toContain(toConvert.body.leadId);
+    expect(ids).toContain(toKeepOpen.body.leadId);
+  });
 });

@@ -8,7 +8,10 @@ export class ConfigController {
   constructor(private readonly featureFlags: FeatureFlagsService) {}
 
   @Get()
-  getConfig(): { newLeadEnabled: boolean } {
-    return { newLeadEnabled: this.featureFlags.isNewLeadEnabled() };
+  getConfig(): { newLeadEnabled: boolean; convertLeadEnabled: boolean } {
+    return {
+      newLeadEnabled: this.featureFlags.isNewLeadEnabled(),
+      convertLeadEnabled: this.featureFlags.isConvertLeadEnabled(),
+    };
   }
 }

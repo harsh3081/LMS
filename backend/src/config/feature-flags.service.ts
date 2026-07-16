@@ -11,4 +11,10 @@ export class FeatureFlagsService {
   isNewLeadEnabled(): boolean {
     return process.env.NEW_LEAD_ENABLED !== 'false';
   }
+
+  /** `CONVERT_LEAD_ENABLED` gates the "Convert to Enquiry" entry point
+   * (issue #25 tech-design.md Component 4, mirrors isNewLeadEnabled). */
+  isConvertLeadEnabled(): boolean {
+    return process.env.CONVERT_LEAD_ENABLED !== 'false';
+  }
 }
