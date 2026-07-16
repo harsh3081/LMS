@@ -4,6 +4,14 @@
  * NestJS/HTTP/DB wiring — mirrors create-lead.dto.spec.ts and
  * convert-lead.dto.spec.ts's structure exactly (this DTO merges both sets of
  * fields into one step, AC2).
+ *
+ * MODIFIED (issue #27, FR-04): customerName/mobile/sourceId/modelId
+ * mandatory-ness moved to FieldConfigService (config-driven, see
+ * field-config.service.spec.ts / field-config-enforcement.spec.ts) —
+ * mirrors create-lead.dto.spec.ts's same modification exactly. The
+ * qualifying-details fields (budget/variant/exchangeInterest/
+ * financeInterest) are NOT configurable and remain statically required,
+ * unchanged.
  */
 import 'reflect-metadata';
 import { plainToInstance } from 'class-transformer';
@@ -32,20 +40,20 @@ describe('CreateDirectEnquiryDto', () => {
     expect(errors).toHaveLength(0);
   });
 
-  // ---- Lead-equivalent mandatory fields (AC2/AC3) ----
-  it('fails when customerName is missing', async () => {
+  // ---- Lead-equivalent fields (AC2/AC3) — mandatory-ness is config-driven (issue #27) ----
+  it('does not fail DTO-level validation when customerName is missing (mandatory-ness moved to FieldConfigService)', async () => {
     const errors = await validateDto({ ...validPayload, customerName: undefined });
-    expect(errors.some((e) => e.property === 'customerName')).toBe(true);
+    expect(errors.some((e) => e.property === 'customerName')).toBe(false);
   });
 
-  it('fails when customerName is empty string', async () => {
+  it('does not fail DTO-level validation when customerName is empty string (still a string)', async () => {
     const errors = await validateDto({ ...validPayload, customerName: '' });
-    expect(errors.some((e) => e.property === 'customerName')).toBe(true);
+    expect(errors.some((e) => e.property === 'customerName')).toBe(false);
   });
 
-  it('fails when mobile is missing', async () => {
+  it('does not fail DTO-level validation when mobile is missing', async () => {
     const errors = await validateDto({ ...validPayload, mobile: undefined });
-    expect(errors.some((e) => e.property === 'mobile')).toBe(true);
+    expect(errors.some((e) => e.property === 'mobile')).toBe(false);
   });
 
   const invalidMobileCases: { label: string; value: string }[] = [
@@ -61,14 +69,14 @@ describe('CreateDirectEnquiryDto', () => {
     });
   }
 
-  it('fails when sourceId is missing', async () => {
+  it('does not fail DTO-level validation when sourceId is missing', async () => {
     const errors = await validateDto({ ...validPayload, sourceId: undefined });
-    expect(errors.some((e) => e.property === 'sourceId')).toBe(true);
+    expect(errors.some((e) => e.property === 'sourceId')).toBe(false);
   });
 
-  it('fails when modelId is missing', async () => {
+  it('does not fail DTO-level validation when modelId is missing', async () => {
     const errors = await validateDto({ ...validPayload, modelId: undefined });
-    expect(errors.some((e) => e.property === 'modelId')).toBe(true);
+    expect(errors.some((e) => e.property === 'modelId')).toBe(false);
   });
 
   // ---- Qualifying fields (AC2, mirrors ConvertLeadDto) ----

@@ -143,4 +143,33 @@ describe('api client', () => {
     const result = await api.getConfig();
     expect(result).toEqual({ newLeadEnabled: true, convertLeadEnabled: true, directEnquiryEnabled: false });
   });
+
+  // -----------------------------------------------------------------
+  // issue #27 — getFieldConfig / updateFieldConfig (FR-04)
+  // -----------------------------------------------------------------
+  it('getFieldConfig fetches /api/v1/field-config', async () => {
+    const config = [{ fieldName: 'customerName', label: 'Customer Name', mandatory: true, updatedBy: null, updatedAt: null }];
+    mockFetchOnce(200, config);
+    const result = await api.getFieldConfig();
+    expect(result).toEqual(config);
+    expect(fetch).toHaveBeenCalledWith('/api/v1/field-config', expect.objectContaining({ credentials: 'include' }));
+  });
+
+  it('updateFieldConfig PUTs to /api/v1/field-config and returns the updated list', async () => {
+    const updated = [{ fieldName: 'sourceId', label: 'Source', mandatory: false, updatedBy: 'admin-1', updatedAt: '2026-01-01T00:00:00.000Z' }];
+    mockFetchOnce(200, updated);
+    const result = await api.updateFieldConfig({ fields: [{ fieldName: 'sourceId', mandatory: false }] });
+    expect(result).toEqual(updated);
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/v1/field-config',
+      expect.objectContaining({ method: 'PUT', credentials: 'include' }),
+    );
+  });
+
+  it('updateFieldConfig surfaces a 403 as ApiError', async () => {
+    mockFetchOnce(403, { message: 'Missing required capability: manage-field-config' });
+    await expect(
+      api.updateFieldConfig({ fields: [{ fieldName: 'sourceId', mandatory: false }] }),
+    ).rejects.toMatchObject({ status: 403 });
+  });
 });

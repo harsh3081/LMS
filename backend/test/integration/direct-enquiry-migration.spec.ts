@@ -116,6 +116,12 @@ describe('direct-enquiry migration (issue #26 Task 1.1)', () => {
 
   it('down-migration reverses cleanly: drops the new columns and restores lead_id NOT NULL', async () => {
     dataSource = await createTestDataSource();
+    // issue #27 added three migrations after this one
+    // (CreateFieldConfig/MakeLeadFieldsNullable/SeedAdminUser); undo those
+    // first, in reverse order, then undo this migration itself.
+    await dataSource.undoLastMigration();
+    await dataSource.undoLastMigration();
+    await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
 
     const columns: { column_name: string }[] = await dataSource.query(

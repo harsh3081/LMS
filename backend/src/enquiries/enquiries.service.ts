@@ -12,6 +12,7 @@ import { VehicleModelEntity } from '../vehicle-models/entities/vehicle-model.ent
 import { LeadNotFoundError, LeadAlreadyConvertedError } from './enquiries.errors';
 import { ReferentialValidationError } from '../leads/leads.errors';
 import { Principal } from '../common/principal';
+import { FieldConfigService } from '../field-config/field-config.service';
 
 /**
  * Convert-Lead-into-Enquiry use case (tech-design.md Component 1 / ref-code.md
@@ -30,6 +31,7 @@ export class EnquiriesService {
     private readonly enquiriesRepository: EnquiriesRepository,
     private readonly leadsRepository: LeadsRepository,
     private readonly auditLogRepository: AuditLogRepository,
+    private readonly fieldConfigService: FieldConfigService,
   ) {}
 
   async convert(leadId: string, dto: ConvertLeadDto, actor: Principal): Promise<EnquiryEntity> {
@@ -101,18 +103,24 @@ export class EnquiriesService {
    * the `Principal` — never from the client DTO (ADR-003/009).
    */
   async createDirect(dto: CreateDirectEnquiryDto, actor: Principal): Promise<EnquiryEntity> {
-    await this.assertSourceExists(dto.sourceId);
-    await this.assertModelExists(dto.modelId);
+    await this.fieldConfigService.assertMandatoryFieldsPresent({
+      customerName: dto.customerName,
+      mobile: dto.mobile,
+      sourceId: dto.sourceId,
+      modelId: dto.modelId,
+    });
+    if (dto.sourceId !== undefined) await this.assertSourceExists(dto.sourceId);
+    if (dto.modelId !== undefined) await this.assertModelExists(dto.modelId);
 
     return this.dataSource.transaction(async (manager) => {
       const enquiry = await this.enquiriesRepository.insert(
         {
           leadId: null,
           entryType: ENQUIRY_ENTRY_TYPE_DIRECT,
-          customerName: dto.customerName,
-          mobile: dto.mobile,
-          sourceId: dto.sourceId,
-          modelId: dto.modelId,
+          customerName: dto.customerName ?? null,
+          mobile: dto.mobile ?? null,
+          sourceId: dto.sourceId ?? null,
+          modelId: dto.modelId ?? null,
           budget: dto.budget,
           variant: dto.variant,
           exchangeInterest: dto.exchangeInterest,

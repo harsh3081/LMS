@@ -13,23 +13,41 @@ export interface VehicleModel {
   name: string;
 }
 
+/** MODIFIED (issue #27, FR-04): the four Lead-equivalent fields are now
+ * optional here — whether they are actually required at submission time is
+ * config-driven (see useFieldConfig/FieldConfigEntry below), enforced both
+ * client-side (NewLeadForm reads the config) and server-side (backend
+ * FieldConfigService), not hardcoded on this type anymore. */
 export interface CreateLeadInput {
-  customerName: string;
-  mobile: string;
-  sourceId: number;
-  modelId: number;
+  customerName?: string;
+  mobile?: string;
+  sourceId?: number;
+  modelId?: number;
 }
 
 export interface Lead {
   leadId: string;
-  customerName: string;
-  mobile: string;
-  sourceId: number;
-  modelId: number;
+  customerName: string | null;
+  mobile: string | null;
+  sourceId: number | null;
+  modelId: number | null;
   status: string;
   ownerId: string;
   locationId: string;
   createdAt: string;
+}
+
+/** One field's current configuration (issue #27, GET/PUT /api/v1/field-config). */
+export interface FieldConfigEntry {
+  fieldName: string;
+  label: string;
+  mandatory: boolean;
+  updatedBy: string | null;
+  updatedAt: string | null;
+}
+
+export interface UpdateFieldConfigInput {
+  fields: { fieldName: string; mandatory: boolean }[];
 }
 
 /** ConvertLeadDto qualifying fields (issue #25, tech-design.md Component 6). */
@@ -66,11 +84,14 @@ export interface Enquiry {
 /** CreateDirectEnquiryDto fields (issue #26) — the Lead-equivalent
  * mandatory fields (mirrors CreateLeadInput) plus the qualifying details
  * (mirrors ConvertLeadInput), captured in one step (AC2). */
+/** MODIFIED (issue #27): the four Lead-equivalent fields are now optional —
+ * mirrors CreateLeadInput's same modification exactly (config-driven
+ * mandatory-ness). The qualifying-details fields stay required. */
 export interface CreateDirectEnquiryInput {
-  customerName: string;
-  mobile: string;
-  sourceId: number;
-  modelId: number;
+  customerName?: string;
+  mobile?: string;
+  sourceId?: number;
+  modelId?: number;
   budget: number;
   variant: string;
   exchangeInterest: boolean;
@@ -154,4 +175,10 @@ export const api = {
     request<Enquiry>('/api/v1/enquiries', { method: 'POST', body: JSON.stringify(input) }),
 
   getMyEnquiries: () => request<Enquiry[]>('/api/v1/enquiries'),
+
+  // ---- issue #27: field configuration (FR-04) ----
+  getFieldConfig: () => request<FieldConfigEntry[]>('/api/v1/field-config'),
+
+  updateFieldConfig: (input: UpdateFieldConfigInput) =>
+    request<FieldConfigEntry[]>('/api/v1/field-config', { method: 'PUT', body: JSON.stringify(input) }),
 };

@@ -16,6 +16,9 @@ import { SessionStore } from './auth/session-store';
 import { SessionAuthGuard } from './auth/session-auth.guard';
 import { ConfigController } from './config/config.controller';
 import { FeatureFlagsService } from './config/feature-flags.service';
+import { FieldConfigController } from './field-config/field-config.controller';
+import { FieldConfigService } from './field-config/field-config.service';
+import { FieldConfigRepository } from './field-config/field-config.repository';
 
 /**
  * Built via `forRoot(dataSource)` rather than `TypeOrmModule.forRootAsync`
@@ -38,6 +41,7 @@ export class AppModule {
         DirectEnquiryController,
         LeadSourcesController,
         VehicleModelsController,
+        FieldConfigController,
       ],
       providers: [
         { provide: DataSource, useValue: dataSource },
@@ -50,6 +54,8 @@ export class AppModule {
         SessionStore,
         SessionAuthGuard,
         FeatureFlagsService,
+        FieldConfigService,
+        FieldConfigRepository,
       ],
     };
   }

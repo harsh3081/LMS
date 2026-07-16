@@ -1,0 +1,39 @@
+# NOTES — Issue #27: Configure Mandatory Fields for Lead/Enquiry Creation
+
+Fast-tracked implementation (no analysis.md/spec.md/tech-design.md/eval-criteria.md chain — see the orchestrator prompt). This file is the single source of truth for what was built.
+
+## What was built
+
+### Backend (`backend/src/field-config/`)
+- **`field_config` table** (migration `1700000000006-CreateFieldConfig.ts`): one row per configurable field, `{ field_name (PK), mandatory, updated_by, updated_at }`, seeded with AC6's default (all four mandatory).
+- **Configurable field set** (`field-config.constants.ts`): `customerName`, `mobile`, `sourceId`, `modelId` — the four fields present on **both** `CreateLeadDto` and `CreateDirectEnquiryDto` (AC6's exact list: name, mobile number, source, model of interest). `budget`/`variant`/`exchangeInterest`/`financeInterest` (Direct-Enquiry-only) stay statically required — deliberately out of scope, see "Known gaps".
+- **`FieldConfigService`**: `getAll()`/`getMandatoryMap()` (read), `assertMandatoryFieldsPresent()` (shared enforcement, throws `MandatoryFieldValidationError` listing every missing-and-mandatory field), `updateMany()` (transactional upsert + one `audit_log` row per **changed** field, action `FIELD_CONFIG_UPDATED`, AC5).
+- **`FieldConfigController`**: `GET /api/v1/field-config` (public, no guard — mirrors `ConfigController`; forms of any role need to read it) and `PUT /api/v1/field-config` (session + new `manage-field-config` capability required, 403 otherwise).
+- **DTOs became config-driven**: `CreateLeadDto`/`CreateDirectEnquiryDto`'s four shared fields changed from `@IsNotEmpty` to `@IsOptional()` (format validators — mobile regex, `@IsInt` — still run whenever a value **is** supplied). Actual mandatory-ness is now enforced by `LeadsService.create()` / `EnquiriesService.createDirect()` calling `FieldConfigService.assertMandatoryFieldsPresent()` **before** the pre-existing referential-validity checks. This was the "service-layer check" option the task suggested, applied identically to both DTOs.
+- **Nullability**: `leads.customer_name/mobile/source_id/model_id` made nullable (migration `1700000000007-MakeLeadFieldsNullable.ts`) so a Lead created while a field is optional-and-omitted is storable — `enquiries`' equivalent columns were already nullable since issue #26 (Direct Enquiry). `LeadEntity`/`LeadResponseDto` types updated to `T | null` accordingly.
+- **New capability, no new role hierarchy**: `manage-field-config`, granted to exactly one seeded account (`SystemAdministrator` role — introduced fresh, no such persona existed before). Seeded two ways: `1700000000008-SeedAdminUser.ts` (real Postgres, `admin@lms.local` / `ChangeMe#Admin1` — **rotate before production**) and `test-seed.ts` (Jest-only `admin@issue27.test`, appended in-code rather than editing the frozen `test-users.json` fixture).
+
+### Frontend
+- **`useFieldConfig`/`useUpdateFieldConfig`** (`src/hooks/useFieldConfig.ts`) + `api.getFieldConfig`/`api.updateFieldConfig` (`src/api/client.ts`).
+- **`FieldConfigForm`/`FieldConfigPage`** (new, route `/admin/field-config`, linked from the dashboard): lists all four fields with a mandatory checkbox + one Save button (PUTs every toggle in one call). A 403 from the server is shown as an explicit "you do not have permission" message.
+- **`NewLeadForm`/`NewEnquiryForm`**: `required`/`validate` rules for the four shared fields now read `useFieldConfig()` instead of being hardcoded; defaults to required while config is loading (fail-safe, matches pre-#27 behavior). Submission omits a blank optional field entirely (`undefined`, not `''`/`NaN`) so the server persists `NULL` rather than a bad value.
+- **`LeadQueue`** updated to render `lead.customerName ?? '—'` / `lead.mobile ?? '—'` (mirrors `EnquiryQueue`'s existing null-handling from #26).
+
+## Key decisions
+1. **Scope of the configurable field set**: limited to the 4 fields shared by both intake forms (matches AC6 exactly). AC1's "expected purchase timeline" doesn't exist as a field anywhere in the current schema and "location" is server-derived/never client-supplied (ADR-003) — neither could be made a toggleable client field without a much larger schema change, out of scope for a fast-tracked Story.
+2. **Mandatory-ness moved out of class-validator, into a service-layer check** — chosen over a custom async class-validator constraint (which would need `useContainer`/DI wiring into class-validator) because it's simpler and was explicitly offered as an acceptable option in the task brief.
+3. **New capability, not a new role**: `manage-field-config` is the only RBAC surface added; existing DSE/TL/SM-GM personas and the `noCapabilityUser` fixture are untouched.
+4. **GET is public** (no session required) — mirrors the existing `ConfigController` precedent, because both intake forms (any authenticated role) need to read it, not just admins.
+
+## Test results
+- **Backend** (`npm test` in `backend/`): **206/206 passing**, 23 suites. Coverage 98.83% lines / 82.5% branches (thresholds: 80/75). New: `field-config.service.spec.ts` (unit), `field-config.controller.spec.ts`, `field-config-enforcement.spec.ts`, `field-config-migration.spec.ts` (integration). Updated: `create-lead.dto.spec.ts` / `create-direct-enquiry.dto.spec.ts` (mandatory-ness assertions moved to reflect the new DTO-optional behavior), `leads.service.spec.ts` / `enquiries.service.spec.ts` / `direct-enquiry.service.spec.ts` (constructor now takes `FieldConfigService`), `migration.spec.ts` / `direct-enquiry-migration.spec.ts` (undo-count comments/counts bumped for the 3 new migrations appended after them).
+- **Frontend** (`npm test` in `frontend/`): **57/57 passing**, 11 suites. Coverage 95.54% lines / 87.33% branches (thresholds: 80/75). New: `FieldConfigForm.spec.tsx`, field-config cases in `api-client.spec.ts`. Updated: `NewLeadForm.spec.tsx`/`NewEnquiryForm.spec.tsx` (added config-driven-optional test cases; mocks now include `getFieldConfig`), `NewLeadPage.spec.tsx`/`NewEnquiryPage.spec.tsx` (mocks now include `getFieldConfig`, since the forms they render call it).
+- Both `tsc --noEmit` and `eslint --max-warnings=0` are clean on both packages.
+- Zero regressions: every pre-existing #24/#25/#26 test still passes unchanged in behavior (default config ships all-four-mandatory, so the historical "missing field → 400" assertions hold exactly as before).
+
+## Known gaps / follow-ups
+- **No client-side admin-only gating of `/admin/field-config`**: the codebase has no "whoami"/current-principal endpoint exposing the caller's capabilities to the SPA, so the nav link and page are visible to any logged-in user; the `PUT` is still capability-gated server-side (403 surfaced as a page error). Exposing current-principal/capabilities to the SPA is a natural next Story.
+- **`FieldConfigPage.tsx` itself has no direct component test** (only `FieldConfigForm`, which it renders, is tested) — consistent with this codebase's existing precedent (`LoginPage.tsx` is likewise untested), not a new gap pattern.
+- **No caching layer** on `FieldConfigService.getMandatoryMap()` — every create-Lead/create-Enquiry call re-reads `field_config` from the DB. Fine at this scale; worth revisiting if this table is queried at high volume.
+- **Configurable set is fixed at 4 fields** (`CONFIGURABLE_FIELD_KEYS`) — widening it to Direct-Enquiry-only fields (budget/variant/exchangeInterest/financeInterest) or genuinely new custom fields (the reserved `customFields` JSONB column) is out of scope here and would need its own design pass.
+- Full regression sweep was run via `npm test`/`npm run test:cov` in both packages plus `tsc --noEmit` + `eslint`; a live E2E/Playwright run against a real Postgres instance was **not** performed in this sandbox (no Docker/Postgres available, same environmental ceiling documented in `.phoenix-os/project/specs/24` evidence for the pg-mem substitute).

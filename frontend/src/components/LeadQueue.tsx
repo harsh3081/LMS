@@ -50,8 +50,8 @@ export function LeadQueue() {
         <TableBody>
           {(leads ?? []).map((lead) => (
             <TableRow key={lead.leadId}>
-              <TableCell className="font-medium text-slate-900">{lead.customerName}</TableCell>
-              <TableCell>{lead.mobile}</TableCell>
+              <TableCell className="font-medium text-slate-900">{lead.customerName ?? '—'}</TableCell>
+              <TableCell>{lead.mobile ?? '—'}</TableCell>
               <TableCell>
                 <StatusPill status={lead.status} />
               </TableCell>

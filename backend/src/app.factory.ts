@@ -8,6 +8,7 @@ import { AppModule } from './app.module';
 import { validationExceptionFactory } from './common/validation-exception.factory';
 import { ReferentialValidationExceptionFilter } from './common/referential-validation.filter';
 import { EnquiryEligibilityExceptionFilter } from './common/enquiry-eligibility.filter';
+import { MandatoryFieldValidationExceptionFilter, UnknownFieldConfigExceptionFilter } from './field-config/field-config.filters';
 
 /**
  * Builds a fully configured Nest application from an already-initialized
@@ -38,7 +39,12 @@ export async function createApp(dataSource: DataSource): Promise<INestApplicatio
     }),
   );
 
-  app.useGlobalFilters(new ReferentialValidationExceptionFilter(), new EnquiryEligibilityExceptionFilter());
+  app.useGlobalFilters(
+    new ReferentialValidationExceptionFilter(),
+    new EnquiryEligibilityExceptionFilter(),
+    new MandatoryFieldValidationExceptionFilter(),
+    new UnknownFieldConfigExceptionFilter(),
+  );
 
   const config = new DocumentBuilder()
     .setTitle('LMS API')
