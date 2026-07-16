@@ -23,11 +23,19 @@ vi.mock('../../src/api/client', async (importOriginal) => {
       getMyLeads: vi.fn(),
       getConfig: vi.fn(),
       login: vi.fn(),
+      getFieldConfig: vi.fn(),
     },
   };
 });
 
 const mockedApi = vi.mocked(api, true);
+
+const ALL_MANDATORY_FIELD_CONFIG = [
+  { fieldName: 'customerName', label: 'Customer Name', mandatory: true, updatedBy: null, updatedAt: null },
+  { fieldName: 'mobile', label: 'Mobile Number', mandatory: true, updatedBy: null, updatedAt: null },
+  { fieldName: 'sourceId', label: 'Source', mandatory: true, updatedBy: null, updatedAt: null },
+  { fieldName: 'modelId', label: 'Model of Interest', mandatory: true, updatedBy: null, updatedAt: null },
+];
 
 function renderForm() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -50,6 +58,7 @@ const models = [
 describe('NewLeadForm', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockedApi.getFieldConfig.mockResolvedValue(ALL_MANDATORY_FIELD_CONFIG);
     mockedApi.getLeadSources.mockResolvedValue(sources);
     mockedApi.getVehicleModels.mockResolvedValue(models);
   });
@@ -162,5 +171,63 @@ describe('NewLeadForm', () => {
     await user.click(screen.getByRole('button', { name: /submit|create|save/i }));
 
     expect(await screen.findByText(/mobile must be a valid india 10-digit number/i)).toBeInTheDocument();
+  });
+
+  // -----------------------------------------------------------------
+  // ADDED (issue #27, FR-04) — mandatory-ness is config-driven (AC3).
+  // -----------------------------------------------------------------
+  describe('config-driven mandatory fields (issue #27)', () => {
+    it('AC3: does not show a required error for a field configured optional, and submits without it', async () => {
+      mockedApi.getFieldConfig.mockResolvedValue([
+        { fieldName: 'customerName', label: 'Customer Name', mandatory: true, updatedBy: null, updatedAt: null },
+        { fieldName: 'mobile', label: 'Mobile Number', mandatory: true, updatedBy: null, updatedAt: null },
+        { fieldName: 'sourceId', label: 'Source', mandatory: false, updatedBy: null, updatedAt: null },
+        { fieldName: 'modelId', label: 'Model of Interest', mandatory: true, updatedBy: null, updatedAt: null },
+      ]);
+      mockedApi.createLead.mockResolvedValue({
+        leadId: 'lead-optional-source',
+        customerName: 'Asha Rao',
+        mobile: '9876543210',
+        sourceId: null,
+        modelId: 101,
+        status: 'New',
+        ownerId: 'owner-1',
+        locationId: 'loc-1',
+        createdAt: new Date().toISOString(),
+      });
+
+      renderForm();
+      const user = userEvent.setup();
+      await waitFor(() => expect(screen.getByRole('option', { name: 'Walk-in' })).toBeInTheDocument());
+
+      await user.type(screen.getByLabelText(/customer name/i), 'Asha Rao');
+      await user.type(screen.getByLabelText(/mobile/i), '9876543210');
+      await user.selectOptions(screen.getByLabelText(/model/i), '101');
+      await user.click(screen.getByRole('button', { name: /submit|create|save/i }));
+
+      expect(await screen.findByText(/lead created|success/i)).toBeInTheDocument();
+      expect(screen.queryByText(/source.*required|required.*source/i)).not.toBeInTheDocument();
+      expect(mockedApi.createLead).toHaveBeenCalledWith({
+        customerName: 'Asha Rao',
+        mobile: '9876543210',
+        sourceId: undefined,
+        modelId: 101,
+      });
+    });
+
+    it('shows a required error for sourceId when it is (re)configured mandatory', async () => {
+      mockedApi.getFieldConfig.mockResolvedValue(ALL_MANDATORY_FIELD_CONFIG);
+      renderForm();
+      const user = userEvent.setup();
+      await waitFor(() => expect(screen.getByRole('option', { name: 'Walk-in' })).toBeInTheDocument());
+
+      await user.type(screen.getByLabelText(/customer name/i), 'Asha Rao');
+      await user.type(screen.getByLabelText(/mobile/i), '9876543210');
+      await user.selectOptions(screen.getByLabelText(/model/i), '101');
+      await user.click(screen.getByRole('button', { name: /submit|create|save/i }));
+
+      expect(await screen.findByText(/source.*required|required.*source/i)).toBeInTheDocument();
+      expect(mockedApi.createLead).not.toHaveBeenCalled();
+    });
   });
 });

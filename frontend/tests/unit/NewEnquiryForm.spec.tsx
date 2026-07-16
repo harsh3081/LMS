@@ -20,11 +20,19 @@ vi.mock('../../src/api/client', async (importOriginal) => {
       getLeadSources: vi.fn(),
       getVehicleModels: vi.fn(),
       createDirectEnquiry: vi.fn(),
+      getFieldConfig: vi.fn(),
     },
   };
 });
 
 const mockedApi = vi.mocked(api, true);
+
+const ALL_MANDATORY_FIELD_CONFIG = [
+  { fieldName: 'customerName', label: 'Customer Name', mandatory: true, updatedBy: null, updatedAt: null },
+  { fieldName: 'mobile', label: 'Mobile Number', mandatory: true, updatedBy: null, updatedAt: null },
+  { fieldName: 'sourceId', label: 'Source', mandatory: true, updatedBy: null, updatedAt: null },
+  { fieldName: 'modelId', label: 'Model of Interest', mandatory: true, updatedBy: null, updatedAt: null },
+];
 
 function renderForm() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -38,6 +46,7 @@ function renderForm() {
 describe('NewEnquiryForm', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockedApi.getFieldConfig.mockResolvedValue(ALL_MANDATORY_FIELD_CONFIG);
     mockedApi.getLeadSources.mockResolvedValue([{ sourceId: 1, name: 'Walk-in' }]);
     mockedApi.getVehicleModels.mockResolvedValue([{ modelId: 101, name: 'Compact Hatchback LX' }]);
   });
@@ -153,5 +162,57 @@ describe('NewEnquiryForm', () => {
     await user.click(screen.getByRole('button', { name: /submit|create|save/i }));
 
     expect(await screen.findByText(/budget must be a positive integer/i)).toBeInTheDocument();
+  });
+
+  // -----------------------------------------------------------------
+  // ADDED (issue #27, FR-04) — mandatory-ness of the Lead-equivalent fields
+  // is config-driven (AC3), mirrors NewLeadForm.spec.tsx exactly.
+  // -----------------------------------------------------------------
+  describe('config-driven mandatory fields (issue #27)', () => {
+    it('AC3: does not show a required error for customerName when configured optional, and submits without it', async () => {
+      mockedApi.getFieldConfig.mockResolvedValue([
+        { fieldName: 'customerName', label: 'Customer Name', mandatory: false, updatedBy: null, updatedAt: null },
+        { fieldName: 'mobile', label: 'Mobile Number', mandatory: true, updatedBy: null, updatedAt: null },
+        { fieldName: 'sourceId', label: 'Source', mandatory: true, updatedBy: null, updatedAt: null },
+        { fieldName: 'modelId', label: 'Model of Interest', mandatory: true, updatedBy: null, updatedAt: null },
+      ]);
+      mockedApi.createDirectEnquiry.mockResolvedValue({
+        enquiryId: 'enq-optional-name',
+        leadId: null,
+        entryType: 'DIRECT',
+        customerName: null,
+        mobile: '9876543210',
+        sourceId: 1,
+        modelId: 101,
+        budget: 300000,
+        variant: 'LX',
+        exchangeInterest: false,
+        financeInterest: true,
+        convertedBy: 'owner-1',
+        convertedAt: new Date().toISOString(),
+        status: 'New',
+        ownerId: 'owner-1',
+        locationId: 'loc-1',
+      });
+
+      renderForm();
+      await waitFor(() => expect(screen.getByRole('option', { name: 'Walk-in' })).toBeInTheDocument());
+      const user = userEvent.setup();
+
+      await user.type(screen.getByLabelText(/mobile/i), '9876543210');
+      await user.selectOptions(screen.getByLabelText(/source/i), '1');
+      await user.selectOptions(screen.getByLabelText(/model/i), '101');
+      await user.type(screen.getByLabelText(/budget/i), '300000');
+      await user.type(screen.getByLabelText(/variant/i), 'LX');
+      await user.selectOptions(screen.getByLabelText(/exchange interest/i), 'false');
+      await user.selectOptions(screen.getByLabelText(/finance interest/i), 'true');
+      await user.click(screen.getByRole('button', { name: /submit|create|save/i }));
+
+      expect(await screen.findByText(/enquiry created/i)).toBeInTheDocument();
+      expect(screen.queryByText(/customer name.*required|required.*customer name/i)).not.toBeInTheDocument();
+      expect(mockedApi.createDirectEnquiry).toHaveBeenCalledWith(
+        expect.objectContaining({ customerName: undefined }),
+      );
+    });
   });
 });

@@ -10,6 +10,8 @@ import { EnquiriesService } from '../../src/enquiries/enquiries.service';
 import { EnquiriesRepository } from '../../src/enquiries/enquiries.repository';
 import { LeadsRepository } from '../../src/leads/leads.repository';
 import { AuditLogRepository } from '../../src/audit-log/audit-log.repository';
+import { FieldConfigService } from '../../src/field-config/field-config.service';
+import { FieldConfigRepository } from '../../src/field-config/field-config.repository';
 import { ReferentialValidationError } from '../../src/leads/leads.errors';
 import { ENQUIRY_STATUS_NEW, ENQUIRY_ENTRY_TYPE_DIRECT } from '../../src/enquiries/entities/enquiry.entity';
 import { Principal } from '../../src/common/principal';
@@ -27,7 +29,14 @@ describe('EnquiriesService.createDirect (Task 2.4, issue #26)', () => {
     seed = await seedTestFixtures(dataSource);
     enquiriesRepository = new EnquiriesRepository(dataSource);
     auditLogRepository = new AuditLogRepository(dataSource);
-    service = new EnquiriesService(dataSource, enquiriesRepository, new LeadsRepository(dataSource), auditLogRepository);
+    const fieldConfigService = new FieldConfigService(dataSource, new FieldConfigRepository(dataSource), auditLogRepository);
+    service = new EnquiriesService(
+      dataSource,
+      enquiriesRepository,
+      new LeadsRepository(dataSource),
+      auditLogRepository,
+      fieldConfigService,
+    );
 
     const dseA = seed.users['dseA'];
     actor = {

@@ -8,11 +8,15 @@ import { LeadSourceEntity } from '../lead-sources/entities/lead-source.entity';
 import { VehicleModelEntity } from '../vehicle-models/entities/vehicle-model.entity';
 import { ReferentialValidationError } from './leads.errors';
 import { Principal } from '../common/principal';
+import { FieldConfigService } from '../field-config/field-config.service';
 
 /**
  * Create-Lead use case (tech-design.md Component 2 / ref-code.md Sample 2).
- * Referential validity is checked first (fail fast at the boundary, AC5),
- * then the Lead + audit_log rows are persisted atomically in one
+ * MODIFIED (issue #27, FR-04): mandatory-field validation (customerName/
+ * mobile/sourceId/modelId) is now config-driven — checked FIRST via
+ * FieldConfigService.assertMandatoryFieldsPresent (AC3/AC4), before the
+ * pre-existing referential-validity checks (fail fast at the boundary, AC5
+ * of #24), then the Lead + audit_log rows are persisted atomically in one
  * transaction (ADR-009) with owner/tenant/status/audit fully server-derived
  * from the `Principal` — never from the client DTO (ADR-003/009).
  * No duplicate/mobile-uniqueness check here (deferred to FR-06).
@@ -23,19 +27,26 @@ export class LeadsService {
     private readonly dataSource: DataSource,
     private readonly leadsRepository: LeadsRepository,
     private readonly auditLogRepository: AuditLogRepository,
+    private readonly fieldConfigService: FieldConfigService,
   ) {}
 
   async create(dto: CreateLeadDto, actor: Principal): Promise<LeadEntity> {
-    await this.assertSourceExists(dto.sourceId);
-    await this.assertModelExists(dto.modelId);
+    await this.fieldConfigService.assertMandatoryFieldsPresent({
+      customerName: dto.customerName,
+      mobile: dto.mobile,
+      sourceId: dto.sourceId,
+      modelId: dto.modelId,
+    });
+    if (dto.sourceId !== undefined) await this.assertSourceExists(dto.sourceId);
+    if (dto.modelId !== undefined) await this.assertModelExists(dto.modelId);
 
     return this.dataSource.transaction(async (manager) => {
       const saved = await this.leadsRepository.insert(
         {
-          customerName: dto.customerName,
-          mobile: dto.mobile,
-          sourceId: dto.sourceId,
-          modelId: dto.modelId,
+          customerName: dto.customerName ?? null,
+          mobile: dto.mobile ?? null,
+          sourceId: dto.sourceId ?? null,
+          modelId: dto.modelId ?? null,
           // ---- server-derived, never from the client DTO ----
           ownerId: actor.userId,
           createdBy: actor.userId,

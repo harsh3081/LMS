@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { useLeadSources } from '../hooks/useLeadSources';
 import { useVehicleModels } from '../hooks/useVehicleModels';
 import { useCreateDirectEnquiry } from '../hooks/useEnquiries';
+import { useFieldConfig, isFieldMandatory } from '../hooks/useFieldConfig';
 import { ApiError, CreateDirectEnquiryInput } from '../api/client';
 import { Button, FormField, Select, TextInput } from './ui';
 
@@ -36,9 +37,19 @@ type FormValues = {
 export function NewEnquiryForm() {
   const { data: sources } = useLeadSources();
   const { data: models } = useVehicleModels();
+  const { data: fieldConfig } = useFieldConfig();
   const createDirectEnquiry = useCreateDirectEnquiry();
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+
+  // AC3: mandatory-ness for the Lead-equivalent fields is config-driven
+  // (issue #27, FR-04, mirrors NewLeadForm exactly). The qualifying-details
+  // fields (budget/variant/exchangeInterest/financeInterest) stay statically
+  // required, unchanged.
+  const customerNameMandatory = isFieldMandatory(fieldConfig, 'customerName');
+  const mobileMandatory = isFieldMandatory(fieldConfig, 'mobile');
+  const sourceIdMandatory = isFieldMandatory(fieldConfig, 'sourceId');
+  const modelIdMandatory = isFieldMandatory(fieldConfig, 'modelId');
 
   const {
     register,
@@ -63,10 +74,10 @@ export function NewEnquiryForm() {
     setSuccessMessage(null);
     setFormError(null);
     const input: CreateDirectEnquiryInput = {
-      customerName: values.customerName,
-      mobile: values.mobile,
-      sourceId: Number(values.sourceId),
-      modelId: Number(values.modelId),
+      customerName: values.customerName || undefined,
+      mobile: values.mobile || undefined,
+      sourceId: values.sourceId ? Number(values.sourceId) : undefined,
+      modelId: values.modelId ? Number(values.modelId) : undefined,
       budget: Number(values.budget),
       variant: values.variant,
       exchangeInterest: values.exchangeInterest === 'true',
@@ -96,24 +107,25 @@ export function NewEnquiryForm() {
   return (
     <form onSubmit={onSubmit} noValidate aria-label="New Enquiry" className="space-y-1">
       <FormField label="Customer Name" htmlFor="customerName" error={errors.customerName?.message}>
-        <TextInput id="customerName" {...register('customerName', { required: 'Customer name is required' })} />
+        <TextInput
+          id="customerName"
+          {...register('customerName', { required: customerNameMandatory ? 'Customer name is required' : false })}
+        />
       </FormField>
 
       <FormField label="Mobile Number" htmlFor="mobile" error={errors.mobile?.message}>
         <TextInput
           id="mobile"
           {...register('mobile', {
-            required: 'Mobile is required',
-            pattern: {
-              value: INDIA_MOBILE_REGEX,
-              message: 'Enter a valid 10-digit mobile number (leading 6-9)',
-            },
+            required: mobileMandatory ? 'Mobile is required' : false,
+            validate: (value) =>
+              !value || INDIA_MOBILE_REGEX.test(value) || 'Enter a valid 10-digit mobile number (leading 6-9)',
           })}
         />
       </FormField>
 
       <FormField label="Source" htmlFor="sourceId" error={errors.sourceId?.message}>
-        <Select id="sourceId" {...register('sourceId', { required: 'Source is required' })}>
+        <Select id="sourceId" {...register('sourceId', { required: sourceIdMandatory ? 'Source is required' : false })}>
           <option value="">Select a source</option>
           {(sources ?? []).map((s) => (
             <option key={s.sourceId} value={s.sourceId}>
@@ -124,7 +136,7 @@ export function NewEnquiryForm() {
       </FormField>
 
       <FormField label="Model of Interest" htmlFor="modelId" error={errors.modelId?.message}>
-        <Select id="modelId" {...register('modelId', { required: 'Model is required' })}>
+        <Select id="modelId" {...register('modelId', { required: modelIdMandatory ? 'Model is required' : false })}>
           <option value="">Select a model</option>
           {(models ?? []).map((m) => (
             <option key={m.modelId} value={m.modelId}>

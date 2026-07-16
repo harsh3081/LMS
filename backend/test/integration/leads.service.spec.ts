@@ -9,6 +9,8 @@ import { seedTestFixtures, SeedResult } from '../../src/seeds/test-seed';
 import { LeadsService } from '../../src/leads/leads.service';
 import { LeadsRepository } from '../../src/leads/leads.repository';
 import { AuditLogRepository } from '../../src/audit-log/audit-log.repository';
+import { FieldConfigService } from '../../src/field-config/field-config.service';
+import { FieldConfigRepository } from '../../src/field-config/field-config.repository';
 import { ReferentialValidationError } from '../../src/leads/leads.errors';
 import { LEAD_STATUS_NEW } from '../../src/leads/entities/lead.entity';
 import { Principal } from '../../src/common/principal';
@@ -24,7 +26,8 @@ describe('LeadsService (Task 2.2 / 2.3)', () => {
     dataSource = await createTestDataSource();
     seed = await seedTestFixtures(dataSource);
     auditLogRepository = new AuditLogRepository(dataSource);
-    service = new LeadsService(dataSource, new LeadsRepository(dataSource), auditLogRepository);
+    const fieldConfigService = new FieldConfigService(dataSource, new FieldConfigRepository(dataSource), auditLogRepository);
+    service = new LeadsService(dataSource, new LeadsRepository(dataSource), auditLogRepository, fieldConfigService);
 
     const dseA = seed.users['dseA'];
     actor = {

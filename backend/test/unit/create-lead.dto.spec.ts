@@ -2,6 +2,14 @@
  * RED->GREEN (Inside-Out, Core Domain Layer) — Tasks 2.1.1 / 2.1.2 / 2.5.1.
  * Validates CreateLeadDto directly via class-validator, without any
  * NestJS/HTTP/DB wiring (no external dependencies).
+ *
+ * MODIFIED (issue #27, FR-04): customerName/mobile/sourceId/modelId are no
+ * longer required at the DTO level — mandatory-ness is now decided at
+ * request time by FieldConfigService.assertMandatoryFieldsPresent (see
+ * field-config.service.spec.ts and field-config-enforcement.spec.ts for that
+ * coverage). This file now only proves: (a) the DTO accepts omission of
+ * these fields (@IsOptional), and (b) format validation (mobile regex,
+ * integer type) still runs whenever a value IS supplied.
  */
 import 'reflect-metadata';
 import { plainToInstance } from 'class-transformer';
@@ -21,29 +29,29 @@ describe('CreateLeadDto', () => {
     expect(errors).toHaveLength(0);
   });
 
-  it('fails when customerName is missing', async () => {
+  it('does not fail DTO-level validation when customerName is missing (issue #27: mandatory-ness moved to the service layer)', async () => {
     const errors = await validateDto({ ...validPayload, customerName: undefined });
-    expect(errors.some((e) => e.property === 'customerName')).toBe(true);
+    expect(errors.some((e) => e.property === 'customerName')).toBe(false);
   });
 
-  it('fails when customerName is empty string', async () => {
+  it('does not fail DTO-level validation when customerName is empty string (still a string)', async () => {
     const errors = await validateDto({ ...validPayload, customerName: '' });
-    expect(errors.some((e) => e.property === 'customerName')).toBe(true);
+    expect(errors.some((e) => e.property === 'customerName')).toBe(false);
   });
 
-  it('fails when mobile is missing', async () => {
+  it('does not fail DTO-level validation when mobile is missing', async () => {
     const errors = await validateDto({ ...validPayload, mobile: undefined });
-    expect(errors.some((e) => e.property === 'mobile')).toBe(true);
+    expect(errors.some((e) => e.property === 'mobile')).toBe(false);
   });
 
-  it('fails when sourceId is missing', async () => {
+  it('does not fail DTO-level validation when sourceId is missing', async () => {
     const errors = await validateDto({ ...validPayload, sourceId: undefined });
-    expect(errors.some((e) => e.property === 'sourceId')).toBe(true);
+    expect(errors.some((e) => e.property === 'sourceId')).toBe(false);
   });
 
-  it('fails when modelId is missing', async () => {
+  it('does not fail DTO-level validation when modelId is missing', async () => {
     const errors = await validateDto({ ...validPayload, modelId: undefined });
-    expect(errors.some((e) => e.property === 'modelId')).toBe(true);
+    expect(errors.some((e) => e.property === 'modelId')).toBe(false);
   });
 
   const invalidMobileCases: { label: string; value: string }[] = [

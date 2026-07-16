@@ -14,6 +14,9 @@ export function LandingPage() {
         <div className="mb-8 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
           <div className="flex items-center gap-3">
+            <Link to="/admin/field-config" role="link" className={`${buttonStyles.base} ${buttonStyles.secondary}`}>
+              Field Configuration
+            </Link>
             {config?.directEnquiryEnabled !== false && (
               <Link
                 to="/enquiries/new"

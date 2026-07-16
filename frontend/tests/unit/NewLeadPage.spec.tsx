@@ -19,14 +19,23 @@ vi.mock('../../src/api/client', async (importOriginal) => {
       getVehicleModels: vi.fn(),
       createLead: vi.fn(),
       getMyLeads: vi.fn(),
+      getFieldConfig: vi.fn(),
     },
   };
 });
 const mockedApi = vi.mocked(api, true);
 
+const ALL_MANDATORY_FIELD_CONFIG = [
+  { fieldName: 'customerName', label: 'Customer Name', mandatory: true, updatedBy: null, updatedAt: null },
+  { fieldName: 'mobile', label: 'Mobile Number', mandatory: true, updatedBy: null, updatedAt: null },
+  { fieldName: 'sourceId', label: 'Source', mandatory: true, updatedBy: null, updatedAt: null },
+  { fieldName: 'modelId', label: 'Model of Interest', mandatory: true, updatedBy: null, updatedAt: null },
+];
+
 describe('NewLeadPage queue reflection (AC6)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockedApi.getFieldConfig.mockResolvedValue(ALL_MANDATORY_FIELD_CONFIG);
     mockedApi.getLeadSources.mockResolvedValue([{ sourceId: 1, name: 'Walk-in' }]);
     mockedApi.getVehicleModels.mockResolvedValue([{ modelId: 101, name: 'Compact Hatchback LX' }]);
     mockedApi.getMyLeads.mockResolvedValue([]);

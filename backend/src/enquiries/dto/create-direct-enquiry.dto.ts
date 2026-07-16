@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsBoolean, IsInt, IsNotEmpty, IsPositive, IsString, Matches } from 'class-validator';
+import { IsBoolean, IsInt, IsNotEmpty, IsOptional, IsPositive, IsString, Matches } from 'class-validator';
 import { INDIA_MOBILE_REGEX } from '../../common/mobile.util';
 
 /**
@@ -13,27 +13,37 @@ import { INDIA_MOBILE_REGEX } from '../../common/mobile.util';
  * global ValidationPipe (`whitelist: true`) strips any extra body properties
  * before they ever reach the service (same convention as CreateLeadDto/
  * ConvertLeadDto).
+ *
+ * MODIFIED (issue #27, FR-04): the four Lead-equivalent fields' mandatory-
+ * ness is now config-driven (mirrors CreateLeadDto exactly — see that file's
+ * comment) via EnquiriesService.createDirect calling
+ * FieldConfigService.assertMandatoryFieldsPresent. The qualifying-details
+ * fields (budget/variant/exchangeInterest/financeInterest) are NOT part of
+ * the configurable set (field-config.constants.ts) and stay statically
+ * required exactly as before.
  */
 export class CreateDirectEnquiryDto {
-  // ---- Lead-equivalent mandatory fields (AC2) ----
-  @ApiProperty({ example: 'Asha Rao' })
+  // ---- Lead-equivalent fields (AC2) — mandatory-ness is config-driven (issue #27) ----
+  @ApiProperty({ example: 'Asha Rao', required: false })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty({ message: 'customerName is required' })
-  customerName!: string;
+  customerName?: string;
 
-  @ApiProperty({ example: '9876543210' })
+  @ApiProperty({ example: '9876543210', required: false })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty({ message: 'mobile is required' })
   @Matches(INDIA_MOBILE_REGEX, { message: 'mobile must be a valid India 10-digit number (leading 6-9)' })
-  mobile!: string;
+  mobile?: string;
 
-  @ApiProperty({ example: 3 })
-  @IsInt({ message: 'sourceId is required and must be an integer' })
-  sourceId!: number;
+  @ApiProperty({ example: 3, required: false })
+  @IsOptional()
+  @IsInt({ message: 'sourceId must be an integer' })
+  sourceId?: number;
 
-  @ApiProperty({ example: 12 })
-  @IsInt({ message: 'modelId is required and must be an integer' })
-  modelId!: number;
+  @ApiProperty({ example: 12, required: false })
+  @IsOptional()
+  @IsInt({ message: 'modelId must be an integer' })
+  modelId?: number;
 
   // ---- Qualifying details (AC2, mirrors ConvertLeadDto) ----
   @ApiProperty({ example: 500000, description: 'Positive integer INR (whole rupees)' })

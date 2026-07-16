@@ -63,7 +63,24 @@ export async function seedTestFixtures(dataSource: DataSource): Promise<SeedResu
     dealerGroupId: string;
     capabilities: string[];
   };
-  const fixtureUsers: FixtureUser[] = usersFixture.users;
+  // ADDED (issue #27): a test-only admin account carrying the new
+  // `manage-field-config` capability, needed to exercise PUT
+  // /api/v1/field-config's capability gate (AC1/AC2) and audit trail (AC5)
+  // in the Jest/Supertest suite. Deliberately NOT added to the frozen
+  // .phoenix-os/project/specs/24/tests/fixtures/test-users.json (that file
+  // backs #24/#25/#26's frozen Playwright suite and must not change) —
+  // this array literal is generated code, safe to extend for this Story.
+  const adminUser: FixtureUser = {
+    key: 'admin',
+    role: 'SystemAdministrator',
+    email: 'admin@issue27.test',
+    password: 'Issue27!TestAdmin1',
+    displayName: 'Platform Administrator',
+    locationId: '55555555-0000-0000-0000-000000000027',
+    dealerGroupId: '99999999-0000-0000-0000-000000000027',
+    capabilities: ['manage-field-config'],
+  };
+  const fixtureUsers: FixtureUser[] = [...usersFixture.users, adminUser];
 
   const locationIds: Record<string, string> = {};
   for (const loc of distinctBy(fixtureUsers, (u) => u.locationId)) {

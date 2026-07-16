@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { useLeadSources } from '../hooks/useLeadSources';
 import { useVehicleModels } from '../hooks/useVehicleModels';
 import { useCreateLead } from '../hooks/useLeads';
+import { useFieldConfig, isFieldMandatory } from '../hooks/useFieldConfig';
 import { ApiError, CreateLeadInput } from '../api/client';
 import { Button, FormField, Select, TextInput } from './ui';
 
@@ -23,9 +24,18 @@ type FormValues = {
 export function NewLeadForm() {
   const { data: sources } = useLeadSources();
   const { data: models } = useVehicleModels();
+  const { data: fieldConfig } = useFieldConfig();
   const createLead = useCreateLead();
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+
+  // AC3: mandatory-ness is config-driven (issue #27, FR-04) — defaults to
+  // required while the config is loading/unknown (fail-safe, matches the
+  // pre-#27 hardcoded behavior).
+  const customerNameMandatory = isFieldMandatory(fieldConfig, 'customerName');
+  const mobileMandatory = isFieldMandatory(fieldConfig, 'mobile');
+  const sourceIdMandatory = isFieldMandatory(fieldConfig, 'sourceId');
+  const modelIdMandatory = isFieldMandatory(fieldConfig, 'modelId');
 
   const {
     register,
@@ -39,10 +49,10 @@ export function NewLeadForm() {
     setSuccessMessage(null);
     setFormError(null);
     const input: CreateLeadInput = {
-      customerName: values.customerName,
-      mobile: values.mobile,
-      sourceId: Number(values.sourceId),
-      modelId: Number(values.modelId),
+      customerName: values.customerName || undefined,
+      mobile: values.mobile || undefined,
+      sourceId: values.sourceId ? Number(values.sourceId) : undefined,
+      modelId: values.modelId ? Number(values.modelId) : undefined,
     };
     try {
       await createLead.mutateAsync(input);
@@ -70,7 +80,9 @@ export function NewLeadForm() {
       <FormField label="Customer Name" htmlFor="customerName" error={errors.customerName?.message}>
         <TextInput
           id="customerName"
-          {...register('customerName', { required: 'Customer name is required' })}
+          {...register('customerName', {
+            required: customerNameMandatory ? 'Customer name is required' : false,
+          })}
         />
       </FormField>
 
@@ -78,17 +90,15 @@ export function NewLeadForm() {
         <TextInput
           id="mobile"
           {...register('mobile', {
-            required: 'Mobile is required',
-            pattern: {
-              value: INDIA_MOBILE_REGEX,
-              message: 'Enter a valid 10-digit mobile number (leading 6-9)',
-            },
+            required: mobileMandatory ? 'Mobile is required' : false,
+            validate: (value) =>
+              !value || INDIA_MOBILE_REGEX.test(value) || 'Enter a valid 10-digit mobile number (leading 6-9)',
           })}
         />
       </FormField>
 
       <FormField label="Source" htmlFor="sourceId" error={errors.sourceId?.message}>
-        <Select id="sourceId" {...register('sourceId', { required: 'Source is required' })}>
+        <Select id="sourceId" {...register('sourceId', { required: sourceIdMandatory ? 'Source is required' : false })}>
           <option value="">Select a source</option>
           {(sources ?? []).map((s) => (
             <option key={s.sourceId} value={s.sourceId}>
@@ -99,7 +109,7 @@ export function NewLeadForm() {
       </FormField>
 
       <FormField label="Model of Interest" htmlFor="modelId" error={errors.modelId?.message}>
-        <Select id="modelId" {...register('modelId', { required: 'Model is required' })}>
+        <Select id="modelId" {...register('modelId', { required: modelIdMandatory ? 'Model is required' : false })}>
           <option value="">Select a model</option>
           {(models ?? []).map((m) => (
             <option key={m.modelId} value={m.modelId}>
