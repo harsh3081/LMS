@@ -7,6 +7,7 @@ import { DataSource } from 'typeorm';
 import { AppModule } from './app.module';
 import { validationExceptionFactory } from './common/validation-exception.factory';
 import { ReferentialValidationExceptionFilter } from './common/referential-validation.filter';
+import { EnquiryEligibilityExceptionFilter } from './common/enquiry-eligibility.filter';
 
 /**
  * Builds a fully configured Nest application from an already-initialized
@@ -37,7 +38,7 @@ export async function createApp(dataSource: DataSource): Promise<INestApplicatio
     }),
   );
 
-  app.useGlobalFilters(new ReferentialValidationExceptionFilter());
+  app.useGlobalFilters(new ReferentialValidationExceptionFilter(), new EnquiryEligibilityExceptionFilter());
 
   const config = new DocumentBuilder()
     .setTitle('LMS API')

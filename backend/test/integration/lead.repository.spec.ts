@@ -8,7 +8,7 @@ import { DataSource } from 'typeorm';
 import { createTestDataSource } from '../support/test-data-source';
 import { seedTestFixtures, SeedResult } from '../../src/seeds/test-seed';
 import { LeadsRepository } from '../../src/leads/leads.repository';
-import { LEAD_STATUS_NEW } from '../../src/leads/entities/lead.entity';
+import { LEAD_STATUS_NEW, LEAD_STATUS_CONVERTED } from '../../src/leads/entities/lead.entity';
 
 describe('LeadsRepository (Task 1.2.3 / 1.3.3)', () => {
   let dataSource: DataSource;
@@ -100,5 +100,115 @@ describe('LeadsRepository (Task 1.2.3 / 1.3.3)', () => {
     expect(queue.findIndex((l) => l.leadId === second.leadId)).toBeLessThan(
       queue.findIndex((l) => l.leadId === first.leadId),
     );
+  });
+
+  // -------------------------------------------------------------------
+  // Task 2.3.1 / 2.3.2 (issue #25) — findOwnedById: status-agnostic
+  // scoped single-Lead load backing the convert action (404 vs 409).
+  // -------------------------------------------------------------------
+  it('findOwnedById returns the owner+tenant-scoped Lead regardless of status', async () => {
+    const dseA = seed.users['dseA'];
+    const locationId = Object.keys(seed.locationIds)[0];
+    const dealerGroupId = Object.keys(seed.dealerGroupIds)[0];
+    const actor = { userId: dseA.userId, locationId, dealerGroupId, role: 'DSE', capabilities: ['convert-lead'] };
+
+    const lead = await repository.insert({
+      customerName: 'Findable Lead',
+      mobile: '9876500011',
+      sourceId: seed.sourceIds[0],
+      modelId: seed.modelIds[0],
+      ownerId: dseA.userId,
+      locationId,
+      dealerGroupId,
+      createdBy: dseA.userId,
+    });
+
+    const found = await repository.findOwnedById(lead.leadId, actor);
+    expect(found?.leadId).toBe(lead.leadId);
+
+    // A Converted lead must still be returned (so the service can 409, not 404).
+    await dataSource.query('UPDATE leads SET status = $1 WHERE lead_id = $2', [LEAD_STATUS_CONVERTED, lead.leadId]);
+    const foundAfterConvert = await repository.findOwnedById(lead.leadId, actor);
+    expect(foundAfterConvert?.status).toBe(LEAD_STATUS_CONVERTED);
+  });
+
+  it('findOwnedById returns null for an out-of-scope (other owner/location) leadId', async () => {
+    const dseA = seed.users['dseA'];
+    const dseC = seed.users['dseC'];
+    const locationIdA = Object.keys(seed.locationIds)[0];
+    const dealerGroupIdA = Object.keys(seed.dealerGroupIds)[0];
+    const locationIdC = Object.keys(seed.locationIds)[1] ?? locationIdA;
+    const dealerGroupIdC = Object.keys(seed.dealerGroupIds)[1] ?? dealerGroupIdA;
+
+    const lead = await repository.insert({
+      customerName: 'Other Owner Lead 2',
+      mobile: '9876500012',
+      sourceId: seed.sourceIds[0],
+      modelId: seed.modelIds[0],
+      ownerId: dseA.userId,
+      locationId: locationIdA,
+      dealerGroupId: dealerGroupIdA,
+      createdBy: dseA.userId,
+    });
+
+    const foundByOther = await repository.findOwnedById(lead.leadId, {
+      userId: dseC.userId,
+      locationId: locationIdC,
+      dealerGroupId: dealerGroupIdC,
+      role: 'DSE',
+      capabilities: ['convert-lead'],
+    });
+    expect(foundByOther).toBeNull();
+
+    const foundNonExistent = await repository.findOwnedById('00000000-0000-0000-0000-000000000000', {
+      userId: dseA.userId,
+      locationId: locationIdA,
+      dealerGroupId: dealerGroupIdA,
+      role: 'DSE',
+      capabilities: ['convert-lead'],
+    });
+    expect(foundNonExistent).toBeNull();
+  });
+
+  // -------------------------------------------------------------------
+  // Task 3.1.2 (issue #25) — findOwnQueue excludes Converted leads (AC5).
+  // -------------------------------------------------------------------
+  it('findOwnQueue excludes Converted leads but keeps other non-Converted leads (AC5)', async () => {
+    const dseA = seed.users['dseA'];
+    const locationId = Object.keys(seed.locationIds)[0];
+    const dealerGroupId = Object.keys(seed.dealerGroupIds)[0];
+
+    const openLead = await repository.insert({
+      customerName: 'Still Open',
+      mobile: '9876500013',
+      sourceId: seed.sourceIds[0],
+      modelId: seed.modelIds[0],
+      ownerId: dseA.userId,
+      locationId,
+      dealerGroupId,
+      createdBy: dseA.userId,
+    });
+    const convertedLead = await repository.insert({
+      customerName: 'Now Converted',
+      mobile: '9876500014',
+      sourceId: seed.sourceIds[0],
+      modelId: seed.modelIds[0],
+      ownerId: dseA.userId,
+      locationId,
+      dealerGroupId,
+      createdBy: dseA.userId,
+      status: LEAD_STATUS_CONVERTED,
+    });
+
+    const queue = await repository.findOwnQueue({
+      userId: dseA.userId,
+      locationId,
+      dealerGroupId,
+      role: 'DSE',
+      capabilities: ['convert-lead'],
+    });
+    const ids = queue.map((l) => l.leadId);
+    expect(ids).toContain(openLead.leadId);
+    expect(ids).not.toContain(convertedLead.leadId);
   });
 });

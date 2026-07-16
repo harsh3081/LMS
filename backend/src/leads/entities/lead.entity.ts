@@ -2,6 +2,10 @@ import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn, Update
 import { jsonbTransformer } from '../../common/jsonb.transformer';
 
 export const LEAD_STATUS_NEW = 'New';
+/** Additive, data-only status value (issue #25) — no schema change; see
+ * migrations 1700000000003-CreateEnquiries.ts "Warnings". Set by
+ * EnquiriesService.convert() when a Lead is converted into an Enquiry. */
+export const LEAD_STATUS_CONVERTED = 'Converted';
 
 /**
  * `leads` table (tech-design Data Design). Owner/tenant/status/audit are

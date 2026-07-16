@@ -1,5 +1,5 @@
 {
-  "_comment": "Test-only DSE accounts for issue #24 Playwright suite. Passwords are test-only, never used outside this fixture/seed. Two location_ids are represented to prove tenant isolation (EVAL-CC-04); two DSEs share location-1 to prove owner isolation (EVAL-CC-05). One capability-lacking account proves RBAC deny-by-default (EVAL-CC-08).",
+  "_comment": "Test-only DSE accounts for issue #24 Playwright suite. Passwords are test-only, never used outside this fixture/seed. Two location_ids are represented to prove tenant isolation (EVAL-CC-04); two DSEs share location-1 to prove owner isolation (EVAL-CC-05). One capability-lacking account proves RBAC deny-by-default (EVAL-CC-08). ADDITIVE NOTE (issue #25, tech-design.md Clarification): dseA/dseB/dseC additionally carry the `convert-lead` capability so this same fixture backs the #25 ('Convert a Lead into an Enquiry') Playwright suite without duplicating user data; noCapabilityUser deliberately still carries no capabilities so it continues to prove RBAC deny-by-default for both create-lead (#24) and convert-lead (#25).",
   "users": [
     {
       "key": "dseA",
@@ -9,7 +9,7 @@
       "displayName": "Dealer Sales Executive Loc1-A",
       "locationId": "11111111-0000-0000-0000-000000000001",
       "dealerGroupId": "99999999-0000-0000-0000-000000000001",
-      "capabilities": ["create-lead"],
+      "capabilities": ["create-lead", "convert-lead"],
       "note": "Primary DSE used for AC1-AC7 happy-path and validation tests; location 1"
     },
     {
@@ -20,7 +20,7 @@
       "displayName": "Dealer Sales Executive Loc1-B",
       "locationId": "11111111-0000-0000-0000-000000000001",
       "dealerGroupId": "99999999-0000-0000-0000-000000000001",
-      "capabilities": ["create-lead"],
+      "capabilities": ["create-lead", "convert-lead"],
       "note": "Same location as dseA, different owner — proves owner-scoped isolation (EVAL-CC-05)"
     },
     {
@@ -31,7 +31,7 @@
       "displayName": "Dealer Sales Executive Loc2-C",
       "locationId": "22222222-0000-0000-0000-000000000002",
       "dealerGroupId": "99999999-0000-0000-0000-000000000002",
-      "capabilities": ["create-lead"],
+      "capabilities": ["create-lead", "convert-lead"],
       "note": "Different location entirely — proves tenant/location isolation (EVAL-CC-04)"
     },
     {
