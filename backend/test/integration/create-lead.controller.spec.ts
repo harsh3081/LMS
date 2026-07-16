@@ -127,6 +127,42 @@ describe('POST /api/v1/leads (Task 2.5)', () => {
     expect(res.body.ownerId).not.toBe('00000000-0000-0000-0000-000000000000');
   });
 
+  // -------------------------------------------------------------------
+  // issue #28 (AC1/AC2/AC3/AC6) — direct proof that ownership/audit
+  // metadata (createdBy/createdAt/ownerId) is (a) auto-captured from the
+  // authenticated Principal, (b) present in the API response payload
+  // (LeadResponseDto was missing `createdBy` before this Story — see
+  // NOTES.md), and (c) never overridable by a client-supplied value, even
+  // when the field IS present in the request body (the ValidationPipe
+  // whitelist strips it before CreateLeadDto ever carries it, so the
+  // server-derived value always wins).
+  // -------------------------------------------------------------------
+  it('EVAL-CC-14 (issue #28): createdBy/createdAt/ownerId are present in the create response and reflect the authenticated actor', async () => {
+    const dseA = ctx.seed.users['dseA'];
+    const before = Date.now();
+    const res = await dseAAgent.post(LEADS_PATH).send(validPayload());
+    const after = Date.now();
+
+    expect(res.status).toBe(201);
+    expect(res.body.createdBy).toBe(dseA.userId);
+    expect(res.body.ownerId).toBe(dseA.userId);
+    const createdAtMs = new Date(res.body.createdAt).getTime();
+    expect(Number.isNaN(createdAtMs)).toBe(false);
+    expect(createdAtMs).toBeGreaterThanOrEqual(before - 5000);
+    expect(createdAtMs).toBeLessThanOrEqual(after + 5000);
+  });
+
+  it('EVAL-CC-15 (issue #28, AC3): a client-supplied createdBy is ignored — the server-derived actor always wins', async () => {
+    const dseA = ctx.seed.users['dseA'];
+    const res = await dseAAgent.post(LEADS_PATH).send({
+      ...validPayload(),
+      createdBy: '00000000-0000-0000-0000-000000000000',
+    });
+    expect(res.status).toBe(201);
+    expect(res.body.createdBy).toBe(dseA.userId);
+    expect(res.body.createdBy).not.toBe('00000000-0000-0000-0000-000000000000');
+  });
+
   it('EVAL-CC-02: client-supplied status is ignored — persisted status is always "New"', async () => {
     const res = await dseAAgent.post(LEADS_PATH).send({ ...validPayload(), status: 'Converted' });
     expect(res.status).toBe(201);

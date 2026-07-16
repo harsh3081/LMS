@@ -22,6 +22,8 @@ export function toEnquiryResponse(enquiry: EnquiryEntity): EnquiryResponseDto {
     convertedAt: enquiry.convertedAt instanceof Date ? enquiry.convertedAt.toISOString() : enquiry.convertedAt,
     status: enquiry.status,
     ownerId: enquiry.ownerId,
+    ownerUpdatedAt:
+      enquiry.ownerUpdatedAt instanceof Date ? enquiry.ownerUpdatedAt.toISOString() : enquiry.ownerUpdatedAt,
     locationId: enquiry.locationId,
   };
 }

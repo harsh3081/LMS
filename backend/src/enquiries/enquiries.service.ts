@@ -9,7 +9,7 @@ import { EnquiryEntity, ENQUIRY_STATUS_NEW, ENQUIRY_ENTRY_TYPE_DIRECT } from './
 import { LeadEntity, LEAD_STATUS_CONVERTED } from '../leads/entities/lead.entity';
 import { LeadSourceEntity } from '../lead-sources/entities/lead-source.entity';
 import { VehicleModelEntity } from '../vehicle-models/entities/vehicle-model.entity';
-import { LeadNotFoundError, LeadAlreadyConvertedError } from './enquiries.errors';
+import { LeadNotFoundError, LeadAlreadyConvertedError, EnquiryReassignTargetNotFoundError } from './enquiries.errors';
 import { ReferentialValidationError } from '../leads/leads.errors';
 import { Principal } from '../common/principal';
 import { FieldConfigService } from '../field-config/field-config.service';
@@ -157,6 +157,51 @@ export class EnquiriesService {
   /** Owner/tenant-scoped Enquiry list (Direct + Converted alike, AC5). */
   async findOwnQueue(actor: Principal): Promise<EnquiryEntity[]> {
     return this.enquiriesRepository.findOwnQueue(actor);
+  }
+
+  /**
+   * Reassign-Enquiry-Owner use case (issue #28, AC4). Mirrors
+   * LeadsService.reassignOwner exactly — no controller calls this yet (a
+   * future TL-reassignment Story wires the HTTP surface); this method +
+   * EnquiriesRepository.reassignOwner prove the ownership-audit mechanism
+   * (ownerId + ownerUpdatedAt updated, audit_log row written, both in one
+   * transaction, ADR-009).
+   */
+  async reassignOwner(enquiryId: string, newOwnerId: string, actor: Principal): Promise<EnquiryEntity> {
+    return this.dataSource.transaction(async (manager) => {
+      const existing = await manager.getRepository(EnquiryEntity).findOne({ where: { enquiryId } });
+      if (!existing) {
+        throw new EnquiryReassignTargetNotFoundError([
+          { field: 'enquiryId', message: `Enquiry ${enquiryId} not found` },
+        ]);
+      }
+      const previousOwnerId = existing.ownerId;
+
+      const updated = await this.enquiriesRepository.reassignOwner(enquiryId, newOwnerId, manager);
+      /* istanbul ignore next -- existing was just found in this same
+       * transaction; cannot race to null within a single transaction. */
+      if (!updated) {
+        throw new EnquiryReassignTargetNotFoundError([
+          { field: 'enquiryId', message: `Enquiry ${enquiryId} not found` },
+        ]);
+      }
+
+      await this.auditLogRepository.record(
+        {
+          actor: actor.userId,
+          action: 'ENQUIRY_OWNER_REASSIGNED',
+          entityType: 'enquiry',
+          entityId: String(enquiryId),
+          before: { ownerId: previousOwnerId },
+          after: { ownerId: newOwnerId },
+          locationId: existing.locationId,
+          dealerGroupId: existing.dealerGroupId,
+        },
+        manager,
+      );
+
+      return updated;
+    });
   }
 
   /** Duplicated from (rather than extracted out of) LeadsService's private

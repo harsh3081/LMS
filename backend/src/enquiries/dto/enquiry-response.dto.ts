@@ -23,5 +23,8 @@ export class EnquiryResponseDto {
   @ApiProperty() convertedAt!: string;
   @ApiProperty() status!: string;
   @ApiProperty() ownerId!: string;
+  /** NEW (issue #28, AC4) — null until the owner is ever reassigned (see
+   * EnquiriesService.reassignOwner; no endpoint calls it yet in this Story). */
+  @ApiProperty({ nullable: true, type: String }) ownerUpdatedAt!: string | null;
   @ApiProperty() locationId!: string;
 }

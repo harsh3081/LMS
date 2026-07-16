@@ -33,4 +33,22 @@ export class EnquiriesRepository {
       order: { convertedAt: 'DESC' },
     });
   }
+
+  /** NEW (issue #28, AC4) — reassigns an Enquiry's owner and stamps
+   * `ownerUpdatedAt`. Mirrors LeadsRepository.reassignOwner exactly
+   * (not owner/tenant-scoped here; a future reassignment endpoint owns
+   * that authorization check). Returns null if no Enquiry with that id
+   * exists. */
+  async reassignOwner(
+    enquiryId: string,
+    newOwnerId: string,
+    manager?: EntityManager,
+  ): Promise<EnquiryEntity | null> {
+    const repository = this.repo(manager);
+    const enquiry = await repository.findOne({ where: { enquiryId } });
+    if (!enquiry) return null;
+    enquiry.ownerId = newOwnerId;
+    enquiry.ownerUpdatedAt = new Date();
+    return repository.save(enquiry);
+  }
 }

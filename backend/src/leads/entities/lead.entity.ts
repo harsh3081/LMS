@@ -53,6 +53,17 @@ export class LeadEntity {
   @Column({ name: 'created_by', type: 'uuid' })
   createdBy!: string;
 
+  /** NEW (issue #28, AC4): set whenever `ownerId` is reassigned (see
+   * LeadsRepository.reassignOwner / LeadsService.reassignOwner). NULL means
+   * "never reassigned since creation" — additive nullable column, migration
+   * 1700000000009-AddOwnerUpdatedAt, so every pre-existing Lead row remains
+   * valid without a backfill statement. No controller/endpoint calls the
+   * reassignment path yet in this Story (a future TL-reassignment Story
+   * wires the HTTP surface) — this column + the repository/service method
+   * prove the tracking mechanism itself works. */
+  @Column({ name: 'owner_updated_at', type: 'timestamptz', nullable: true })
+  ownerUpdatedAt!: Date | null;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date;
 

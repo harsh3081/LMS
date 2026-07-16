@@ -17,6 +17,7 @@ import { DirectEnquiry1700000000005 } from './migrations/1700000000005-DirectEnq
 import { CreateFieldConfig1700000000006 } from './migrations/1700000000006-CreateFieldConfig';
 import { MakeLeadFieldsNullable1700000000007 } from './migrations/1700000000007-MakeLeadFieldsNullable';
 import { SeedAdminUser1700000000008 } from './migrations/1700000000008-SeedAdminUser';
+import { AddOwnerUpdatedAt1700000000009 } from './migrations/1700000000009-AddOwnerUpdatedAt';
 
 /**
  * Real PostgreSQL 16 DataSource (tech-design.md: TypeORM, resolved) — used by
@@ -49,6 +50,7 @@ export const migrations = [
   CreateFieldConfig1700000000006,
   MakeLeadFieldsNullable1700000000007,
   SeedAdminUser1700000000008,
+  AddOwnerUpdatedAt1700000000009,
 ];
 
 export const dataSourceOptions: DataSourceOptions = {

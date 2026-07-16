@@ -15,3 +15,15 @@ export class ReferentialValidationError extends Error {
     this.name = 'ReferentialValidationError';
   }
 }
+
+/** Thrown by LeadsService.reassignOwner (issue #28, AC4) when the target
+ * Lead does not exist. No controller/endpoint calls reassignOwner yet in
+ * this Story — defined now (rather than an ad-hoc generic Error) so a
+ * future TL-reassignment Story can map this to 404 without touching this
+ * Story's contract. */
+export class LeadReassignTargetNotFoundError extends Error {
+  constructor(public readonly errors: FieldError[]) {
+    super('Lead not found');
+    this.name = 'LeadReassignTargetNotFoundError';
+  }
+}

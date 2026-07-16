@@ -56,4 +56,21 @@ export class LeadsRepository {
       },
     });
   }
+
+  /** NEW (issue #28, AC4) — reassigns a Lead's owner and stamps
+   * `ownerUpdatedAt`. Deliberately NOT owner/tenant-scoped by the acting
+   * Principal (unlike findOwnedById): a future TL/SM-GM reassignment
+   * endpoint will call this on a Lead the *current owner* holds, not the
+   * reassigning TL — that authorization check belongs to that future
+   * Story's controller/service layer, not here. Returns null if no Lead
+   * with that id exists (LeadsService.reassignOwner maps that to a
+   * not-found error). */
+  async reassignOwner(leadId: string, newOwnerId: string, manager?: EntityManager): Promise<LeadEntity | null> {
+    const repository = this.repo(manager);
+    const lead = await repository.findOne({ where: { leadId } });
+    if (!lead) return null;
+    lead.ownerId = newOwnerId;
+    lead.ownerUpdatedAt = new Date();
+    return repository.save(lead);
+  }
 }
