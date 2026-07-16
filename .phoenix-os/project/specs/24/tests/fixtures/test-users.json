@@ -1,0 +1,49 @@
+{
+  "_comment": "Test-only DSE accounts for issue #24 Playwright suite. Passwords are test-only, never used outside this fixture/seed. Two location_ids are represented to prove tenant isolation (EVAL-CC-04); two DSEs share location-1 to prove owner isolation (EVAL-CC-05). One capability-lacking account proves RBAC deny-by-default (EVAL-CC-08).",
+  "users": [
+    {
+      "key": "dseA",
+      "role": "DSE",
+      "email": "dse.loc1.a@issue24.test",
+      "password": "Issue24!TestA1",
+      "displayName": "Dealer Sales Executive Loc1-A",
+      "locationId": "11111111-0000-0000-0000-000000000001",
+      "dealerGroupId": "99999999-0000-0000-0000-000000000001",
+      "capabilities": ["create-lead"],
+      "note": "Primary DSE used for AC1-AC7 happy-path and validation tests; location 1"
+    },
+    {
+      "key": "dseB",
+      "role": "DSE",
+      "email": "dse.loc1.b@issue24.test",
+      "password": "Issue24!TestB1",
+      "displayName": "Dealer Sales Executive Loc1-B",
+      "locationId": "11111111-0000-0000-0000-000000000001",
+      "dealerGroupId": "99999999-0000-0000-0000-000000000001",
+      "capabilities": ["create-lead"],
+      "note": "Same location as dseA, different owner — proves owner-scoped isolation (EVAL-CC-05)"
+    },
+    {
+      "key": "dseC",
+      "role": "DSE",
+      "email": "dse.loc2.c@issue24.test",
+      "password": "Issue24!TestC1",
+      "displayName": "Dealer Sales Executive Loc2-C",
+      "locationId": "22222222-0000-0000-0000-000000000002",
+      "dealerGroupId": "99999999-0000-0000-0000-000000000002",
+      "capabilities": ["create-lead"],
+      "note": "Different location entirely — proves tenant/location isolation (EVAL-CC-04)"
+    },
+    {
+      "key": "noCapabilityUser",
+      "role": "ReadOnlyStaff",
+      "email": "readonly.loc1@issue24.test",
+      "password": "Issue24!TestRO1",
+      "displayName": "Read-Only Staff Loc1",
+      "locationId": "11111111-0000-0000-0000-000000000001",
+      "dealerGroupId": "99999999-0000-0000-0000-000000000001",
+      "capabilities": [],
+      "note": "Authenticated but lacks the create-lead capability — proves deny-by-default RBAC (EVAL-CC-08, 403 not 401)"
+    }
+  ]
+}

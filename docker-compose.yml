@@ -1,0 +1,32 @@
+version: "3.9"
+
+# Real PostgreSQL 16 for local dev/CI (tech-design.md). The Jest integration
+# suite and the sandbox this Story was authored in run against pg-mem (an
+# in-memory substitute — see backend/test/support/test-data-source.ts and
+# evidence.md "Blockers") because neither Docker nor a local Postgres install
+# was available there. Once this is up, point the backend at it and run the
+# real migrations:
+#
+#   docker compose up -d
+#   cd backend && npm run migration:run && npm run seed:test
+#   npm run start        # backend on :4000 against real Postgres
+#
+# Then re-run the Jest suite against real Postgres by adapting
+# test/support/test-data-source.ts to use src/data-source.ts's
+# `dataSourceOptions` instead of the pg-mem adapter (a one-line swap), and
+# re-run the frozen Playwright suite from the repo root the same way it was
+# run in this sandbox (backend on :4000, frontend on :3000, `npx playwright test`).
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: lms
+    ports:
+      - "5432:5432"
+    volumes:
+      - lms_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  lms_postgres_data:
