@@ -21,3 +21,13 @@ export class LeadAlreadyConvertedError extends Error {
     this.name = 'LeadAlreadyConvertedError';
   }
 }
+
+/** Thrown by EnquiriesService.reassignOwner (issue #28, AC4) when the
+ * target Enquiry does not exist. Mirrors LeadReassignTargetNotFoundError —
+ * no controller/endpoint calls reassignOwner yet in this Story. */
+export class EnquiryReassignTargetNotFoundError extends Error {
+  constructor(public readonly errors: FieldError[]) {
+    super('Enquiry not found');
+    this.name = 'EnquiryReassignTargetNotFoundError';
+  }
+}

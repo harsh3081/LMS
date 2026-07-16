@@ -18,7 +18,10 @@ function toResponse(lead: LeadEntity): LeadResponseDto {
     modelId: lead.modelId,
     status: lead.status,
     ownerId: lead.ownerId,
+    ownerUpdatedAt:
+      lead.ownerUpdatedAt instanceof Date ? lead.ownerUpdatedAt.toISOString() : lead.ownerUpdatedAt,
     locationId: lead.locationId,
+    createdBy: lead.createdBy,
     createdAt: lead.createdAt instanceof Date ? lead.createdAt.toISOString() : lead.createdAt,
   };
 }

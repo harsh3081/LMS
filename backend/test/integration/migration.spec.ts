@@ -24,6 +24,11 @@ describe('leads migration (Task 1.2.1 / 1.2.2)', () => {
     );
     const columnNames = columns.map((c) => c.column_name).sort();
 
+    // UPDATED (issue #28): AddOwnerUpdatedAt1700000000009 additively extends
+    // this same table (owner_updated_at) — createTestDataSource() runs ALL
+    // migrations, so this list reflects the table's current full shape, not
+    // just what CreateLeads1700000000002 itself added (mirrors the enquiries
+    // column-list test below).
     expect(columnNames).toEqual(
       [
         'lead_id',
@@ -32,6 +37,7 @@ describe('leads migration (Task 1.2.1 / 1.2.2)', () => {
         'source_id',
         'model_id',
         'owner_id',
+        'owner_updated_at',
         'location_id',
         'dealer_group_id',
         'status',
@@ -76,11 +82,13 @@ describe('leads migration (Task 1.2.1 / 1.2.2)', () => {
     dataSource = await createTestDataSource();
     // issue #25 added CreateEnquiries1700000000003, the seed-data fix added
     // SeedMasterData1700000000004, issue #26 added DirectEnquiry1700000000005,
-    // and issue #27 added CreateFieldConfig1700000000006 /
-    // MakeLeadFieldsNullable1700000000007 / SeedAdminUser1700000000008 — six
-    // migrations after this one, so undoLastMigration() now reverts them
-    // first, in reverse order; undo seven times to reach and verify the
-    // leads migration's own reversibility.
+    // issue #27 added CreateFieldConfig1700000000006 /
+    // MakeLeadFieldsNullable1700000000007 / SeedAdminUser1700000000008, and
+    // issue #28 added AddOwnerUpdatedAt1700000000009 — seven migrations
+    // after this one, so undoLastMigration() now reverts them first, in
+    // reverse order; undo eight times to reach and verify the leads
+    // migration's own reversibility.
+    await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
@@ -120,11 +128,13 @@ describe('enquiries migration (Task 1.1.1, issue #25)', () => {
     const columnNames = columns.map((c) => c.column_name).sort();
 
     // UPDATED (issue #26): DirectEnquiry1700000000005 additively extends this
-    // same table (entry_type + Lead-equivalent nullable columns) — this
-    // createTestDataSource() runs ALL migrations, so the column list here
-    // necessarily reflects the table's current full shape, not just what
-    // CreateEnquiries1700000000003 itself added. See
-    // direct-enquiry-migration.spec.ts for that migration's own dedicated
+    // same table (entry_type + Lead-equivalent nullable columns); UPDATED
+    // (issue #28): AddOwnerUpdatedAt1700000000009 additively extends it
+    // further (owner_updated_at) — this createTestDataSource() runs ALL
+    // migrations, so the column list here necessarily reflects the table's
+    // current full shape, not just what CreateEnquiries1700000000003 itself
+    // added. See direct-enquiry-migration.spec.ts / owner-updated-at-
+    // migration.spec.ts for those migrations' own dedicated
     // column/nullability assertions.
     expect(columnNames).toEqual(
       [
@@ -136,6 +146,7 @@ describe('enquiries migration (Task 1.1.1, issue #25)', () => {
         'finance_interest',
         'converted_by',
         'owner_id',
+        'owner_updated_at',
         'location_id',
         'dealer_group_id',
         'status',
@@ -188,11 +199,13 @@ describe('enquiries migration (Task 1.1.1, issue #25)', () => {
   it('down-migration drops the enquiries table (reversibility)', async () => {
     dataSource = await createTestDataSource();
     // SeedMasterData1700000000004, DirectEnquiry1700000000005 (issue #26),
-    // and CreateFieldConfig1700000000006 / MakeLeadFieldsNullable1700000000007
-    // / SeedAdminUser1700000000008 (issue #27) were all added after this
+    // CreateFieldConfig1700000000006 / MakeLeadFieldsNullable1700000000007
+    // / SeedAdminUser1700000000008 (issue #27), and
+    // AddOwnerUpdatedAt1700000000009 (issue #28) were all added after this
     // migration, so undoLastMigration() now reverts them first, in reverse
-    // order; undo six times to reach and verify the enquiries migration's
+    // order; undo seven times to reach and verify the enquiries migration's
     // own reversibility (drop-table).
+    await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();

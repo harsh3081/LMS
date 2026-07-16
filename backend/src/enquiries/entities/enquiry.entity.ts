@@ -84,6 +84,15 @@ export class EnquiryEntity {
   @Column({ name: 'owner_id', type: 'uuid' })
   ownerId!: string;
 
+  /** NEW (issue #28, AC4): set whenever `ownerId` is reassigned (see
+   * EnquiriesRepository.reassignOwner / EnquiriesService.reassignOwner).
+   * NULL means "never reassigned since creation" — additive nullable column,
+   * migration 1700000000009-AddOwnerUpdatedAt, mirrors LeadEntity.ownerUpdatedAt
+   * exactly. No controller/endpoint calls the reassignment path yet in this
+   * Story (deferred to a future TL-reassignment Story). */
+  @Column({ name: 'owner_updated_at', type: 'timestamptz', nullable: true })
+  ownerUpdatedAt!: Date | null;
+
   @Column({ name: 'location_id', type: 'uuid' })
   locationId!: string;
 
