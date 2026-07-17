@@ -17,5 +17,6 @@ export function toFollowupResponse(followup: FollowupEntity): FollowupResponseDt
         ? followup.nextFollowUpAt.toISOString()
         : followup.nextFollowUpAt
       : null,
+    resultingStatus: followup.resultingStatus ?? null,
   };
 }

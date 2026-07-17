@@ -30,6 +30,7 @@ function makeFollowup(overrides: Partial<Followup>): Followup {
     locationId: 'loc-1',
     loggedAt: new Date().toISOString(),
     nextFollowUpAt: null,
+    resultingStatus: null,
     ...overrides,
   };
 }

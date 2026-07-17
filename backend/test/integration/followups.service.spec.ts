@@ -311,6 +311,44 @@ describe('FollowupsService.logFollowup (issue #30)', () => {
       expect(followup.nextFollowUpAt).not.toBeNull();
     });
 
+    describe('issue #32 AC2: resultingStatus persisted on the Follow-up row', () => {
+      it.each([ENQUIRY_STATUS_LOST, ENQUIRY_STATUS_BOOKED])(
+        'persists resultingStatus="%s" on the created Follow-up when enquiryStatus is set',
+        async (terminalStatus) => {
+          const enquiry = await enquiriesService.createDirect(validEnquiryDto(), actorA);
+          const followup = await service.logFollowup(
+            enquiry.enquiryId,
+            { type: FOLLOWUP_TYPE_CALL, remarks: 'Closing this out.', enquiryStatus: terminalStatus },
+            actorA,
+          );
+          expect(followup.resultingStatus).toBe(terminalStatus);
+        },
+      );
+
+      it('leaves resultingStatus null when enquiryStatus is not set', async () => {
+        const enquiry = await enquiriesService.createDirect(validEnquiryDto(), actorA);
+        const followup = await service.logFollowup(
+          enquiry.enquiryId,
+          { type: FOLLOWUP_TYPE_CALL, remarks: 'Just scheduling.', nextFollowUpAt: '2026-09-10' },
+          actorA,
+        );
+        expect(followup.resultingStatus).toBeNull();
+      });
+
+      it('findByEnquiry returns resultingStatus so the history can show which entry changed status', async () => {
+        const enquiry = await enquiriesService.createDirect(validEnquiryDto(), actorA);
+        await service.logFollowup(
+          enquiry.enquiryId,
+          { type: FOLLOWUP_TYPE_CALL, remarks: 'Closing this out.', enquiryStatus: ENQUIRY_STATUS_BOOKED },
+          actorA,
+        );
+
+        const history = await service.findByEnquiry(enquiry.enquiryId, actorA);
+        const closingEntry = history.find((f) => f.resultingStatus !== null);
+        expect(closingEntry?.resultingStatus).toBe(ENQUIRY_STATUS_BOOKED);
+      });
+    });
+
     describe('findUpcoming (AC4)', () => {
       it('returns only the actor\'s own Follow-ups that carry a nextFollowUpAt, most-overdue-first', async () => {
         const enquiry = await enquiriesService.createDirect(validEnquiryDto(), actorA);
@@ -351,5 +389,165 @@ describe('FollowupsService.logFollowup (issue #30)', () => {
         expect(upcomingForC.some((f) => f.enquiryId === enquiry.enquiryId)).toBe(false);
       });
     });
+  });
+});
+
+/**
+ * RED->GREEN (Inside-Out, Service Layer) — issue #32 ("Role-Scoped
+ * Follow-up History Timeline", AC3-AC6). The role-scoping matrix: DSE
+ * (owner-only), TL (same-location proxy for "team"), SM/GM (same-dealer-
+ * group proxy for "org hierarchy"), and the AC6 cross-scope denial cases.
+ * Exercises FollowupsService.findByEnquiry end to end (eligibility +
+ * FollowupsRepository.findByEnquiry's own tenant-scope query together) —
+ * see .phoenix-os/project/specs/32/NOTES.md for the full proxy-mapping
+ * rationale.
+ */
+describe('FollowupsService.findByEnquiry: role-scoped visibility (issue #32, AC3-AC6)', () => {
+  let dataSource: DataSource;
+  let seed: SeedResult;
+  let service: FollowupsService;
+  let enquiriesService: EnquiriesService;
+  let dseA: Principal;
+  let dseB: Principal;
+  let dseC: Principal;
+  let tlLoc1: Principal;
+  let tlLoc2: Principal;
+  let smgmGroup1: Principal;
+  let smgmGroup2: Principal;
+
+  beforeAll(async () => {
+    dataSource = await createTestDataSource();
+    seed = await seedTestFixtures(dataSource);
+
+    const auditLogRepository = new AuditLogRepository(dataSource);
+    const enquiriesRepository = new EnquiriesRepository(dataSource);
+    const fieldConfigService = new FieldConfigService(
+      dataSource,
+      new FieldConfigRepository(dataSource),
+      auditLogRepository,
+    );
+    const duplicatesService = new DuplicatesService(new DuplicatesRepository(dataSource));
+    enquiriesService = new EnquiriesService(
+      dataSource,
+      enquiriesRepository,
+      new LeadsRepository(dataSource),
+      auditLogRepository,
+      fieldConfigService,
+      duplicatesService,
+    );
+    service = new FollowupsService(
+      dataSource,
+      new FollowupsRepository(dataSource),
+      enquiriesRepository,
+      auditLogRepository,
+    );
+
+    const loc1 = Object.keys(seed.locationIds)[0];
+    const dg1 = Object.keys(seed.dealerGroupIds)[0];
+    const loc2 = Object.keys(seed.locationIds)[1];
+    const dg2 = Object.keys(seed.dealerGroupIds)[1];
+
+    dseA = { userId: seed.users['dseA'].userId, role: 'DSE', locationId: loc1, dealerGroupId: dg1, capabilities: ['create-lead'] };
+    dseB = { userId: seed.users['dseB'].userId, role: 'DSE', locationId: loc1, dealerGroupId: dg1, capabilities: ['create-lead'] };
+    dseC = { userId: seed.users['dseC'].userId, role: 'DSE', locationId: loc2, dealerGroupId: dg2, capabilities: ['create-lead'] };
+    tlLoc1 = { userId: seed.users['tlLoc1'].userId, role: 'TL', locationId: loc1, dealerGroupId: dg1, capabilities: ['create-lead'] };
+    tlLoc2 = { userId: seed.users['tlLoc2'].userId, role: 'TL', locationId: loc2, dealerGroupId: dg2, capabilities: ['create-lead'] };
+    smgmGroup1 = {
+      userId: seed.users['smgmGroup1'].userId,
+      role: 'SM-GM',
+      locationId: '33333333-0000-0000-0000-000000000032',
+      dealerGroupId: dg1,
+      capabilities: ['create-lead'],
+    };
+    smgmGroup2 = {
+      userId: seed.users['smgmGroup2'].userId,
+      role: 'SM-GM',
+      locationId: loc2,
+      dealerGroupId: dg2,
+      capabilities: ['create-lead'],
+    };
+  });
+
+  afterAll(async () => {
+    await dataSource.destroy();
+  });
+
+  const validEnquiryDto = () => ({
+    customerName: 'Role-Scoping Target',
+    mobile: `9${Math.floor(100000000 + Math.random() * 899999999)}`,
+    sourceId: seed.sourceIds[0],
+    modelId: seed.modelIds[0],
+    budget: 300000,
+    variant: 'LX',
+    exchangeInterest: false,
+    financeInterest: true,
+  });
+
+  async function createEnquiryWithFollowupOwnedByDseA() {
+    const enquiry = await enquiriesService.createDirect(validEnquiryDto(), dseA);
+    const followup = await service.logFollowup(
+      enquiry.enquiryId,
+      { type: FOLLOWUP_TYPE_HOME_VISIT, remarks: 'Owned by dseA.', nextFollowUpAt: '2026-08-01' },
+      dseA,
+    );
+    return { enquiry, followup };
+  }
+
+  it('DSE: sees the history of an Enquiry it owns', async () => {
+    const { enquiry, followup } = await createEnquiryWithFollowupOwnedByDseA();
+    const history = await service.findByEnquiry(enquiry.enquiryId, dseA);
+    expect(history.map((f) => f.followupId)).toContain(followup.followupId);
+  });
+
+  it('DSE: cannot see the history of an Enquiry owned by a different DSE, even in the same location', async () => {
+    const { enquiry } = await createEnquiryWithFollowupOwnedByDseA();
+    await expect(service.findByEnquiry(enquiry.enquiryId, dseB)).rejects.toBeInstanceOf(FollowupEnquiryNotFoundError);
+  });
+
+  it("TL: CAN see a same-location Enquiry's history that it does not own (location proxy for 'team')", async () => {
+    const { enquiry, followup } = await createEnquiryWithFollowupOwnedByDseA();
+    const history = await service.findByEnquiry(enquiry.enquiryId, tlLoc1);
+    expect(history.map((f) => f.followupId)).toContain(followup.followupId);
+  });
+
+  it('TL: from a different location cannot see the history (AC6 denial)', async () => {
+    const { enquiry } = await createEnquiryWithFollowupOwnedByDseA();
+    await expect(service.findByEnquiry(enquiry.enquiryId, tlLoc2)).rejects.toBeInstanceOf(FollowupEnquiryNotFoundError);
+  });
+
+  it("SM/GM: CAN see a same-dealer-group Enquiry's history at a DIFFERENT location ('org hierarchy' proxy)", async () => {
+    const { enquiry, followup } = await createEnquiryWithFollowupOwnedByDseA();
+    const history = await service.findByEnquiry(enquiry.enquiryId, smgmGroup1);
+    expect(history.map((f) => f.followupId)).toContain(followup.followupId);
+  });
+
+  it('SM/GM: from a different dealer group cannot see the history (AC6 denial)', async () => {
+    const { enquiry } = await createEnquiryWithFollowupOwnedByDseA();
+    await expect(service.findByEnquiry(enquiry.enquiryId, smgmGroup2)).rejects.toBeInstanceOf(
+      FollowupEnquiryNotFoundError,
+    );
+  });
+
+  it('DSE from an entirely different tenant (location+dealer group) cannot see the history (AC6 denial)', async () => {
+    const { enquiry } = await createEnquiryWithFollowupOwnedByDseA();
+    await expect(service.findByEnquiry(enquiry.enquiryId, dseC)).rejects.toBeInstanceOf(FollowupEnquiryNotFoundError);
+  });
+
+  it("AC1: the SM/GM's view is still newest-first chronological order", async () => {
+    const enquiry = await enquiriesService.createDirect(validEnquiryDto(), dseA);
+    const first = await service.logFollowup(
+      enquiry.enquiryId,
+      { type: FOLLOWUP_TYPE_HOME_VISIT, remarks: 'First.', nextFollowUpAt: '2026-08-01' },
+      dseA,
+    );
+    const second = await service.logFollowup(
+      enquiry.enquiryId,
+      { type: FOLLOWUP_TYPE_CALL, remarks: 'Second.', nextFollowUpAt: '2026-08-02' },
+      dseA,
+    );
+
+    const history = await service.findByEnquiry(enquiry.enquiryId, smgmGroup1);
+    const ids = history.map((f) => f.followupId);
+    expect(ids.indexOf(second.followupId)).toBeLessThan(ids.indexOf(first.followupId));
   });
 });

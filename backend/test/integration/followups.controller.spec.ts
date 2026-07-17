@@ -172,6 +172,27 @@ describe('POST /api/v1/enquiries/:enquiryId/follow-ups (issue #30)', () => {
     expect(res.status).toBe(404);
   });
 
+  it('issue #32 AC2: a Follow-up that sets enquiryStatus returns resultingStatus in both POST and GET responses', async () => {
+    const created = await dseAAgent.post(ENQUIRIES_PATH).send(validEnquiryPayload());
+    const eid = created.body.enquiryId;
+
+    const posted = await dseAAgent
+      .post(followupPath(eid))
+      .send({ type: 'Call', remarks: 'Closing out.', enquiryStatus: 'Lost' });
+    expect(posted.status).toBe(201);
+    expect(posted.body.resultingStatus).toBe('Lost');
+
+    const list = await dseAAgent.get(followupPath(eid));
+    const closingEntry = list.body.find((f: { followupId: string }) => f.followupId === posted.body.followupId);
+    expect(closingEntry.resultingStatus).toBe('Lost');
+  });
+
+  it('a Follow-up without enquiryStatus returns resultingStatus null', async () => {
+    const res = await dseAAgent.post(followupPath(enquiryId)).send(validFollowupPayload());
+    expect(res.status).toBe(201);
+    expect(res.body.resultingStatus).toBeNull();
+  });
+
   it('regression: POST /api/v1/enquiries still succeeds unaffected by the Follow-up slice', async () => {
     const res = await dseAAgent.post(ENQUIRIES_PATH).send(validEnquiryPayload());
     expect(res.status).toBe(201);
@@ -290,5 +311,112 @@ describe('issue #31: Schedule Next Follow-up and Auto-Generate Reminder', () => 
       const res = await request(ctx.app.getHttpServer()).get('/api/v1/follow-ups/upcoming');
       expect(res.status).toBe(401);
     });
+  });
+});
+
+/**
+ * RED->GREEN (Inside-Out, Experience/API Layer) — issue #32
+ * ("Role-Scoped Follow-up History Timeline", AC3-AC6). Supertest
+ * integration tests against the real Nest HTTP pipeline (guards,
+ * ValidationPipe, filters) for GET
+ * /api/v1/enquiries/:enquiryId/follow-ups, proving the role-scoping matrix
+ * end to end through the actual session/capability/eligibility pipeline —
+ * not just the service layer (already covered by
+ * followups.service.spec.ts). Mirrors this file's own structure/login
+ * convention.
+ */
+describe('GET /api/v1/enquiries/:enquiryId/follow-ups: role-scoped visibility (issue #32, AC3-AC6)', () => {
+  let ctx: TestAppContext;
+  let dseAAgent: ReturnType<typeof request.agent>;
+  let dseBAgent: ReturnType<typeof request.agent>;
+  let tlLoc1Agent: ReturnType<typeof request.agent>;
+  let tlLoc2Agent: ReturnType<typeof request.agent>;
+  let smgmGroup1Agent: ReturnType<typeof request.agent>;
+  let smgmGroup2Agent: ReturnType<typeof request.agent>;
+  let enquiryId: string;
+  let followupId: string;
+
+  const validEnquiryPayload = () => ({
+    customerName: `Role Scoping Target ${Date.now()}-${Math.random()}`,
+    mobile: (() => {
+      const leading = ['6', '7', '8', '9'][Math.floor(Math.random() * 4)];
+      const rest = Array.from({ length: 9 }, () => Math.floor(Math.random() * 10)).join('');
+      return `${leading}${rest}`;
+    })(),
+    sourceId: 1,
+    modelId: 101,
+    budget: 300000,
+    variant: 'LX',
+    exchangeInterest: false,
+    financeInterest: true,
+  });
+
+  beforeAll(async () => {
+    ctx = await createTestApp();
+    const dseA = ctx.seed.users['dseA'];
+    const dseB = ctx.seed.users['dseB'];
+    const tlLoc1 = ctx.seed.users['tlLoc1'];
+    const tlLoc2 = ctx.seed.users['tlLoc2'];
+    const smgmGroup1 = ctx.seed.users['smgmGroup1'];
+    const smgmGroup2 = ctx.seed.users['smgmGroup2'];
+    dseAAgent = await loginAgent(ctx.app, dseA.email, dseA.password);
+    dseBAgent = await loginAgent(ctx.app, dseB.email, dseB.password);
+    tlLoc1Agent = await loginAgent(ctx.app, tlLoc1.email, tlLoc1.password);
+    tlLoc2Agent = await loginAgent(ctx.app, tlLoc2.email, tlLoc2.password);
+    smgmGroup1Agent = await loginAgent(ctx.app, smgmGroup1.email, smgmGroup1.password);
+    smgmGroup2Agent = await loginAgent(ctx.app, smgmGroup2.email, smgmGroup2.password);
+
+    const created = await dseAAgent.post(ENQUIRIES_PATH).send(validEnquiryPayload());
+    enquiryId = created.body.enquiryId;
+    const followup = await dseAAgent
+      .post(followupPath(enquiryId))
+      .send({ type: 'Home Visit', remarks: 'Owned by dseA.', nextFollowUpAt: '2026-08-01' });
+    followupId = followup.body.followupId;
+  });
+
+  afterAll(async () => {
+    await closeTestApp(ctx);
+  });
+
+  function followupPath(id: string) {
+    return `${ENQUIRIES_PATH}/${id}/follow-ups`;
+  }
+
+  it('DSE: owner sees the history (200, includes the logged Follow-up)', async () => {
+    const res = await dseAAgent.get(followupPath(enquiryId));
+    expect(res.status).toBe(200);
+    expect(res.body.some((f: { followupId: string }) => f.followupId === followupId)).toBe(true);
+  });
+
+  it('DSE: a different DSE in the same location cannot see it -> 404 (AC3/AC6)', async () => {
+    const res = await dseBAgent.get(followupPath(enquiryId));
+    expect(res.status).toBe(404);
+  });
+
+  it("TL: same-location TL CAN see the history (200) — location proxy for 'team' (AC4)", async () => {
+    const res = await tlLoc1Agent.get(followupPath(enquiryId));
+    expect(res.status).toBe(200);
+    expect(res.body.some((f: { followupId: string }) => f.followupId === followupId)).toBe(true);
+  });
+
+  it('TL: a different-location TL cannot see it -> 404 (AC6)', async () => {
+    const res = await tlLoc2Agent.get(followupPath(enquiryId));
+    expect(res.status).toBe(404);
+  });
+
+  it("SM/GM: same-dealer-group SM/GM (different location) CAN see the history (200) — 'org hierarchy' proxy (AC5)", async () => {
+    const res = await smgmGroup1Agent.get(followupPath(enquiryId));
+    expect(res.status).toBe(200);
+    expect(res.body.some((f: { followupId: string }) => f.followupId === followupId)).toBe(true);
+  });
+
+  it('SM/GM: a different-dealer-group SM/GM cannot see it -> 404 (AC6)', async () => {
+    const res = await smgmGroup2Agent.get(followupPath(enquiryId));
+    expect(res.status).toBe(404);
+  });
+
+  it('unauthenticated -> 401 (AC6)', async () => {
+    const res = await request(ctx.app.getHttpServer()).get(followupPath(enquiryId));
+    expect(res.status).toBe(401);
   });
 });

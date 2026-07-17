@@ -95,6 +95,7 @@ describe('LogFollowupForm', () => {
       locationId: 'loc-1',
       loggedAt: new Date().toISOString(),
       nextFollowUpAt: '2026-08-01T00:00:00.000Z',
+      resultingStatus: null,
     });
 
     renderForm(onLogged);
@@ -139,6 +140,7 @@ describe('LogFollowupForm', () => {
         locationId: 'loc-1',
         loggedAt: new Date().toISOString(),
         nextFollowUpAt: null,
+        resultingStatus: status,
       });
 
       renderForm();

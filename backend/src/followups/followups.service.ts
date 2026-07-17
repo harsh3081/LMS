@@ -43,6 +43,13 @@ export class FollowupsService {
           type: dto.type,
           remarks: dto.remarks,
           nextFollowUpAt: dto.nextFollowUpAt ? new Date(dto.nextFollowUpAt) : null,
+          // NEW (issue #32, AC2): persist the same enquiryStatus value that
+          // is (optionally) applied to Enquiry.status below onto this
+          // Follow-up row itself, so the history timeline can show which
+          // entry changed the status. No new validation/logic — dto.enquiryStatus
+          // is already validated (LogFollowupDto `@IsIn`) and about to be
+          // applied by EnquiriesRepository.updateStatus further down.
+          resultingStatus: dto.enquiryStatus ?? null,
           // ---- server-derived, never from the client DTO ----
           loggedBy: actor.userId,
           locationId: actor.locationId,
@@ -96,11 +103,17 @@ export class FollowupsService {
     });
   }
 
-  /** AC5: history for one Enquiry — same eligibility check as logFollowup,
-   * so a caller can never enumerate Follow-ups for an Enquiry they cannot
-   * already see. */
+  /** AC5 (#30), extended by issue #32 AC3-AC6: role-scoped Follow-up
+   * history for one Enquiry. MODIFIED (issue #32): now uses
+   * `assertEnquiryVisibleToActor` (role-aware: DSE owner-scoped, TL
+   * location-scoped, SM/GM dealer-group-scoped) rather than logFollowup's
+   * owner-only `assertEnquiryOwnedByActor` — this Story's ACs are
+   * explicitly about VIEWING history (FR-10), not about widening who may
+   * LOG a Follow-up (logFollowup above is deliberately left untouched). A
+   * caller can still never enumerate Follow-ups for an Enquiry outside
+   * their own role-scoped visibility (AC6). See NOTES.md. */
   async findByEnquiry(enquiryId: string, actor: Principal): Promise<FollowupEntity[]> {
-    await this.assertEnquiryOwnedByActor(enquiryId, actor);
+    await this.assertEnquiryVisibleToActor(enquiryId, actor);
     return this.followupsRepository.findByEnquiry(enquiryId, actor);
   }
 
@@ -135,6 +148,19 @@ export class FollowupsService {
 
   private async assertEnquiryOwnedByActor(enquiryId: string, actor: Principal): Promise<EnquiryEntity> {
     const enquiry = await this.enquiriesRepository.findOwnedById(enquiryId, actor);
+    if (!enquiry) {
+      throw new FollowupEnquiryNotFoundError([{ field: 'enquiryId', message: `Enquiry ${enquiryId} not found` }]);
+    }
+    return enquiry;
+  }
+
+  /** NEW (issue #32, AC3-AC6) — role-aware read-eligibility gate backing
+   * findByEnquiry only (see that method's doc comment for why the write
+   * path above keeps using the unchanged owner-only
+   * assertEnquiryOwnedByActor). Same "not found, never 403" shape as the
+   * write path (no cross-scope leakage, AC6). */
+  private async assertEnquiryVisibleToActor(enquiryId: string, actor: Principal): Promise<EnquiryEntity> {
+    const enquiry = await this.enquiriesRepository.findVisibleById(enquiryId, actor);
     if (!enquiry) {
       throw new FollowupEnquiryNotFoundError([{ field: 'enquiryId', message: `Enquiry ${enquiryId} not found` }]);
     }

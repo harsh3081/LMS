@@ -80,7 +80,67 @@ export async function seedTestFixtures(dataSource: DataSource): Promise<SeedResu
     dealerGroupId: '99999999-0000-0000-0000-000000000027',
     capabilities: ['manage-field-config'],
   };
-  const fixtureUsers: FixtureUser[] = [...usersFixture.users, adminUser];
+  // ADDED (issue #32, "Role-Scoped Follow-up History Timeline"): TL/SM-GM
+  // test-only accounts, needed to exercise the role-scoping matrix
+  // (EnquiriesRepository.findVisibleById / FollowupsService.findByEnquiry)
+  // in the Jest/Supertest suite. Mirrors `adminUser` above exactly (issue
+  // #27's precedent) — deliberately NOT added to the frozen
+  // .phoenix-os/project/specs/24/tests/fixtures/test-users.json. Every
+  // frozen #24 DSE fixture (dseA/dseB/dseC) is deliberately reused for
+  // location_id/dealer_group_id pairing below rather than minted fresh, so
+  // the role-scoping tests exercise real overlap/non-overlap with the
+  // existing DSE-owned Enquiries those fixtures already create:
+  //   - tlLoc1: same location_id/dealer_group_id as dseA/dseB (location 1,
+  //     dealer group 1) -> proxy for "TL's team" per NOTES.md.
+  //   - tlLoc2: same location_id/dealer_group_id as dseC (location 2,
+  //     dealer group 2) -> a TL in a DIFFERENT location, proving AC6 denial.
+  //   - smgmGroup1: dealer_group_id 1 (same as dseA/dseB) but a BRAND NEW
+  //     location_id (33333333-...-000000000032, not used by any DSE fixture)
+  //     -> proves SM/GM's "org hierarchy" scope spans locations under the
+  //     SAME dealer group, per NOTES.md's dealer-group-as-org-unit proxy.
+  //   - smgmGroup2: dealer_group_id 2 (same as dseC, a DIFFERENT dealer
+  //     group than dseA/dseB) -> proves AC6 denial across dealer groups.
+  const tlLoc1: FixtureUser = {
+    key: 'tlLoc1',
+    role: 'TL',
+    email: 'tl.loc1@issue32.test',
+    password: 'Issue32!TestTL1',
+    displayName: 'Team Lead Loc1',
+    locationId: '11111111-0000-0000-0000-000000000001',
+    dealerGroupId: '99999999-0000-0000-0000-000000000001',
+    capabilities: ['create-lead'],
+  };
+  const tlLoc2: FixtureUser = {
+    key: 'tlLoc2',
+    role: 'TL',
+    email: 'tl.loc2@issue32.test',
+    password: 'Issue32!TestTL2',
+    displayName: 'Team Lead Loc2',
+    locationId: '22222222-0000-0000-0000-000000000002',
+    dealerGroupId: '99999999-0000-0000-0000-000000000002',
+    capabilities: ['create-lead'],
+  };
+  const smgmGroup1: FixtureUser = {
+    key: 'smgmGroup1',
+    role: 'SM-GM',
+    email: 'smgm.group1@issue32.test',
+    password: 'Issue32!TestSMGM1',
+    displayName: 'Sales Manager/GM Group1',
+    locationId: '33333333-0000-0000-0000-000000000032',
+    dealerGroupId: '99999999-0000-0000-0000-000000000001',
+    capabilities: ['create-lead'],
+  };
+  const smgmGroup2: FixtureUser = {
+    key: 'smgmGroup2',
+    role: 'SM-GM',
+    email: 'smgm.group2@issue32.test',
+    password: 'Issue32!TestSMGM2',
+    displayName: 'Sales Manager/GM Group2',
+    locationId: '22222222-0000-0000-0000-000000000002',
+    dealerGroupId: '99999999-0000-0000-0000-000000000002',
+    capabilities: ['create-lead'],
+  };
+  const fixtureUsers: FixtureUser[] = [...usersFixture.users, adminUser, tlLoc1, tlLoc2, smgmGroup1, smgmGroup2];
 
   const locationIds: Record<string, string> = {};
   for (const loc of distinctBy(fixtureUsers, (u) => u.locationId)) {

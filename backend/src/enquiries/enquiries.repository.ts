@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource, DeepPartial, EntityManager } from 'typeorm';
 import { EnquiryEntity } from './entities/enquiry.entity';
-import { Principal } from '../common/principal';
+import { Principal, ROLE_SM_GM, ROLE_TL } from '../common/principal';
 
 /**
  * Mirrors LeadsRepository's `repo(manager)` transactional pattern (ref-code.md
@@ -41,6 +41,50 @@ export class EnquiriesRepository {
    * non-existent otherwise — no cross-tenant/cross-owner leakage). */
   async findOwnedById(enquiryId: string, actor: Principal, manager?: EntityManager): Promise<EnquiryEntity | null> {
     const repository = this.repo(manager);
+    return repository.findOne({
+      where: {
+        enquiryId,
+        ownerId: actor.userId,
+        locationId: actor.locationId,
+        dealerGroupId: actor.dealerGroupId,
+      },
+    });
+  }
+
+  /**
+   * NEW (issue #32, AC3-AC6) — role-scoped single-Enquiry visibility check,
+   * backing FollowupsService's Follow-up-HISTORY (read) eligibility gate
+   * only. `findOwnedById` above is left completely untouched and continues
+   * to gate the WRITE path (POST a Follow-up, #30/#31) — this Story's ACs
+   * are explicitly about VIEWING history (FR-10), not about widening who
+   * may log a Follow-up (that remains a DSE-owner-only action; TL/SM-GM
+   * "record a follow-up on a DSE's enquiry" is BRD FR-28, a separate future
+   * Story). No team/reports-to table exists anywhere in this codebase (see
+   * NOTES.md), so this deliberately uses the existing tenant primitives as
+   * a pragmatic, documented proxy:
+   *   - DSE (default/fallback): unchanged owner+tenant-scoped lookup
+   *     (identical to findOwnedById) — a DSE only ever sees Enquiries they
+   *     own.
+   *   - TL: LOCATION-scoped (+ own dealerGroupId, defense-in-depth) — "same
+   *     location" stands in for "TL's team" until a real team-hierarchy
+   *     Feature exists (mirrors #29 duplicate-detection's same-location
+   *     peer-visibility precedent).
+   *   - SM/GM: DEALER-GROUP-scoped only (no locationId filter) — spans
+   *     every location under that dealer group, standing in for "org
+   *     hierarchy".
+   * See .phoenix-os/project/specs/32/NOTES.md for the full rationale.
+   */
+  async findVisibleById(enquiryId: string, actor: Principal, manager?: EntityManager): Promise<EnquiryEntity | null> {
+    const repository = this.repo(manager);
+
+    if (actor.role === ROLE_SM_GM) {
+      return repository.findOne({ where: { enquiryId, dealerGroupId: actor.dealerGroupId } });
+    }
+    if (actor.role === ROLE_TL) {
+      return repository.findOne({
+        where: { enquiryId, locationId: actor.locationId, dealerGroupId: actor.dealerGroupId },
+      });
+    }
     return repository.findOne({
       where: {
         enquiryId,
