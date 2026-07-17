@@ -8,6 +8,7 @@ import { LogFollowupPage } from './pages/LogFollowupPage';
 import { UpcomingFollowupsPage } from './pages/UpcomingFollowupsPage';
 import { BookTestDrivePage } from './pages/BookTestDrivePage';
 import { UpcomingTestDrivesPage } from './pages/UpcomingTestDrivesPage';
+import { TestDriveSchedulerPage } from './pages/TestDriveSchedulerPage';
 
 export function App() {
   return (
@@ -20,6 +21,7 @@ export function App() {
       <Route path="/follow-ups/upcoming" element={<UpcomingFollowupsPage />} />
       <Route path="/test-drives/new" element={<BookTestDrivePage />} />
       <Route path="/test-drives/upcoming" element={<UpcomingTestDrivesPage />} />
+      <Route path="/test-drives/scheduler" element={<TestDriveSchedulerPage />} />
       <Route path="/admin/field-config" element={<FieldConfigPage />} />
     </Routes>
   );

@@ -27,6 +27,7 @@ describe('TestDrivesService.book (issue #34)', () => {
   let service: TestDrivesService;
   let enquiriesService: EnquiriesService;
   let actorA: Principal;
+  let actorB: Principal;
   let actorC: Principal;
   let vehicleIdLoc1: string;
   let vehicleIdLoc2: string;
@@ -54,12 +55,17 @@ describe('TestDrivesService.book (issue #34)', () => {
     service = new TestDrivesService(dataSource, new TestDrivesRepository(dataSource), enquiriesRepository, auditLogRepository);
 
     const dseA = seed.users['dseA'];
+    const dseB = seed.users['dseB'];
     const dseC = seed.users['dseC'];
     const loc1 = Object.keys(seed.locationIds)[0];
     const dg1 = Object.keys(seed.dealerGroupIds)[0];
     const loc2 = Object.keys(seed.locationIds)[1];
     const dg2 = Object.keys(seed.dealerGroupIds)[1];
     actorA = { userId: dseA.userId, role: 'DSE', locationId: loc1, dealerGroupId: dg1, capabilities: ['create-lead'] };
+    // dseB shares dseA's location/dealer-group (NOTES.md #34: "loc1:
+    // dseA/dseB") — used to prove the scheduler is tenant-scoped, NOT
+    // owner-scoped (issue #35).
+    actorB = { userId: dseB.userId, role: 'DSE', locationId: loc1, dealerGroupId: dg1, capabilities: ['create-lead'] };
     actorC = { userId: dseC.userId, role: 'DSE', locationId: loc2, dealerGroupId: dg2, capabilities: ['create-lead'] };
     vehicleIdLoc1 = seed.demoVehicleIdsByLocation[loc1][0];
     vehicleIdLoc2 = seed.demoVehicleIdsByLocation[loc2][0];
@@ -276,6 +282,108 @@ describe('TestDrivesService.book (issue #34)', () => {
 
       const upcoming = await service.findUpcoming(actorA);
       expect(upcoming.some((t) => t.testDriveId === pastBooking.testDriveId)).toBe(false);
+    });
+  });
+
+  describe('getScheduler (issue #35 AC1/AC2/AC5)', () => {
+    const dayRange = (dateIso: string) => ({
+      from: `${dateIso}T00:00:00.000Z`,
+      to: `${dateIso}T23:59:59.999Z`,
+    });
+
+    it('returns a booking made by a DIFFERENT DSE at the SAME location (tenant-scoped, not owner-scoped)', async () => {
+      const enquiry = await enquiriesService.createDirect(validEnquiryDto(), actorA);
+      const booking = await service.book(
+        { enquiryId: enquiry.enquiryId, vehicleId: vehicleIdLoc1, slotStart: '2026-11-01T10:00:00.000Z', slotEnd: '2026-11-01T10:30:00.000Z' },
+        actorA,
+      );
+
+      const slots = await service.getScheduler(
+        { vehicleId: vehicleIdLoc1, ...dayRange('2026-11-01') },
+        actorB,
+      );
+      expect(slots.some((s) => s.slotStart.getTime() === booking.slotStart.getTime())).toBe(true);
+    });
+
+    it('does NOT return a booking scoped to a different location/dealer-group', async () => {
+      const enquiry = await enquiriesService.createDirect(validEnquiryDto(), actorA);
+      await service.book(
+        { enquiryId: enquiry.enquiryId, vehicleId: vehicleIdLoc1, slotStart: '2026-11-02T10:00:00.000Z', slotEnd: '2026-11-02T10:30:00.000Z' },
+        actorA,
+      );
+
+      const slots = await service.getScheduler(
+        { vehicleId: vehicleIdLoc1, ...dayRange('2026-11-02') },
+        actorC,
+      );
+      expect(slots).toHaveLength(0);
+    });
+
+    it('only returns slots overlapping the requested date range', async () => {
+      const enquiry = await enquiriesService.createDirect(validEnquiryDto(), actorA);
+      const inRange = await service.book(
+        { enquiryId: enquiry.enquiryId, vehicleId: vehicleIdLoc1, slotStart: '2026-11-03T10:00:00.000Z', slotEnd: '2026-11-03T10:30:00.000Z' },
+        actorA,
+      );
+      const outOfRange = await service.book(
+        { enquiryId: enquiry.enquiryId, vehicleId: vehicleIdLoc1, slotStart: '2026-11-04T10:00:00.000Z', slotEnd: '2026-11-04T10:30:00.000Z' },
+        actorA,
+      );
+
+      const slots = await service.getScheduler(
+        { vehicleId: vehicleIdLoc1, ...dayRange('2026-11-03') },
+        actorA,
+      );
+      const starts = slots.map((s) => s.slotStart.getTime());
+      expect(starts).toContain(inRange.slotStart.getTime());
+      expect(starts).not.toContain(outOfRange.slotStart.getTime());
+    });
+
+    it('only returns slots for the requested vehicle', async () => {
+      const enquiry = await enquiriesService.createDirect(validEnquiryDto(), actorA);
+      const vehicleIdLoc1Other = seed.demoVehicleIdsByLocation[actorA.locationId][1];
+      const wantedVehicle = await service.book(
+        { enquiryId: enquiry.enquiryId, vehicleId: vehicleIdLoc1, slotStart: '2026-11-05T10:00:00.000Z', slotEnd: '2026-11-05T10:30:00.000Z' },
+        actorA,
+      );
+      await service.book(
+        { enquiryId: enquiry.enquiryId, vehicleId: vehicleIdLoc1Other, slotStart: '2026-11-05T11:00:00.000Z', slotEnd: '2026-11-05T11:30:00.000Z' },
+        actorA,
+      );
+
+      const slots = await service.getScheduler(
+        { vehicleId: vehicleIdLoc1, ...dayRange('2026-11-05') },
+        actorA,
+      );
+      expect(slots).toHaveLength(1);
+      expect(slots[0].slotStart.getTime()).toBe(wantedVehicle.slotStart.getTime());
+    });
+
+    it('returns an empty array for a vehicle/range with no bookings (never errors)', async () => {
+      const slots = await service.getScheduler(
+        { vehicleId: vehicleIdLoc1, ...dayRange('2030-01-01') },
+        actorA,
+      );
+      expect(slots).toEqual([]);
+    });
+
+    it('is ordered ascending by slotStart', async () => {
+      const enquiry = await enquiriesService.createDirect(validEnquiryDto(), actorA);
+      const later = await service.book(
+        { enquiryId: enquiry.enquiryId, vehicleId: vehicleIdLoc1, slotStart: '2026-11-06T15:00:00.000Z', slotEnd: '2026-11-06T15:30:00.000Z' },
+        actorA,
+      );
+      const sooner = await service.book(
+        { enquiryId: enquiry.enquiryId, vehicleId: vehicleIdLoc1, slotStart: '2026-11-06T09:00:00.000Z', slotEnd: '2026-11-06T09:30:00.000Z' },
+        actorA,
+      );
+
+      const slots = await service.getScheduler(
+        { vehicleId: vehicleIdLoc1, ...dayRange('2026-11-06') },
+        actorA,
+      );
+      const starts = slots.map((s) => s.slotStart.getTime());
+      expect(starts.indexOf(sooner.slotStart.getTime())).toBeLessThan(starts.indexOf(later.slotStart.getTime()));
     });
   });
 });

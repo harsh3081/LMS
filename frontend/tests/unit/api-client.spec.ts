@@ -333,4 +333,21 @@ describe('api client', () => {
       expect.objectContaining({ credentials: 'include' }),
     );
   });
+
+  // -----------------------------------------------------------------
+  // issue #35 — getScheduler (AC1/AC2/AC5)
+  // -----------------------------------------------------------------
+  it('getScheduler fetches /api/v1/test-drives with vehicleId/from/to query params', async () => {
+    mockFetchOnce(200, [{ slotStart: '2026-08-01T10:00:00.000Z', slotEnd: '2026-08-01T10:30:00.000Z' }]);
+    const result = await api.getScheduler({
+      vehicleId: 'v1',
+      from: '2026-08-01T00:00:00.000Z',
+      to: '2026-08-01T23:59:59.999Z',
+    });
+    expect(result).toEqual([{ slotStart: '2026-08-01T10:00:00.000Z', slotEnd: '2026-08-01T10:30:00.000Z' }]);
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/v1/test-drives?vehicleId=v1&from=2026-08-01T00%3A00%3A00.000Z&to=2026-08-01T23%3A59%3A59.999Z',
+      expect.objectContaining({ credentials: 'include' }),
+    );
+  });
 });

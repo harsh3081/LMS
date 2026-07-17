@@ -5,6 +5,7 @@ import { EnquiriesRepository } from '../enquiries/enquiries.repository';
 import { AuditLogRepository } from '../audit-log/audit-log.repository';
 import { DemoVehicleEntity } from '../demo-vehicles/entities/demo-vehicle.entity';
 import { CreateTestDriveDto } from './dto/create-test-drive.dto';
+import { SchedulerQueryDto } from './dto/scheduler-query.dto';
 import { TestDriveEntity, TEST_DRIVE_STATUS_BOOKED } from './entities/test-drive.entity';
 import { TestDriveEnquiryNotFoundError, OperatingHoursViolationError, FieldError } from './test-drives.errors';
 import { ReferentialValidationError } from '../leads/leads.errors';
@@ -114,6 +115,20 @@ export class TestDrivesService {
   /** AC5: "DSE can view a list of their own upcoming bookings." */
   async findUpcoming(actor: Principal): Promise<TestDriveEntity[]> {
     return this.testDrivesRepository.findUpcomingForActor(actor);
+  }
+
+  /** issue #35 AC1/AC2/AC5 — the scheduler grid's data source: every BOOKED
+   * slot for the requested vehicle+date-range, tenant-scoped but NOT
+   * owner-scoped (see TestDrivesRepository.findBookedInRange's comment).
+   * Deliberately does no existence check on `vehicleId` and no cross-field
+   * `to > from` validation — mirrors DuplicatesService's "no match -> empty
+   * array" convention (GET /api/v1/duplicates) rather than 404/400: this is
+   * a read-only, nothing-is-written endpoint, so an unknown/inactive/
+   * other-tenant vehicleId or a malformed range simply yields an empty
+   * booked-slots list, which the frontend already renders as "every slot
+   * open" — never a dangerous false negative. */
+  async getScheduler(query: SchedulerQueryDto, actor: Principal): Promise<TestDriveEntity[]> {
+    return this.testDrivesRepository.findBookedInRange(query.vehicleId, new Date(query.from), new Date(query.to), actor);
   }
 
   /** AC2: "System validates the selected slot is within dealership

@@ -27,11 +27,11 @@ vi.mock('../../src/api/client', async (importOriginal) => {
 
 const mockedApi = vi.mocked(api, true);
 
-function renderForm() {
+function renderForm(initialValues?: { vehicleId?: string; date?: string; time?: string }) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
-      <NewTestDriveForm />
+      <NewTestDriveForm initialValues={initialValues} />
     </QueryClientProvider>,
   );
 }
@@ -137,5 +137,15 @@ describe('NewTestDriveForm', () => {
     await user.click(screen.getByRole('button', { name: /book test drive/i }));
 
     expect(await screen.findByText(/operating hours/i)).toBeInTheDocument();
+  });
+
+  it('issue #35 AC4: pre-fills vehicle/date/time from initialValues, leaving enquiryId blank', async () => {
+    renderForm({ vehicleId: 'v1', date: '2026-08-01', time: '10:00' });
+    await waitFor(() => expect(screen.getByRole('option', { name: /walk-in customer/i })).toBeInTheDocument());
+
+    expect(screen.getByLabelText(/customer.*enquiry/i)).toHaveValue('');
+    expect(screen.getByLabelText(/demo vehicle/i)).toHaveValue('v1');
+    expect(screen.getByLabelText(/^date$/i)).toHaveValue('2026-08-01');
+    expect(screen.getByLabelText(/start time/i)).toHaveValue('10:00');
   });
 });

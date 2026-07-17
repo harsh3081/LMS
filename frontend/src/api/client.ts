@@ -187,6 +187,25 @@ export interface TestDrive {
   updatedAt: string;
 }
 
+/** GET /api/v1/test-drives?vehicleId=&from=&to= query params (issue #35,
+ * "Real-Time Test Drive Scheduler View" AC1/AC5) — mirrors
+ * backend/src/test-drives/dto/scheduler-query.dto.ts. */
+export interface SchedulerQuery {
+  vehicleId: string;
+  from: string;
+  to: string;
+}
+
+/** One BOOKED slot as returned by the scheduler query (issue #35 AC2) —
+ * mirrors backend/src/test-drives/dto/scheduler-slot.dto.ts. Deliberately
+ * minimal/anonymized — no testDriveId/enquiryId/bookedBy (see that DTO's
+ * comment). The frontend derives the full open/booked grid itself from
+ * this list of booked slots (see NOTES.md "derived, not stored"). */
+export interface SchedulerSlot {
+  slotStart: string;
+  slotEnd: string;
+}
+
 export interface FieldError {
   field: string;
   message: string;
@@ -291,4 +310,10 @@ export const api = {
     request<TestDrive>('/api/v1/test-drives', { method: 'POST', body: JSON.stringify(input) }),
 
   getUpcomingTestDrives: () => request<TestDrive[]>('/api/v1/test-drives/upcoming'),
+
+  // ---- issue #35: scheduler grid — booked slots for one vehicle+range (AC1/AC2/AC5) ----
+  getScheduler: (query: SchedulerQuery) =>
+    request<SchedulerSlot[]>(
+      `/api/v1/test-drives?${new URLSearchParams({ vehicleId: query.vehicleId, from: query.from, to: query.to }).toString()}`,
+    ),
 };

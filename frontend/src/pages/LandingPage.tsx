@@ -11,7 +11,9 @@ import { buttonStyles } from '../components/ui';
  * reachable entry point into UpcomingFollowupsPage ("Reminder/task is
  * visible to the DSE ahead of the due date"). MODIFIED (issue #34, AC5): a
  * "My Upcoming Test Drives" link (badged with count) and a "Book a Test
- * Drive" entry point, mirroring the Follow-up entry points exactly. */
+ * Drive" entry point, mirroring the Follow-up entry points exactly.
+ * MODIFIED (issue #35): a "Test Drive Scheduler" entry point into
+ * TestDriveSchedulerPage (AC1-AC5). */
 export function LandingPage() {
   const { data: config } = useFeatureFlags();
   const { data: upcomingFollowups } = useUpcomingFollowups();
@@ -41,6 +43,9 @@ export function LandingPage() {
             </Link>
             <Link to="/test-drives/new" role="link" className={`${buttonStyles.base} ${buttonStyles.secondary}`}>
               Book a Test Drive
+            </Link>
+            <Link to="/test-drives/scheduler" role="link" className={`${buttonStyles.base} ${buttonStyles.secondary}`}>
+              Test Drive Scheduler
             </Link>
             <Link to="/admin/field-config" role="link" className={`${buttonStyles.base} ${buttonStyles.secondary}`}>
               Field Configuration

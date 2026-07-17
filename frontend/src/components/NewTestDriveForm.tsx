@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useEnquiries } from '../hooks/useEnquiries';
 import { useDemoVehicles } from '../hooks/useDemoVehicles';
@@ -40,6 +40,17 @@ type FormValues = {
   time: string;
 };
 
+export interface NewTestDriveFormProps {
+  /** issue #35 AC4 pre-fill: initial vehicle/date/time when arriving from
+   * the Scheduler grid's "Book" action (a click on an OPEN slot). Only
+   * vehicle/date/time are ever pre-filled — `enquiryId` is deliberately
+   * never part of this, since the DSE still selects which customer the
+   * drive is for on this form regardless of entry point. Omitted/undefined
+   * fields fall back to the normal empty defaults (arriving directly at
+   * /test-drives/new, issue #34's original entry point, is unaffected). */
+  initialValues?: Partial<Pick<FormValues, 'vehicleId' | 'date' | 'time'>>;
+}
+
 /**
  * "Book a Test Drive" form (issue #34 AC1-AC6) — mirrors NewEnquiryForm's
  * structure closely (a create-form with several selects/inputs, client-side
@@ -50,9 +61,11 @@ type FormValues = {
  * date, start time (AC1). AC3: on success, the created booking record (test
  * drive id + slot/vehicle/enquiry details) is shown as the confirmation —
  * this IS the "booking reference" (no separate confirmation-number scheme,
- * see TestDriveResponseDto's comment).
+ * see TestDriveResponseDto's comment). MODIFIED (issue #35 AC4):
+ * `initialValues` (see NewTestDriveFormProps) pre-fills vehicle/date/time
+ * when the DSE arrives here via the Scheduler grid's "Book" link.
  */
-export function NewTestDriveForm() {
+export function NewTestDriveForm({ initialValues }: NewTestDriveFormProps = {}) {
   const { data: enquiries } = useEnquiries();
   const { data: vehicles } = useDemoVehicles();
   const { data: models } = useVehicleModels();
@@ -64,9 +77,30 @@ export function NewTestDriveForm() {
     register,
     handleSubmit,
     setError,
+    setValue,
     reset,
     formState: { errors },
-  } = useForm<FormValues>({ defaultValues: { enquiryId: '', vehicleId: '', date: '', time: '' } });
+  } = useForm<FormValues>({
+    defaultValues: {
+      enquiryId: '',
+      vehicleId: initialValues?.vehicleId ?? '',
+      date: initialValues?.date ?? '',
+      time: initialValues?.time ?? '',
+    },
+  });
+
+  // issue #35 AC4: `vehicles` loads asynchronously (useDemoVehicles), so at
+  // mount time the <select>'s matching <option> for a pre-filled vehicleId
+  // does not exist yet — a native <select>'s value cannot "stick" to an
+  // option that isn't rendered yet (it silently reverts to ""). Once the
+  // vehicle list has loaded, re-apply the pre-fill via setValue so the
+  // now-existing <option> is actually selected.
+  useEffect(() => {
+    if (initialValues?.vehicleId && vehicles?.some((v) => v.vehicleId === initialValues.vehicleId)) {
+      setValue('vehicleId', initialValues.vehicleId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vehicles]);
 
   const modelNameById = new Map((models ?? []).map((m) => [m.modelId, m.name]));
 
