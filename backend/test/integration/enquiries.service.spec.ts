@@ -12,6 +12,8 @@ import { LeadsRepository } from '../../src/leads/leads.repository';
 import { AuditLogRepository } from '../../src/audit-log/audit-log.repository';
 import { FieldConfigService } from '../../src/field-config/field-config.service';
 import { FieldConfigRepository } from '../../src/field-config/field-config.repository';
+import { DuplicatesService } from '../../src/duplicates/duplicates.service';
+import { DuplicatesRepository } from '../../src/duplicates/duplicates.repository';
 import { LeadNotFoundError, LeadAlreadyConvertedError } from '../../src/enquiries/enquiries.errors';
 import { ENQUIRY_STATUS_NEW } from '../../src/enquiries/entities/enquiry.entity';
 import { LEAD_STATUS_CONVERTED } from '../../src/leads/entities/lead.entity';
@@ -31,12 +33,14 @@ describe('EnquiriesService (Task 2.4)', () => {
     leadsRepository = new LeadsRepository(dataSource);
     auditLogRepository = new AuditLogRepository(dataSource);
     const fieldConfigService = new FieldConfigService(dataSource, new FieldConfigRepository(dataSource), auditLogRepository);
+    const duplicatesService = new DuplicatesService(new DuplicatesRepository(dataSource));
     service = new EnquiriesService(
       dataSource,
       new EnquiriesRepository(dataSource),
       leadsRepository,
       auditLogRepository,
       fieldConfigService,
+      duplicatesService,
     );
 
     const dseA = seed.users['dseA'];

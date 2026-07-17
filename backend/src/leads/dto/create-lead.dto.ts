@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsInt, IsOptional, IsString, Matches } from 'class-validator';
+import { IsBoolean, IsInt, IsOptional, IsString, Matches } from 'class-validator';
 import { INDIA_MOBILE_REGEX } from '../../common/mobile.util';
 
 /**
@@ -41,4 +41,17 @@ export class CreateLeadDto {
   @IsOptional()
   @IsInt({ message: 'modelId must be an integer' })
   modelId?: number;
+
+  /** NEW (issue #29, AC3): "the DSE has seen and dismissed" the duplicate-
+   * warning UI and chose to proceed anyway. Purely advisory — the server
+   * NEVER blocks creation on a duplicate match either way (AC3: "DSE can
+   * choose to proceed"); this flag only changes which audit_log action
+   * LeadsService.create writes when a duplicate mobile is actually found
+   * (DUPLICATE_OVERRIDE_ACKNOWLEDGED vs ...UNACKNOWLEDGED — see NOTES.md
+   * "Design decisions"). Omitted/false is indistinguishable from "the
+   * client never checked" — both are logged as unacknowledged. */
+  @ApiProperty({ required: false, description: 'true if the DSE dismissed a duplicate-mobile warning and chose to proceed' })
+  @IsOptional()
+  @IsBoolean({ message: 'acknowledgeDuplicate must be a boolean' })
+  acknowledgeDuplicate?: boolean;
 }

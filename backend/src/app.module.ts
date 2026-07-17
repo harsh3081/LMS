@@ -19,6 +19,9 @@ import { FeatureFlagsService } from './config/feature-flags.service';
 import { FieldConfigController } from './field-config/field-config.controller';
 import { FieldConfigService } from './field-config/field-config.service';
 import { FieldConfigRepository } from './field-config/field-config.repository';
+import { DuplicatesController } from './duplicates/duplicates.controller';
+import { DuplicatesService } from './duplicates/duplicates.service';
+import { DuplicatesRepository } from './duplicates/duplicates.repository';
 
 /**
  * Built via `forRoot(dataSource)` rather than `TypeOrmModule.forRootAsync`
@@ -42,6 +45,7 @@ export class AppModule {
         LeadSourcesController,
         VehicleModelsController,
         FieldConfigController,
+        DuplicatesController,
       ],
       providers: [
         { provide: DataSource, useValue: dataSource },
@@ -56,6 +60,8 @@ export class AppModule {
         FeatureFlagsService,
         FieldConfigService,
         FieldConfigRepository,
+        DuplicatesService,
+        DuplicatesRepository,
       ],
     };
   }

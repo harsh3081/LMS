@@ -13,6 +13,7 @@ import { LeadNotFoundError, LeadAlreadyConvertedError, EnquiryReassignTargetNotF
 import { ReferentialValidationError } from '../leads/leads.errors';
 import { Principal } from '../common/principal';
 import { FieldConfigService } from '../field-config/field-config.service';
+import { DuplicatesService } from '../duplicates/duplicates.service';
 
 /**
  * Convert-Lead-into-Enquiry use case (tech-design.md Component 1 / ref-code.md
@@ -32,6 +33,7 @@ export class EnquiriesService {
     private readonly leadsRepository: LeadsRepository,
     private readonly auditLogRepository: AuditLogRepository,
     private readonly fieldConfigService: FieldConfigService,
+    private readonly duplicatesService: DuplicatesService,
   ) {}
 
   async convert(leadId: string, dto: ConvertLeadDto, actor: Principal): Promise<EnquiryEntity> {
@@ -112,6 +114,12 @@ export class EnquiriesService {
     if (dto.sourceId !== undefined) await this.assertSourceExists(dto.sourceId);
     if (dto.modelId !== undefined) await this.assertModelExists(dto.modelId);
 
+    // issue #29 (FR-06) — mirrors LeadsService.create's duplicate-audit block
+    // exactly; see that file's comment for the full design rationale.
+    const duplicateMatches = dto.mobile
+      ? await this.duplicatesService.findMatches(dto.mobile, actor.locationId)
+      : [];
+
     return this.dataSource.transaction(async (manager) => {
       const enquiry = await this.enquiriesRepository.insert(
         {
@@ -149,6 +157,22 @@ export class EnquiriesService {
         },
         manager,
       );
+
+      if (duplicateMatches.length > 0) {
+        await this.auditLogRepository.record(
+          {
+            actor: actor.userId,
+            action: dto.acknowledgeDuplicate ? 'DUPLICATE_OVERRIDE_ACKNOWLEDGED' : 'DUPLICATE_OVERRIDE_UNACKNOWLEDGED',
+            entityType: 'enquiry',
+            entityId: String(enquiry.enquiryId),
+            before: null,
+            after: { mobile: dto.mobile, matchedIds: duplicateMatches.map((m) => m.id) },
+            locationId: actor.locationId,
+            dealerGroupId: actor.dealerGroupId,
+          },
+          manager,
+        );
+      }
 
       return enquiry;
     });
