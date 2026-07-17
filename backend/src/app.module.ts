@@ -26,6 +26,11 @@ import { FollowupsController } from './followups/followups.controller';
 import { UpcomingFollowupsController } from './followups/upcoming-followups.controller';
 import { FollowupsService } from './followups/followups.service';
 import { FollowupsRepository } from './followups/followups.repository';
+import { DemoVehiclesController } from './demo-vehicles/demo-vehicles.controller';
+import { TestDrivesController } from './test-drives/test-drives.controller';
+import { UpcomingTestDrivesController } from './test-drives/upcoming-test-drives.controller';
+import { TestDrivesService } from './test-drives/test-drives.service';
+import { TestDrivesRepository } from './test-drives/test-drives.repository';
 
 /**
  * Built via `forRoot(dataSource)` rather than `TypeOrmModule.forRootAsync`
@@ -52,6 +57,9 @@ export class AppModule {
         DuplicatesController,
         FollowupsController,
         UpcomingFollowupsController,
+        DemoVehiclesController,
+        TestDrivesController,
+        UpcomingTestDrivesController,
       ],
       providers: [
         { provide: DataSource, useValue: dataSource },
@@ -70,6 +78,8 @@ export class AppModule {
         DuplicatesRepository,
         FollowupsService,
         FollowupsRepository,
+        TestDrivesService,
+        TestDrivesRepository,
       ],
     };
   }

@@ -14,7 +14,9 @@ vi.mock('../../src/api/client', async (importOriginal) => {
     ...actual,
     // NEW (issue #31): getUpcomingFollowups is called by LandingPage's new
     // "My Upcoming Follow-ups" entry point via useUpcomingFollowups.
-    api: { getConfig: vi.fn(), getMyLeads: vi.fn(), getUpcomingFollowups: vi.fn() },
+    // NEW (issue #34): getUpcomingTestDrives is called by LandingPage's new
+    // "My Upcoming Test Drives" entry point via useUpcomingTestDrives.
+    api: { getConfig: vi.fn(), getMyLeads: vi.fn(), getUpcomingFollowups: vi.fn(), getUpcomingTestDrives: vi.fn() },
   };
 });
 const mockedApi = vi.mocked(api, true);
@@ -35,6 +37,7 @@ describe('LandingPage entry point / feature toggle (CC-10)', () => {
     vi.clearAllMocks();
     mockedApi.getMyLeads.mockResolvedValue([]);
     mockedApi.getUpcomingFollowups.mockResolvedValue([]);
+    mockedApi.getUpcomingTestDrives.mockResolvedValue([]);
   });
 
   // ---- issue #31 AC4: "My Upcoming Follow-ups" entry point ----
@@ -78,6 +81,44 @@ describe('LandingPage entry point / feature toggle (CC-10)', () => {
     renderLanding();
     await waitFor(() => expect(mockedApi.getConfig).toHaveBeenCalled());
     await waitFor(() => expect(screen.queryByRole('link', { name: /new lead/i })).not.toBeInTheDocument());
+  });
+
+  // ---- issue #34 AC5: "My Upcoming Test Drives" + "Book a Test Drive" entry points ----
+  it('AC5: shows the "My Upcoming Test Drives" entry point, badged with the current count', async () => {
+    mockedApi.getConfig.mockResolvedValue({ newLeadEnabled: true, convertLeadEnabled: true, directEnquiryEnabled: true });
+    mockedApi.getUpcomingTestDrives.mockResolvedValue([
+      {
+        testDriveId: 't1',
+        enquiryId: 'e1',
+        vehicleId: 'v1',
+        slotStart: '2026-08-01T10:00:00.000Z',
+        slotEnd: '2026-08-01T10:30:00.000Z',
+        status: 'Booked',
+        remarks: null,
+        bookedBy: 'dse-1',
+        locationId: 'loc-1',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    ]);
+    renderLanding();
+    const entry = await screen.findByRole('link', { name: /my upcoming test drives/i });
+    expect(entry).toHaveAttribute('href', '/test-drives/upcoming');
+    expect(await screen.findByText('1')).toBeInTheDocument();
+  });
+
+  it('AC5: shows no badge when there are no upcoming test drives', async () => {
+    mockedApi.getConfig.mockResolvedValue({ newLeadEnabled: true, convertLeadEnabled: true, directEnquiryEnabled: true });
+    renderLanding();
+    await screen.findByRole('link', { name: /my upcoming test drives/i });
+    expect(screen.queryByText('0')).not.toBeInTheDocument();
+  });
+
+  it('AC1: shows the "Book a Test Drive" entry point', async () => {
+    mockedApi.getConfig.mockResolvedValue({ newLeadEnabled: true, convertLeadEnabled: true, directEnquiryEnabled: true });
+    renderLanding();
+    const entry = await screen.findByRole('link', { name: /book a test drive/i });
+    expect(entry).toHaveAttribute('href', '/test-drives/new');
   });
 
   // -----------------------------------------------------------------

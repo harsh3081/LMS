@@ -147,6 +147,46 @@ export interface Followup {
   resultingStatus: string | null;
 }
 
+/** GET /api/v1/demo-vehicles response shape (issue #34, AC1) — mirrors
+ * backend/src/demo-vehicles/demo-vehicles.controller.ts's
+ * DemoVehicleResponseDto. Location-scoped (the caller's own location's
+ * active fleet only), deliberately distinct from VehicleModel (the
+ * abstract, location-agnostic catalog). */
+export interface DemoVehicle {
+  vehicleId: string;
+  modelId: number;
+  variant: string;
+  locationId: string;
+}
+
+/** CreateTestDriveDto fields (issue #34 AC1/AC6) —
+ * backend/src/test-drives/dto/create-test-drive.dto.ts. `enquiryId` IS part
+ * of the body here (unlike LogFollowupInput, where it travels in the URL
+ * path) — the booking form is where the DSE selects which of their own
+ * Enquiries the drive is against. */
+export interface CreateTestDriveInput {
+  enquiryId: string;
+  vehicleId: string;
+  slotStart: string;
+  slotEnd: string;
+}
+
+/** Mirrors TestDriveResponseDto (dealerGroupId intentionally excluded, same
+ * convention as Enquiry/Followup). */
+export interface TestDrive {
+  testDriveId: string;
+  enquiryId: string;
+  vehicleId: string;
+  slotStart: string;
+  slotEnd: string;
+  status: string;
+  remarks: string | null;
+  bookedBy: string;
+  locationId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface FieldError {
   field: string;
   message: string;
@@ -243,4 +283,12 @@ export const api = {
 
   // ---- issue #31: my upcoming/overdue follow-up reminders (AC4) ----
   getUpcomingFollowups: () => request<Followup[]>('/api/v1/follow-ups/upcoming'),
+
+  // ---- issue #34: book a test drive against an Enquiry (AC1-AC6) ----
+  getDemoVehicles: () => request<DemoVehicle[]>('/api/v1/demo-vehicles'),
+
+  bookTestDrive: (input: CreateTestDriveInput) =>
+    request<TestDrive>('/api/v1/test-drives', { method: 'POST', body: JSON.stringify(input) }),
+
+  getUpcomingTestDrives: () => request<TestDrive[]>('/api/v1/test-drives/upcoming'),
 };

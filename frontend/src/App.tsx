@@ -6,6 +6,8 @@ import { LoginPage } from './pages/LoginPage';
 import { FieldConfigPage } from './pages/FieldConfigPage';
 import { LogFollowupPage } from './pages/LogFollowupPage';
 import { UpcomingFollowupsPage } from './pages/UpcomingFollowupsPage';
+import { BookTestDrivePage } from './pages/BookTestDrivePage';
+import { UpcomingTestDrivesPage } from './pages/UpcomingTestDrivesPage';
 
 export function App() {
   return (
@@ -16,6 +18,8 @@ export function App() {
       <Route path="/enquiries/new" element={<NewEnquiryPage />} />
       <Route path="/enquiries/:enquiryId/follow-up" element={<LogFollowupPage />} />
       <Route path="/follow-ups/upcoming" element={<UpcomingFollowupsPage />} />
+      <Route path="/test-drives/new" element={<BookTestDrivePage />} />
+      <Route path="/test-drives/upcoming" element={<UpcomingTestDrivesPage />} />
       <Route path="/admin/field-config" element={<FieldConfigPage />} />
     </Routes>
   );

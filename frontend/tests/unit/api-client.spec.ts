@@ -271,4 +271,66 @@ describe('api client', () => {
       expect.objectContaining({ credentials: 'include' }),
     );
   });
+
+  // -----------------------------------------------------------------
+  // issue #34 — getDemoVehicles / bookTestDrive / getUpcomingTestDrives (AC1-AC6)
+  // -----------------------------------------------------------------
+  it('getDemoVehicles fetches /api/v1/demo-vehicles', async () => {
+    mockFetchOnce(200, [{ vehicleId: 'v1', modelId: 101, variant: 'LX', locationId: 'loc-1' }]);
+    const result = await api.getDemoVehicles();
+    expect(result).toEqual([{ vehicleId: 'v1', modelId: 101, variant: 'LX', locationId: 'loc-1' }]);
+    expect(fetch).toHaveBeenCalledWith('/api/v1/demo-vehicles', expect.objectContaining({ credentials: 'include' }));
+  });
+
+  it('bookTestDrive posts to /api/v1/test-drives and returns the created Test Drive', async () => {
+    mockFetchOnce(201, {
+      testDriveId: 'td-1',
+      enquiryId: 'enq-1',
+      vehicleId: 'v1',
+      slotStart: '2026-08-01T10:00:00.000Z',
+      slotEnd: '2026-08-01T10:30:00.000Z',
+      status: 'Booked',
+      remarks: null,
+      bookedBy: 'dse-1',
+      locationId: 'loc-1',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    });
+    const result = await api.bookTestDrive({
+      enquiryId: 'enq-1',
+      vehicleId: 'v1',
+      slotStart: '2026-08-01T10:00:00.000Z',
+      slotEnd: '2026-08-01T10:30:00.000Z',
+    });
+    expect(result.testDriveId).toBe('td-1');
+    expect(result.status).toBe('Booked');
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/v1/test-drives',
+      expect.objectContaining({ method: 'POST', credentials: 'include' }),
+    );
+  });
+
+  it('bookTestDrive surfaces a 400 field error as ApiError.fieldErrors', async () => {
+    mockFetchOnce(400, [{ field: 'enquiryId', message: 'enquiryId is required' }]);
+    await expect(
+      api.bookTestDrive({ enquiryId: '', vehicleId: 'v1', slotStart: '2026-08-01T10:00:00.000Z', slotEnd: '2026-08-01T10:30:00.000Z' }),
+    ).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it('bookTestDrive surfaces a 404 (enquiry not found / not owned) as ApiError', async () => {
+    mockFetchOnce(404, [{ field: 'enquiryId', message: 'Enquiry enq-1 not found' }]);
+    await expect(
+      api.bookTestDrive({ enquiryId: 'enq-1', vehicleId: 'v1', slotStart: '2026-08-01T10:00:00.000Z', slotEnd: '2026-08-01T10:30:00.000Z' }),
+    ).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('getUpcomingTestDrives fetches /api/v1/test-drives/upcoming', async () => {
+    mockFetchOnce(200, [{ testDriveId: 'td-1', enquiryId: 'enq-1', slotStart: '2026-08-01T10:00:00.000Z' }]);
+    const result = await api.getUpcomingTestDrives();
+    expect(result).toEqual([{ testDriveId: 'td-1', enquiryId: 'enq-1', slotStart: '2026-08-01T10:00:00.000Z' }]);
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/v1/test-drives/upcoming',
+      expect.objectContaining({ credentials: 'include' }),
+    );
+  });
 });

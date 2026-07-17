@@ -10,6 +10,8 @@ import { LeadEntity } from './leads/entities/lead.entity';
 import { EnquiryEntity } from './enquiries/entities/enquiry.entity';
 import { FieldConfigEntity } from './field-config/entities/field-config.entity';
 import { FollowupEntity } from './followups/entities/followup.entity';
+import { DemoVehicleEntity } from './demo-vehicles/entities/demo-vehicle.entity';
+import { TestDriveEntity } from './test-drives/entities/test-drive.entity';
 import { CreateFoundationalTables1700000000001 } from './migrations/1700000000001-CreateFoundationalTables';
 import { CreateLeads1700000000002 } from './migrations/1700000000002-CreateLeads';
 import { CreateEnquiries1700000000003 } from './migrations/1700000000003-CreateEnquiries';
@@ -22,6 +24,8 @@ import { AddOwnerUpdatedAt1700000000009 } from './migrations/1700000000009-AddOw
 import { CreateFollowups1700000000010 } from './migrations/1700000000010-CreateFollowups';
 import { AddNextFollowUpAt1700000000011 } from './migrations/1700000000011-AddNextFollowUpAt';
 import { AddResultingStatusToFollowups1700000000012 } from './migrations/1700000000012-AddResultingStatusToFollowups';
+import { CreateTestDrives1700000000013 } from './migrations/1700000000013-CreateTestDrives';
+import { SeedDemoVehicles1700000000014 } from './migrations/1700000000014-SeedDemoVehicles';
 
 /**
  * Real PostgreSQL 16 DataSource (tech-design.md: TypeORM, resolved) — used by
@@ -44,6 +48,8 @@ export const entities = [
   EnquiryEntity,
   FieldConfigEntity,
   FollowupEntity,
+  DemoVehicleEntity,
+  TestDriveEntity,
 ];
 
 export const migrations = [
@@ -59,6 +65,8 @@ export const migrations = [
   CreateFollowups1700000000010,
   AddNextFollowUpAt1700000000011,
   AddResultingStatusToFollowups1700000000012,
+  CreateTestDrives1700000000013,
+  SeedDemoVehicles1700000000014,
 ];
 
 export const dataSourceOptions: DataSourceOptions = {
