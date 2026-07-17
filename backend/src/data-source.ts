@@ -21,6 +21,7 @@ import { SeedAdminUser1700000000008 } from './migrations/1700000000008-SeedAdmin
 import { AddOwnerUpdatedAt1700000000009 } from './migrations/1700000000009-AddOwnerUpdatedAt';
 import { CreateFollowups1700000000010 } from './migrations/1700000000010-CreateFollowups';
 import { AddNextFollowUpAt1700000000011 } from './migrations/1700000000011-AddNextFollowUpAt';
+import { AddResultingStatusToFollowups1700000000012 } from './migrations/1700000000012-AddResultingStatusToFollowups';
 
 /**
  * Real PostgreSQL 16 DataSource (tech-design.md: TypeORM, resolved) — used by
@@ -57,6 +58,7 @@ export const migrations = [
   AddOwnerUpdatedAt1700000000009,
   CreateFollowups1700000000010,
   AddNextFollowUpAt1700000000011,
+  AddResultingStatusToFollowups1700000000012,
 ];
 
 export const dataSourceOptions: DataSourceOptions = {

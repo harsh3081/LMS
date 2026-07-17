@@ -130,7 +130,10 @@ export interface LogFollowupInput {
 
 /** Mirrors FollowupResponseDto (dealerGroupId intentionally excluded, same
  * convention as Enquiry). MODIFIED (issue #31): `nextFollowUpAt` — null only
- * when the Follow-up closed its Enquiry to a terminal status (AC2). */
+ * when the Follow-up closed its Enquiry to a terminal status (AC2).
+ * MODIFIED (issue #32, AC2): `resultingStatus` — the terminal Enquiry
+ * status (Lost/Booked) this entry applied, if any; null otherwise. Powers
+ * the "any status change" part of the history timeline (AC2). */
 export interface Followup {
   followupId: string;
   enquiryId: string;
@@ -140,6 +143,7 @@ export interface Followup {
   locationId: string;
   loggedAt: string;
   nextFollowUpAt: string | null;
+  resultingStatus: string | null;
 }
 
 export interface FieldError {

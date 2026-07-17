@@ -50,6 +50,7 @@ describe('LandingPage entry point / feature toggle (CC-10)', () => {
         locationId: 'loc-1',
         loggedAt: new Date().toISOString(),
         nextFollowUpAt: '2026-08-01T00:00:00.000Z',
+        resultingStatus: null,
       },
     ]);
     renderLanding();

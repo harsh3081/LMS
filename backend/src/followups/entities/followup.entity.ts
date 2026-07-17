@@ -60,4 +60,17 @@ export class FollowupEntity {
    * exception — see FollowupsService.assertNextFollowUpOrTerminalStatus). */
   @Column({ name: 'next_follow_up_at', type: 'timestamptz', nullable: true })
   nextFollowUpAt!: Date | null;
+
+  /** NEW (issue #32, AC2): "any status change" — the terminal Enquiry status
+   * (Lost/Booked) this specific Follow-up entry applied, if any. Persists
+   * `LogFollowupDto.enquiryStatus` (already validated/applied to
+   * `Enquiry.status` by FollowupsService.logFollowup since issue #31) onto
+   * the Follow-up row itself so the history timeline can show which entry
+   * changed the Enquiry's status. Nullable additive column (migration
+   * 1700000000012-AddResultingStatusToFollowups), NULL for every Follow-up
+   * that did not carry a terminal enquiryStatus (the overwhelming majority).
+   * Deliberately reuses the same varchar convention as `Enquiry.status`
+   * rather than a DB enum, mirroring `type`'s precedent above. */
+  @Column({ name: 'resulting_status', type: 'varchar', nullable: true })
+  resultingStatus!: string | null;
 }

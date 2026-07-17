@@ -1,8 +1,13 @@
 /**
- * RED->GREEN — issue #30. LogFollowupPage reads :enquiryId from the route
- * and passes it through to LogFollowupForm; a successful submit shows the
- * success confirmation (AC1-AC5). Mirrors NewEnquiryPage.spec.tsx's
+ * RED->GREEN — issue #30, extended by issue #32 ("Role-Scoped Follow-up
+ * History Timeline", AC1/AC2). LogFollowupPage reads :enquiryId from the
+ * route and passes it through to LogFollowupForm; a successful submit
+ * shows the success confirmation (AC1-AC5). Mirrors NewEnquiryPage.spec.tsx's
  * MemoryRouter usage, with an initial route carrying the :enquiryId param.
+ * MODIFIED (issue #32): the page now also renders FollowupHistoryTimeline
+ * for the same routed Enquiry — `getFollowups` is mocked here too so that
+ * component's own query resolves during these tests (its own rendering
+ * behavior is covered in depth by FollowupHistoryTimeline.spec.tsx).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -16,7 +21,7 @@ vi.mock('../../src/api/client', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../src/api/client')>();
   return {
     ...actual,
-    api: { ...actual.api, logFollowup: vi.fn() },
+    api: { ...actual.api, logFollowup: vi.fn(), getFollowups: vi.fn() },
   };
 });
 const mockedApi = vi.mocked(api, true);
@@ -37,6 +42,7 @@ function renderPage(enquiryId = 'enq-42') {
 describe('LogFollowupPage (issue #30)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockedApi.getFollowups.mockResolvedValue([]);
   });
 
   it('renders the Log Follow-up form for the routed Enquiry', () => {
@@ -55,6 +61,7 @@ describe('LogFollowupPage (issue #30)', () => {
       locationId: 'loc-1',
       loggedAt: new Date().toISOString(),
       nextFollowUpAt: '2026-08-01T00:00:00.000Z',
+      resultingStatus: null,
     });
 
     renderPage('enq-42');
@@ -71,5 +78,39 @@ describe('LogFollowupPage (issue #30)', () => {
       remarks: 'Left a voicemail.',
       nextFollowUpAt: '2026-08-01',
     });
+  });
+
+  // ---- issue #32: Role-Scoped Follow-up History Timeline (AC1/AC2) ----
+  it('AC1/AC2: renders the Follow-up history timeline for the routed Enquiry', async () => {
+    mockedApi.getFollowups.mockResolvedValue([
+      {
+        followupId: 'followup-9',
+        enquiryId: 'enq-42',
+        type: 'Showroom Visit',
+        remarks: 'Customer viewed the SUV lineup.',
+        loggedBy: 'dse-1',
+        locationId: 'loc-1',
+        loggedAt: new Date().toISOString(),
+        nextFollowUpAt: null,
+        resultingStatus: 'Booked',
+      },
+    ]);
+
+    renderPage('enq-42');
+
+    // Wait on the remarks text specifically — "Showroom Visit"/"Booked" are
+    // also present synchronously as <option> text in LogFollowupForm's
+    // dropdowns above, so they resolve immediately and would not actually
+    // prove the async timeline query has settled.
+    expect(await screen.findByText('Customer viewed the SUV lineup.')).toBeInTheDocument();
+    expect(screen.getAllByText('Showroom Visit').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Booked').length).toBeGreaterThan(0);
+    expect(mockedApi.getFollowups).toHaveBeenCalledWith('enq-42');
+  });
+
+  it('shows the empty-history message when the Enquiry has no Follow-ups yet', async () => {
+    mockedApi.getFollowups.mockResolvedValue([]);
+    renderPage('enq-42');
+    expect(await screen.findByText(/no follow-up history/i)).toBeInTheDocument();
   });
 });
