@@ -1,6 +1,7 @@
 export { Button, buttonStyles } from './Button';
 export type { ButtonProps } from './Button';
 export { TextInput } from './TextInput';
+export { Textarea } from './Textarea';
 export { Select } from './Select';
 export { FormField } from './FormField';
 export { Card } from './Card';

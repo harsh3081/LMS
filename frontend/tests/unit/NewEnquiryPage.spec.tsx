@@ -3,11 +3,17 @@
  * Enquiries" list immediately after a successful submit (AC5), without a
  * full page reload — the cache update happens via
  * useCreateDirectEnquiry's onSuccess (mirrors NewLeadPage.spec.tsx, #24).
+ *
+ * MODIFIED (issue #30): EnquiryQueue's rows now render a react-router
+ * <Link> ("Log Follow-up", AC1-AC5's entry point) — rendering NewEnquiryPage
+ * (which includes EnquiryQueue) requires a Router context now, so this file
+ * wraps with <MemoryRouter>, mirroring LandingPage.spec.tsx's pattern.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 import { NewEnquiryPage } from '../../src/pages/NewEnquiryPage';
 import { api } from '../../src/api/client';
 
@@ -65,7 +71,9 @@ describe('NewEnquiryPage queue reflection (AC5, issue #26)', () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
       <QueryClientProvider client={queryClient}>
-        <NewEnquiryPage />
+        <MemoryRouter>
+          <NewEnquiryPage />
+        </MemoryRouter>
       </QueryClientProvider>,
     );
 

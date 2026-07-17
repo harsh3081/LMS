@@ -75,7 +75,9 @@ describe('owner-updated-at migration (issue #28 Task 1.1)', () => {
 
   it('down-migration reverses cleanly: drops owner_updated_at from both tables', async () => {
     dataSource = await createTestDataSource();
-    // This is the LAST migration (1700000000009) — a single undo reaches it.
+    // issue #30 added CreateFollowups1700000000010 after this one; undo
+    // that first, then undo this migration itself.
+    await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
 
     const leadsColumns: { column_name: string }[] = await dataSource.query(
