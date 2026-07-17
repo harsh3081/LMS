@@ -20,6 +20,7 @@ import { MakeLeadFieldsNullable1700000000007 } from './migrations/1700000000007-
 import { SeedAdminUser1700000000008 } from './migrations/1700000000008-SeedAdminUser';
 import { AddOwnerUpdatedAt1700000000009 } from './migrations/1700000000009-AddOwnerUpdatedAt';
 import { CreateFollowups1700000000010 } from './migrations/1700000000010-CreateFollowups';
+import { AddNextFollowUpAt1700000000011 } from './migrations/1700000000011-AddNextFollowUpAt';
 
 /**
  * Real PostgreSQL 16 DataSource (tech-design.md: TypeORM, resolved) — used by
@@ -55,6 +56,7 @@ export const migrations = [
   SeedAdminUser1700000000008,
   AddOwnerUpdatedAt1700000000009,
   CreateFollowups1700000000010,
+  AddNextFollowUpAt1700000000011,
 ];
 
 export const dataSourceOptions: DataSourceOptions = {

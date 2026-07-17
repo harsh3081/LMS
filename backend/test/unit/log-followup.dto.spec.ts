@@ -68,4 +68,59 @@ describe('LogFollowupDto', () => {
       expect(declaredKeys.has(forbidden)).toBe(false);
     }
   });
+
+  // ---- nextFollowUpAt / enquiryStatus (issue #31, AC1-AC4) ----
+  // Presence/mandatory-ness of nextFollowUpAt relative to enquiryStatus is a
+  // cross-field business rule enforced by FollowupsService, NOT by this DTO
+  // — these tests only cover the DTO's own format-level checks.
+  describe('nextFollowUpAt (format only — the AC2 cross-field mandatory rule lives in FollowupsService)', () => {
+    it('passes when nextFollowUpAt is omitted (mandatory-ness is a service-layer concern)', async () => {
+      const errors = await validateDto(validPayload);
+      expect(errors.some((e) => e.property === 'nextFollowUpAt')).toBe(false);
+    });
+
+    it('passes when nextFollowUpAt is a valid ISO date', async () => {
+      const errors = await validateDto({ ...validPayload, nextFollowUpAt: '2026-08-01' });
+      expect(errors.some((e) => e.property === 'nextFollowUpAt')).toBe(false);
+    });
+
+    it('passes when nextFollowUpAt is a valid ISO date-time', async () => {
+      const errors = await validateDto({ ...validPayload, nextFollowUpAt: '2026-08-01T10:00:00Z' });
+      expect(errors.some((e) => e.property === 'nextFollowUpAt')).toBe(false);
+    });
+
+    it('fails when nextFollowUpAt is not a valid ISO 8601 date', async () => {
+      const errors = await validateDto({ ...validPayload, nextFollowUpAt: 'not-a-date' });
+      expect(errors.some((e) => e.property === 'nextFollowUpAt')).toBe(true);
+    });
+
+    it('does not run the ISO-format check when nextFollowUpAt is an empty string (treated as "not provided")', async () => {
+      const errors = await validateDto({ ...validPayload, nextFollowUpAt: '' });
+      expect(errors.some((e) => e.property === 'nextFollowUpAt')).toBe(false);
+    });
+  });
+
+  describe('enquiryStatus (AC2)', () => {
+    it('passes when enquiryStatus is omitted', async () => {
+      const errors = await validateDto(validPayload);
+      expect(errors.some((e) => e.property === 'enquiryStatus')).toBe(false);
+    });
+
+    for (const status of ['Lost', 'Booked']) {
+      it(`passes for enquiryStatus "${status}"`, async () => {
+        const errors = await validateDto({ ...validPayload, enquiryStatus: status });
+        expect(errors.some((e) => e.property === 'enquiryStatus')).toBe(false);
+      });
+    }
+
+    it('fails for an enquiryStatus outside the terminal set (e.g. "New") — not a general status-update surface', async () => {
+      const errors = await validateDto({ ...validPayload, enquiryStatus: 'New' });
+      expect(errors.some((e) => e.property === 'enquiryStatus')).toBe(true);
+    });
+
+    it('fails for an unrecognized enquiryStatus value', async () => {
+      const errors = await validateDto({ ...validPayload, enquiryStatus: 'Won' });
+      expect(errors.some((e) => e.property === 'enquiryStatus')).toBe(true);
+    });
+  });
 });

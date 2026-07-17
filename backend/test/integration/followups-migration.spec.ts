@@ -100,6 +100,9 @@ describe('followups migration (issue #30 Task 1.1)', () => {
 
   it('down-migration reverses cleanly: drops the followups table', async () => {
     dataSource = await createTestDataSource();
+    // issue #31 added AddNextFollowUpAt1700000000011 after this migration;
+    // undo that first, then undo this migration itself.
+    await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
 
     const columns: { column_name: string }[] = await dataSource.query(

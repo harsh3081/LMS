@@ -10,4 +10,7 @@ export class FollowupResponseDto {
   @ApiProperty() loggedBy!: string;
   @ApiProperty() locationId!: string;
   @ApiProperty() loggedAt!: string;
+  /** NEW (issue #31, AC1-AC4): null only when this Follow-up closed its
+   * Enquiry to a terminal status in the same request (AC2's exception). */
+  @ApiProperty({ nullable: true, example: '2026-08-01T00:00:00.000Z' }) nextFollowUpAt!: string | null;
 }

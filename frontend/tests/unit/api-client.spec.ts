@@ -215,4 +215,60 @@ describe('api client', () => {
       expect.objectContaining({ credentials: 'include' }),
     );
   });
+
+  // -----------------------------------------------------------------
+  // issue #31 — logFollowup(nextFollowUpAt/enquiryStatus) / getUpcomingFollowups (AC1-AC4)
+  // -----------------------------------------------------------------
+  it('logFollowup posts nextFollowUpAt and returns it on the created Follow-up', async () => {
+    mockFetchOnce(201, {
+      followupId: 'followup-2',
+      enquiryId: 'enq-1',
+      type: 'Home Visit',
+      remarks: 'Scheduling next visit.',
+      loggedBy: 'dse-1',
+      locationId: 'loc-1',
+      loggedAt: '2026-01-01T00:00:00.000Z',
+      nextFollowUpAt: '2026-08-01T00:00:00.000Z',
+    });
+    const result = await api.logFollowup('enq-1', {
+      type: 'Home Visit',
+      remarks: 'Scheduling next visit.',
+      nextFollowUpAt: '2026-08-01',
+    });
+    expect(result.nextFollowUpAt).toBe('2026-08-01T00:00:00.000Z');
+  });
+
+  it('logFollowup surfaces a 400 nextFollowUpAt-required error as ApiError.fieldErrors', async () => {
+    mockFetchOnce(400, [
+      { field: 'nextFollowUpAt', message: 'nextFollowUpAt is required unless enquiryStatus is Lost or Booked' },
+    ]);
+    await expect(api.logFollowup('enq-1', { type: 'Call', remarks: 'No date given.' })).rejects.toBeInstanceOf(
+      ApiError,
+    );
+  });
+
+  it('logFollowup posts a terminal enquiryStatus without nextFollowUpAt', async () => {
+    mockFetchOnce(201, {
+      followupId: 'followup-3',
+      enquiryId: 'enq-1',
+      type: 'Call',
+      remarks: 'Closing out.',
+      loggedBy: 'dse-1',
+      locationId: 'loc-1',
+      loggedAt: '2026-01-01T00:00:00.000Z',
+      nextFollowUpAt: null,
+    });
+    const result = await api.logFollowup('enq-1', { type: 'Call', remarks: 'Closing out.', enquiryStatus: 'Lost' });
+    expect(result.nextFollowUpAt).toBeNull();
+  });
+
+  it('getUpcomingFollowups fetches /api/v1/follow-ups/upcoming', async () => {
+    mockFetchOnce(200, [{ followupId: 'followup-1', enquiryId: 'enq-1', nextFollowUpAt: '2026-08-01T00:00:00.000Z' }]);
+    const result = await api.getUpcomingFollowups();
+    expect(result).toEqual([{ followupId: 'followup-1', enquiryId: 'enq-1', nextFollowUpAt: '2026-08-01T00:00:00.000Z' }]);
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/v1/follow-ups/upcoming',
+      expect.objectContaining({ credentials: 'include' }),
+    );
+  });
 });

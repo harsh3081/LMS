@@ -23,6 +23,7 @@ import { DuplicatesController } from './duplicates/duplicates.controller';
 import { DuplicatesService } from './duplicates/duplicates.service';
 import { DuplicatesRepository } from './duplicates/duplicates.repository';
 import { FollowupsController } from './followups/followups.controller';
+import { UpcomingFollowupsController } from './followups/upcoming-followups.controller';
 import { FollowupsService } from './followups/followups.service';
 import { FollowupsRepository } from './followups/followups.repository';
 
@@ -50,6 +51,7 @@ export class AppModule {
         FieldConfigController,
         DuplicatesController,
         FollowupsController,
+        UpcomingFollowupsController,
       ],
       providers: [
         { provide: DataSource, useValue: dataSource },

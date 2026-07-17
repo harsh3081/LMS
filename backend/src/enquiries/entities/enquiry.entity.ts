@@ -3,6 +3,19 @@ import { jsonbTransformer } from '../../common/jsonb.transformer';
 
 export const ENQUIRY_STATUS_NEW = 'New';
 
+/** NEW (issue #31, AC2): the minimal terminal-state subset needed for this
+ * Story's "closing a Follow-up without a Next Follow-up Date" exception.
+ * Issue #33 ("Update Enquiry Status as Part of a Follow-up") owns the FULL
+ * status vocabulary/transition workflow (reasons, permissions nuance,
+ * audit) — this Story only needs to recognize these two values as
+ * "terminal" for FollowupsService's AC2 check, and allows the SAME
+ * follow-up-logging request to optionally set one of them (see
+ * LogFollowupDto.enquiryStatus). See
+ * .phoenix-os/project/specs/31/NOTES.md for the full boundary reasoning. */
+export const ENQUIRY_STATUS_LOST = 'Lost';
+export const ENQUIRY_STATUS_BOOKED = 'Booked';
+export const ENQUIRY_TERMINAL_STATUSES = [ENQUIRY_STATUS_LOST, ENQUIRY_STATUS_BOOKED] as const;
+
 /** Distinguishes a Direct Enquiry (issue #26, no parent Lead) from one
  * converted from an existing Lead (issue #25). See migration
  * 1700000000005-DirectEnquiry.ts "Schema decisions" for why this is an

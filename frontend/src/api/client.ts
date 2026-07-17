@@ -114,17 +114,23 @@ export interface DuplicateMatch {
   status: string;
 }
 
-/** LogFollowupDto fields (issue #30, AC1-AC4) — backend/src/followups/dto/
+/** LogFollowupDto fields (issue #30, AC1-AC4, extended by issue #31 AC1-AC4
+ * with `nextFollowUpAt`/`enquiryStatus`) — backend/src/followups/dto/
  * log-followup.dto.ts. `enquiryId` is deliberately not part of the body; it
  * travels in the URL path (mirrors ConvertLeadInput / convertLead's leadId
- * path-param convention). */
+ * path-param convention). `nextFollowUpAt` is required unless
+ * `enquiryStatus` is 'Lost'/'Booked' (AC2) — enforced both client-side
+ * (LogFollowupForm) and server-side (FollowupsService). */
 export interface LogFollowupInput {
   type: 'Home Visit' | 'Showroom Visit' | 'Call';
   remarks: string;
+  nextFollowUpAt?: string;
+  enquiryStatus?: 'Lost' | 'Booked';
 }
 
 /** Mirrors FollowupResponseDto (dealerGroupId intentionally excluded, same
- * convention as Enquiry). */
+ * convention as Enquiry). MODIFIED (issue #31): `nextFollowUpAt` — null only
+ * when the Follow-up closed its Enquiry to a terminal status (AC2). */
 export interface Followup {
   followupId: string;
   enquiryId: string;
@@ -133,6 +139,7 @@ export interface Followup {
   loggedBy: string;
   locationId: string;
   loggedAt: string;
+  nextFollowUpAt: string | null;
 }
 
 export interface FieldError {
@@ -228,4 +235,7 @@ export const api = {
     request<Followup>(`/api/v1/enquiries/${enquiryId}/follow-ups`, { method: 'POST', body: JSON.stringify(input) }),
 
   getFollowups: (enquiryId: string) => request<Followup[]>(`/api/v1/enquiries/${enquiryId}/follow-ups`),
+
+  // ---- issue #31: my upcoming/overdue follow-up reminders (AC4) ----
+  getUpcomingFollowups: () => request<Followup[]>('/api/v1/follow-ups/upcoming'),
 };

@@ -12,7 +12,9 @@ vi.mock('../../src/api/client', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../src/api/client')>();
   return {
     ...actual,
-    api: { getConfig: vi.fn(), getMyLeads: vi.fn() },
+    // NEW (issue #31): getUpcomingFollowups is called by LandingPage's new
+    // "My Upcoming Follow-ups" entry point via useUpcomingFollowups.
+    api: { getConfig: vi.fn(), getMyLeads: vi.fn(), getUpcomingFollowups: vi.fn() },
   };
 });
 const mockedApi = vi.mocked(api, true);
@@ -32,6 +34,35 @@ describe('LandingPage entry point / feature toggle (CC-10)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockedApi.getMyLeads.mockResolvedValue([]);
+    mockedApi.getUpcomingFollowups.mockResolvedValue([]);
+  });
+
+  // ---- issue #31 AC4: "My Upcoming Follow-ups" entry point ----
+  it('AC4: shows the "My Upcoming Follow-ups" entry point, badged with the current count', async () => {
+    mockedApi.getConfig.mockResolvedValue({ newLeadEnabled: true, convertLeadEnabled: true, directEnquiryEnabled: true });
+    mockedApi.getUpcomingFollowups.mockResolvedValue([
+      {
+        followupId: 'f1',
+        enquiryId: 'e1',
+        type: 'Call',
+        remarks: 'r',
+        loggedBy: 'dse-1',
+        locationId: 'loc-1',
+        loggedAt: new Date().toISOString(),
+        nextFollowUpAt: '2026-08-01T00:00:00.000Z',
+      },
+    ]);
+    renderLanding();
+    const entry = await screen.findByRole('link', { name: /my upcoming follow-ups/i });
+    expect(entry).toHaveAttribute('href', '/follow-ups/upcoming');
+    expect(await screen.findByText('1')).toBeInTheDocument();
+  });
+
+  it('AC4: shows no badge when there are no upcoming follow-ups', async () => {
+    mockedApi.getConfig.mockResolvedValue({ newLeadEnabled: true, convertLeadEnabled: true, directEnquiryEnabled: true });
+    renderLanding();
+    await screen.findByRole('link', { name: /my upcoming follow-ups/i });
+    expect(screen.queryByText('0')).not.toBeInTheDocument();
   });
 
   it('EVAL-CC-10: shows the New Lead entry point when the toggle is enabled', async () => {

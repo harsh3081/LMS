@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useLogFollowup } from '../hooks/useFollowups';
 import { ApiError, LogFollowupInput } from '../api/client';
-import { Button, FormField, Select, Textarea } from './ui';
+import { Button, FormField, Select, TextInput, Textarea } from './ui';
 
 /** Mirrors backend/src/followups/entities/followup.entity.ts FOLLOWUP_TYPES
  * exactly (AC1) — duplicated client-side so the <Select> options render
@@ -11,9 +11,18 @@ import { Button, FormField, Select, Textarea } from './ui';
  * INDIA_MOBILE_REGEX). */
 const FOLLOWUP_TYPES = ['Home Visit', 'Showroom Visit', 'Call'] as const;
 
+/** NEW (issue #31, AC2) — mirrors
+ * backend/src/enquiries/entities/enquiry.entity.ts ENQUIRY_TERMINAL_STATUSES
+ * exactly. Deliberately just these two values (not the full status
+ * vocabulary) — this form is not a general enquiry-status-update surface;
+ * see .phoenix-os/project/specs/31/NOTES.md. */
+const ENQUIRY_TERMINAL_STATUSES = ['Lost', 'Booked'] as const;
+
 type FormValues = {
   type: '' | (typeof FOLLOWUP_TYPES)[number];
   remarks: string;
+  nextFollowUpAt: string;
+  enquiryStatus: '' | (typeof ENQUIRY_TERMINAL_STATUSES)[number];
 };
 
 export interface LogFollowupFormProps {
@@ -23,13 +32,17 @@ export interface LogFollowupFormProps {
 }
 
 /**
- * "Log a Follow-up" form (issue #30, AC1-AC5) — a follow-up type selector
- * (Home Visit / Showroom Visit / Call, AC1/AC4, required) and a mandatory
- * free-text remarks field (AC2/AC3). Submission is blocked client-side if
- * either field is missing/blank, mirroring the server-side LogFollowupDto
- * validation exactly (backend/src/followups/dto/log-followup.dto.ts).
- * Mirrors ConvertLeadForm's structure (inline qualifying-details form
- * scoped to one parent record, server field-error mapping via `setError`).
+ * "Log a Follow-up" form (issue #30 AC1-AC5, extended by issue #31 AC1-AC4)
+ * — a follow-up type selector (Home Visit / Showroom Visit / Call, AC1/AC4,
+ * required), a mandatory free-text remarks field (AC2/AC3), a Next
+ * Follow-up Date picker, and an "Enquiry Outcome" selector for the terminal-
+ * status exception (AC2: "unless Enquiry status is set to a terminal state
+ * (Lost/Booked)"). The Next Follow-up Date is required UNLESS an outcome is
+ * selected — mirrors LogFollowupDto/FollowupsService's cross-field rule
+ * exactly (backend/src/followups/followups.service.ts
+ * assertNextFollowUpOrTerminalStatus). Mirrors ConvertLeadForm's structure
+ * (inline qualifying-details form scoped to one parent record, server
+ * field-error mapping via `setError`).
  */
 export function LogFollowupForm({ enquiryId, onLogged }: LogFollowupFormProps) {
   const logFollowup = useLogFollowup(enquiryId);
@@ -42,7 +55,7 @@ export function LogFollowupForm({ enquiryId, onLogged }: LogFollowupFormProps) {
     setError,
     reset,
     formState: { errors },
-  } = useForm<FormValues>({ defaultValues: { type: '', remarks: '' } });
+  } = useForm<FormValues>({ defaultValues: { type: '', remarks: '', nextFollowUpAt: '', enquiryStatus: '' } });
 
   const onSubmit = handleSubmit(async (values) => {
     setSuccessMessage(null);
@@ -50,6 +63,8 @@ export function LogFollowupForm({ enquiryId, onLogged }: LogFollowupFormProps) {
     const input: LogFollowupInput = {
       type: values.type as LogFollowupInput['type'],
       remarks: values.remarks,
+      ...(values.nextFollowUpAt ? { nextFollowUpAt: values.nextFollowUpAt } : {}),
+      ...(values.enquiryStatus ? { enquiryStatus: values.enquiryStatus } : {}),
     };
     try {
       await logFollowup.mutateAsync(input);
@@ -60,7 +75,7 @@ export function LogFollowupForm({ enquiryId, onLogged }: LogFollowupFormProps) {
       if (err instanceof ApiError && err.fieldErrors) {
         for (const fieldError of err.fieldErrors) {
           const key = fieldError.field as keyof FormValues;
-          if (key === 'type' || key === 'remarks') {
+          if (key === 'type' || key === 'remarks' || key === 'nextFollowUpAt' || key === 'enquiryStatus') {
             setError(key, { type: 'server', message: fieldError.message });
           }
         }
@@ -94,6 +109,30 @@ export function LogFollowupForm({ enquiryId, onLogged }: LogFollowupFormProps) {
             validate: (value) => value.trim().length > 0 || 'Remarks are required',
           })}
         />
+      </FormField>
+
+      <FormField label="Next Follow-up Date" htmlFor="nextFollowUpAt" error={errors.nextFollowUpAt?.message}>
+        <TextInput
+          id="nextFollowUpAt"
+          type="date"
+          {...register('nextFollowUpAt', {
+            validate: (value, formValues) =>
+              value || formValues.enquiryStatus
+                ? true
+                : 'Next follow-up date is required unless the enquiry is marked Lost or Booked',
+          })}
+        />
+      </FormField>
+
+      <FormField label="Enquiry Outcome (optional)" htmlFor="enquiryStatus" error={errors.enquiryStatus?.message}>
+        <Select id="enquiryStatus" {...register('enquiryStatus')}>
+          <option value="">Keep enquiry open</option>
+          {ENQUIRY_TERMINAL_STATUSES.map((status) => (
+            <option key={status} value={status}>
+              {status}
+            </option>
+          ))}
+        </Select>
       </FormField>
 
       {formError && (
