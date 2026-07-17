@@ -6,6 +6,7 @@ import { LocationEntity } from '../locations/entities/location.entity';
 import { DealerGroupEntity } from '../dealer-groups/entities/dealer-group.entity';
 import { LeadSourceEntity } from '../lead-sources/entities/lead-source.entity';
 import { VehicleModelEntity } from '../vehicle-models/entities/vehicle-model.entity';
+import { DemoVehicleEntity } from '../demo-vehicles/entities/demo-vehicle.entity';
 
 /**
  * Seeds the fixtures that the frozen Playwright suite
@@ -30,6 +31,9 @@ export interface SeedResult {
   users: Record<string, { userId: string; email: string; password: string }>;
   sourceIds: number[];
   modelIds: number[];
+  /** NEW (issue #34) — 2-3 seeded demo_vehicles per distinct fixture
+   * location, keyed by locationId. */
+  demoVehicleIdsByLocation: Record<string, string[]>;
 }
 
 /** Distinct location_id/dealer_group_id values referenced by test-users.json. */
@@ -52,6 +56,7 @@ export async function seedTestFixtures(dataSource: DataSource): Promise<SeedResu
   const userRepo = dataSource.getRepository(UserEntity);
   const sourceRepo = dataSource.getRepository(LeadSourceEntity);
   const modelRepo = dataSource.getRepository(VehicleModelEntity);
+  const demoVehicleRepo = dataSource.getRepository(DemoVehicleEntity);
 
   type FixtureUser = {
     key: string;
@@ -198,7 +203,30 @@ export async function seedTestFixtures(dataSource: DataSource): Promise<SeedResu
     modelIds.push(m.modelId);
   }
 
-  return { locationIds, dealerGroupIds, users, sourceIds, modelIds };
+  // ADDED (issue #34, "Book a Test Drive Slot"): 2-3 demo vehicles PER
+  // distinct fixture location, so the Jest/Supertest suite's booking tests
+  // (and a locally-run frontend against the pgmem dev server) have real,
+  // location-scoped demo-fleet data to select. This CANNOT live in a
+  // migration (see migrations/1700000000014-SeedDemoVehicles.ts's own
+  // comment): these are test-fixture-only location_ids that do not exist
+  // until the loop above creates them, at test-run time, well after
+  // migrations have already run — a migration cannot FK against a row that
+  // doesn't exist yet. Keyed by locationId (not a flat list) so tests can
+  // pick a vehicle scoped to the same location as the DSE they're acting as
+  // (e.g. dseA/dseB -> locationIds['11111111-...-000000000001']).
+  const demoVehicleIdsByLocation: Record<string, string[]> = {};
+  for (const loc of distinctBy(fixtureUsers, (u) => u.locationId)) {
+    const ids: string[] = [];
+    for (const variant of ['LX', 'VXi (O)']) {
+      const saved = await demoVehicleRepo.save(
+        demoVehicleRepo.create({ modelId: modelIds[0], variant, locationId: loc.locationId, isActive: true }),
+      );
+      ids.push(saved.vehicleId);
+    }
+    demoVehicleIdsByLocation[loc.locationId] = ids;
+  }
+
+  return { locationIds, dealerGroupIds, users, sourceIds, modelIds, demoVehicleIdsByLocation };
 }
 
 /* istanbul ignore next -- CLI entry point, not exercised by unit/integration tests */

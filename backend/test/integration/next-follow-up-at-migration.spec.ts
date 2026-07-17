@@ -75,8 +75,12 @@ describe('next-follow-up-at migration (issue #31 Task 1.1)', () => {
 
   it('down-migration reverses cleanly: drops next_follow_up_at from followups', async () => {
     dataSource = await createTestDataSource();
-    // issue #32 added AddResultingStatusToFollowups1700000000012 after this
-    // one; undo that first, then undo this migration itself.
+    // issue #32 added AddResultingStatusToFollowups1700000000012, and issue
+    // #34 added CreateTestDrives1700000000013 /
+    // SeedDemoVehicles1700000000014, after this one; undo those first, then
+    // undo this migration itself.
+    await dataSource.undoLastMigration();
+    await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
 

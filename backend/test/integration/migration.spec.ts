@@ -86,11 +86,14 @@ describe('leads migration (Task 1.2.1 / 1.2.2)', () => {
     // MakeLeadFieldsNullable1700000000007 / SeedAdminUser1700000000008,
     // issue #28 added AddOwnerUpdatedAt1700000000009, issue #30 added
     // CreateFollowups1700000000010, issue #31 added
-    // AddNextFollowUpAt1700000000011, and issue #32 added
-    // AddResultingStatusToFollowups1700000000012 — ten migrations after
-    // this one, so undoLastMigration() now reverts them first, in reverse
-    // order; undo eleven times to reach and verify the leads migration's
-    // own reversibility.
+    // AddNextFollowUpAt1700000000011, issue #32 added
+    // AddResultingStatusToFollowups1700000000012, and issue #34 added
+    // CreateTestDrives1700000000013 / SeedDemoVehicles1700000000014 —
+    // twelve migrations after this one, so undoLastMigration() now reverts
+    // them first, in reverse order; undo thirteen times to reach and
+    // verify the leads migration's own reversibility.
+    await dataSource.undoLastMigration();
+    await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
@@ -209,11 +212,14 @@ describe('enquiries migration (Task 1.1.1, issue #25)', () => {
     // / SeedAdminUser1700000000008 (issue #27),
     // AddOwnerUpdatedAt1700000000009 (issue #28),
     // CreateFollowups1700000000010 (issue #30),
-    // AddNextFollowUpAt1700000000011 (issue #31), and
-    // AddResultingStatusToFollowups1700000000012 (issue #32) were all added
-    // after this migration, so undoLastMigration() now reverts them first,
-    // in reverse order; undo ten times to reach and verify the enquiries
-    // migration's own reversibility (drop-table).
+    // AddNextFollowUpAt1700000000011 (issue #31),
+    // AddResultingStatusToFollowups1700000000012 (issue #32), and
+    // CreateTestDrives1700000000013 / SeedDemoVehicles1700000000014 (issue
+    // #34) were all added after this migration, so undoLastMigration() now
+    // reverts them first, in reverse order; undo twelve times to reach and
+    // verify the enquiries migration's own reversibility (drop-table).
+    await dataSource.undoLastMigration();
+    await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();

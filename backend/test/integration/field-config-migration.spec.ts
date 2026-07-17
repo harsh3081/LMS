@@ -77,10 +77,13 @@ describe('field-config migrations (issue #27 Task 1.1)', () => {
     // SeedAdminUser1700000000008, MakeLeadFieldsNullable1700000000007,
     // AddOwnerUpdatedAt1700000000009 (issue #28),
     // CreateFollowups1700000000010 (issue #30),
-    // AddNextFollowUpAt1700000000011 (issue #31), and
-    // AddResultingStatusToFollowups1700000000012 (issue #32) were all added
-    // after this migration; undo those first, in reverse order, then undo
-    // this migration itself.
+    // AddNextFollowUpAt1700000000011 (issue #31),
+    // AddResultingStatusToFollowups1700000000012 (issue #32), and
+    // CreateTestDrives1700000000013 / SeedDemoVehicles1700000000014 (issue
+    // #34) were all added after this migration; undo those first, in
+    // reverse order, then undo this migration itself.
+    await dataSource.undoLastMigration();
+    await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();

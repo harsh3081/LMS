@@ -76,9 +76,13 @@ describe('owner-updated-at migration (issue #28 Task 1.1)', () => {
   it('down-migration reverses cleanly: drops owner_updated_at from both tables', async () => {
     dataSource = await createTestDataSource();
     // issue #30 added CreateFollowups1700000000010, issue #31 added
-    // AddNextFollowUpAt1700000000011, and issue #32 added
-    // AddResultingStatusToFollowups1700000000012, after this one; undo
-    // those first, in reverse order, then undo this migration itself.
+    // AddNextFollowUpAt1700000000011, issue #32 added
+    // AddResultingStatusToFollowups1700000000012, and issue #34 added
+    // CreateTestDrives1700000000013 / SeedDemoVehicles1700000000014, after
+    // this one; undo those first, in reverse order, then undo this
+    // migration itself.
+    await dataSource.undoLastMigration();
+    await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
