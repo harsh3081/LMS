@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsIn, IsISO8601, IsNotEmpty, IsOptional, IsString, Matches, ValidateIf } from 'class-validator';
 import { FOLLOWUP_TYPES } from '../entities/followup.entity';
-import { ENQUIRY_TERMINAL_STATUSES } from '../../enquiries/entities/enquiry.entity';
+import { ENQUIRY_ALL_LOGGABLE_STATUSES, ENQUIRY_TERMINAL_STATUSES } from '../../enquiries/entities/enquiry.entity';
 
 /**
  * Client-supplied fields ONLY for logging a Follow-up (issue #30 AC1-AC4,
@@ -57,22 +57,24 @@ export class LogFollowupDto {
   nextFollowUpAt?: string;
 
   /**
-   * NEW (issue #31, AC2): the minimum slice of issue #33 ("Update Enquiry
-   * Status as Part of a Follow-up") pulled forward just far enough to make
-   * AC2's terminal-state exception correct — see NOTES.md "Terminal-status
-   * boundary" for the full reasoning and the explicit hand-off to #33
-   * (transitions, reasons, permissions nuance, and audit trail beyond the
-   * single audit_log row written here all remain #33's to build).
-   * Deliberately restricted to the two terminal values only via `@IsIn`
-   * (not the full status vocabulary) — this endpoint is not a general
-   * enquiry-status-update surface.
+   * NEW (issue #31, AC2), WIDENED (issue #33, AC1/AC5): lets a DSE set the
+   * Enquiry's status as part of logging a Follow-up. `@IsIn` accepts the
+   * full loggable set (Hot/Warm/Cold/Lost/Booked) — any other value
+   * (including an omitted-but-present empty string, or a value outside the
+   * set such as "New" or a typo) is rejected with 400 (AC5). Only
+   * Lost/Booked are TERMINAL (`ENQUIRY_TERMINAL_STATUSES`): setting
+   * Hot/Warm/Cold still requires `nextFollowUpAt` — that cross-field rule is
+   * enforced by FollowupsService.assertNextFollowUpOrTerminalStatus (AC4),
+   * not by this DTO. See .phoenix-os/project/specs/33/NOTES.md.
    */
   @ApiProperty({
     required: false,
-    example: ENQUIRY_TERMINAL_STATUSES[0],
-    description: ENQUIRY_TERMINAL_STATUSES.join(' | '),
+    example: ENQUIRY_ALL_LOGGABLE_STATUSES[0],
+    description: `${ENQUIRY_ALL_LOGGABLE_STATUSES.join(' | ')} — only ${ENQUIRY_TERMINAL_STATUSES.join(' and ')} are terminal (waive nextFollowUpAt); Hot/Warm/Cold still require nextFollowUpAt.`,
   })
   @IsOptional()
-  @IsIn(ENQUIRY_TERMINAL_STATUSES, { message: `enquiryStatus must be one of: ${ENQUIRY_TERMINAL_STATUSES.join(', ')}` })
+  @IsIn(ENQUIRY_ALL_LOGGABLE_STATUSES, {
+    message: `enquiryStatus must be one of: ${ENQUIRY_ALL_LOGGABLE_STATUSES.join(', ')}`,
+  })
   enquiryStatus?: string;
 }
