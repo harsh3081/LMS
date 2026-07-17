@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource, DeepPartial, EntityManager, MoreThanOrEqual } from 'typeorm';
+import { DataSource, DeepPartial, EntityManager, LessThan, MoreThan, MoreThanOrEqual } from 'typeorm';
 import { TestDriveEntity } from './entities/test-drive.entity';
 import { Principal } from '../common/principal';
 
@@ -35,6 +35,37 @@ export class TestDrivesRepository {
         locationId: actor.locationId,
         dealerGroupId: actor.dealerGroupId,
         slotStart: MoreThanOrEqual(new Date()),
+      },
+      order: { slotStart: 'ASC' },
+    });
+  }
+
+  /** issue #35 AC1/AC2/AC5 — the scheduler grid's data source: every BOOKED
+   * slot for one vehicle whose [slotStart,slotEnd) window overlaps the
+   * requested [from,to) range, tenant-scoped (`locationId`/`dealerGroupId`,
+   * mirrors FollowupsRepository.findByEnquiry's tenant-not-owner scoping)
+   * but deliberately NOT owner/`bookedBy`-scoped — any DSE at the same
+   * location sees every booking against a vehicle they can also see via
+   * GET /api/v1/demo-vehicles (demo vehicles are a shared dealership
+   * resource, not per-DSE). No SM/GM cross-location widening (unlike
+   * FollowupsRepository.findByEnquiry's SM/GM branch) — GET /demo-vehicles
+   * itself has no role-based branching either, so this mirrors that
+   * simpler, single-location-scoped precedent. Ascending by slotStart. */
+  async findBookedInRange(
+    vehicleId: string,
+    from: Date,
+    to: Date,
+    actor: Principal,
+    manager?: EntityManager,
+  ): Promise<TestDriveEntity[]> {
+    const repository = this.repo(manager);
+    return repository.find({
+      where: {
+        vehicleId,
+        locationId: actor.locationId,
+        dealerGroupId: actor.dealerGroupId,
+        slotStart: LessThan(to),
+        slotEnd: MoreThan(from),
       },
       order: { slotStart: 'ASC' },
     });

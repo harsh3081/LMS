@@ -1,5 +1,6 @@
 import { TestDriveEntity } from './entities/test-drive.entity';
 import { TestDriveResponseDto } from './dto/test-drive-response.dto';
+import { SchedulerSlotDto } from './dto/scheduler-slot.dto';
 
 function toIso(value: Date | string): string {
   return value instanceof Date ? value.toISOString() : value;
@@ -20,5 +21,14 @@ export function toTestDriveResponse(testDrive: TestDriveEntity): TestDriveRespon
     locationId: testDrive.locationId,
     createdAt: toIso(testDrive.createdAt),
     updatedAt: toIso(testDrive.updatedAt),
+  };
+}
+
+/** issue #35 AC2 — maps a booked TestDriveEntity onto the deliberately
+ * minimal/anonymized SchedulerSlotDto (see that DTO's comment). */
+export function toSchedulerSlot(testDrive: TestDriveEntity): SchedulerSlotDto {
+  return {
+    slotStart: toIso(testDrive.slotStart),
+    slotEnd: toIso(testDrive.slotEnd),
   };
 }

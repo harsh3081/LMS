@@ -238,6 +238,120 @@ describe('GET /api/v1/test-drives/upcoming (issue #34 AC5)', () => {
   });
 });
 
+describe('GET /api/v1/test-drives (issue #35 scheduler grid, AC1/AC2/AC5)', () => {
+  let ctx: TestAppContext;
+  let dseAAgent: ReturnType<typeof request.agent>;
+  let dseBAgent: ReturnType<typeof request.agent>;
+  let dseCAgent: ReturnType<typeof request.agent>;
+  let enquiryId: string;
+  let vehicleId: string;
+
+  const validEnquiryPayload = () => ({
+    customerName: `Walk-in Customer ${Date.now()}-${Math.random()}`,
+    mobile: (() => {
+      const leading = ['6', '7', '8', '9'][Math.floor(Math.random() * 4)];
+      const rest = Array.from({ length: 9 }, () => Math.floor(Math.random() * 10)).join('');
+      return `${leading}${rest}`;
+    })(),
+    sourceId: 1,
+    modelId: 101,
+    budget: 300000,
+    variant: 'LX',
+    exchangeInterest: false,
+    financeInterest: true,
+  });
+
+  beforeAll(async () => {
+    ctx = await createTestApp();
+    const dseA = ctx.seed.users['dseA'];
+    const dseB = ctx.seed.users['dseB'];
+    const dseC = ctx.seed.users['dseC'];
+    dseAAgent = await loginAgent(ctx.app, dseA.email, dseA.password);
+    dseBAgent = await loginAgent(ctx.app, dseB.email, dseB.password);
+    dseCAgent = await loginAgent(ctx.app, dseC.email, dseC.password);
+
+    const created = await dseAAgent.post(ENQUIRIES_PATH).send(validEnquiryPayload());
+    enquiryId = created.body.enquiryId;
+    vehicleId = ctx.seed.demoVehicleIdsByLocation[Object.keys(ctx.seed.locationIds)[0]][0];
+  });
+
+  afterAll(async () => {
+    await closeTestApp(ctx);
+  });
+
+  const schedulerQuery = (from: string, to: string) =>
+    `${TEST_DRIVES_PATH}?vehicleId=${vehicleId}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+
+  it('AC1/AC2: returns the booked slot (slotStart/slotEnd only, anonymized) for the requested vehicle+range', async () => {
+    const booking = await dseAAgent
+      .post(TEST_DRIVES_PATH)
+      .send({ enquiryId, vehicleId, slotStart: '2026-12-01T10:00:00.000Z', slotEnd: '2026-12-01T10:30:00.000Z' });
+    expect(booking.status).toBe(201);
+
+    const res = await dseAAgent.get(schedulerQuery('2026-12-01T00:00:00.000Z', '2026-12-01T23:59:59.999Z'));
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(
+      expect.arrayContaining([{ slotStart: '2026-12-01T10:00:00.000Z', slotEnd: '2026-12-01T10:30:00.000Z' }]),
+    );
+    // Deliberately anonymized (AC2/NOTES.md) — no cross-DSE identifying fields.
+    expect(res.body.every((s: Record<string, unknown>) => !('testDriveId' in s) && !('enquiryId' in s) && !('bookedBy' in s))).toBe(
+      true,
+    );
+  });
+
+  it('AC5: a DIFFERENT DSE at the SAME location sees the booking (tenant-scoped, not owner-scoped)', async () => {
+    await dseAAgent
+      .post(TEST_DRIVES_PATH)
+      .send({ enquiryId, vehicleId, slotStart: '2026-12-02T10:00:00.000Z', slotEnd: '2026-12-02T10:30:00.000Z' });
+
+    const res = await dseBAgent.get(schedulerQuery('2026-12-02T00:00:00.000Z', '2026-12-02T23:59:59.999Z'));
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(
+      expect.arrayContaining([{ slotStart: '2026-12-02T10:00:00.000Z', slotEnd: '2026-12-02T10:30:00.000Z' }]),
+    );
+  });
+
+  it("does not include a booking from a different location/tenant's DSE", async () => {
+    await dseAAgent
+      .post(TEST_DRIVES_PATH)
+      .send({ enquiryId, vehicleId, slotStart: '2026-12-03T10:00:00.000Z', slotEnd: '2026-12-03T10:30:00.000Z' });
+
+    const res = await dseCAgent.get(schedulerQuery('2026-12-03T00:00:00.000Z', '2026-12-03T23:59:59.999Z'));
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([]);
+  });
+
+  it('missing vehicleId -> 400', async () => {
+    const res = await dseAAgent.get(`${TEST_DRIVES_PATH}?from=2026-12-01T00:00:00.000Z&to=2026-12-01T23:59:59.999Z`);
+    expect(res.status).toBe(400);
+  });
+
+  it('missing from -> 400', async () => {
+    const res = await dseAAgent.get(`${TEST_DRIVES_PATH}?vehicleId=${vehicleId}&to=2026-12-01T23:59:59.999Z`);
+    expect(res.status).toBe(400);
+  });
+
+  it('missing to -> 400', async () => {
+    const res = await dseAAgent.get(`${TEST_DRIVES_PATH}?vehicleId=${vehicleId}&from=2026-12-01T00:00:00.000Z`);
+    expect(res.status).toBe(400);
+  });
+
+  it('an unknown vehicleId returns an empty array, not an error', async () => {
+    const res = await dseAAgent.get(
+      `${TEST_DRIVES_PATH}?vehicleId=${NON_EXISTENT_UUID}&from=2026-12-01T00:00:00.000Z&to=2026-12-01T23:59:59.999Z`,
+    );
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([]);
+  });
+
+  it('unauthenticated -> 401', async () => {
+    const res = await request(ctx.app.getHttpServer()).get(
+      schedulerQuery('2026-12-01T00:00:00.000Z', '2026-12-01T23:59:59.999Z'),
+    );
+    expect(res.status).toBe(401);
+  });
+});
+
 describe('GET /api/v1/demo-vehicles (issue #34 AC1)', () => {
   let ctx: TestAppContext;
   let dseAAgent: ReturnType<typeof request.agent>;

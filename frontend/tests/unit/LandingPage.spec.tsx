@@ -121,6 +121,14 @@ describe('LandingPage entry point / feature toggle (CC-10)', () => {
     expect(entry).toHaveAttribute('href', '/test-drives/new');
   });
 
+  // ---- issue #35: "Test Drive Scheduler" entry point ----
+  it('shows the "Test Drive Scheduler" entry point', async () => {
+    mockedApi.getConfig.mockResolvedValue({ newLeadEnabled: true, convertLeadEnabled: true, directEnquiryEnabled: true });
+    renderLanding();
+    const entry = await screen.findByRole('link', { name: /test drive scheduler/i });
+    expect(entry).toHaveAttribute('href', '/test-drives/scheduler');
+  });
+
   // -----------------------------------------------------------------
   // ADDED (issue #26) — New Enquiry entry point + its own feature toggle.
   // -----------------------------------------------------------------

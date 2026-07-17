@@ -24,11 +24,11 @@ vi.mock('../../src/api/client', async (importOriginal) => {
 });
 const mockedApi = vi.mocked(api, true);
 
-function renderPage() {
+function renderPage(initialEntry = '/test-drives/new') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={['/test-drives/new']}>
+      <MemoryRouter initialEntries={[initialEntry]}>
         <BookTestDrivePage />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -48,5 +48,16 @@ describe('BookTestDrivePage (issue #34 AC1)', () => {
     expect(screen.getByRole('heading', { name: /book a test drive/i })).toBeInTheDocument();
     await waitFor(() => expect(mockedApi.getMyEnquiries).toHaveBeenCalled());
     expect(screen.getByRole('form', { name: /book a test drive/i })).toBeInTheDocument();
+  });
+
+  it('issue #35 AC4: pre-fills vehicle/date/time from the vehicleId/date/time query params (Scheduler "Book" link)', async () => {
+    mockedApi.getDemoVehicles.mockResolvedValue([{ vehicleId: 'v1', modelId: 101, variant: 'LX', locationId: 'loc-1' }]);
+    renderPage('/test-drives/new?vehicleId=v1&date=2026-08-01&time=10:00');
+
+    await waitFor(() => expect(screen.getByLabelText(/demo vehicle/i)).toHaveValue('v1'));
+    expect(screen.getByLabelText(/^date$/i)).toHaveValue('2026-08-01');
+    expect(screen.getByLabelText(/start time/i)).toHaveValue('10:00');
+    // enquiryId is deliberately never pre-filled (see NewTestDriveForm's comment).
+    expect(screen.getByLabelText(/customer.*enquiry/i)).toHaveValue('');
   });
 });
