@@ -159,6 +159,64 @@ describe('LogFollowupForm', () => {
     },
   );
 
+  // ---- issue #33: Update Enquiry Status as Part of a Follow-up (AC1/AC4) ----
+  it('AC1: the Enquiry Outcome selector offers Hot, Warm, Cold, Lost, and Booked', () => {
+    renderForm();
+    for (const status of ['Hot', 'Warm', 'Cold', 'Lost', 'Booked']) {
+      expect(screen.getByRole('option', { name: status })).toBeInTheDocument();
+    }
+  });
+
+  it.each(['Hot', 'Warm', 'Cold'])(
+    'AC4: selecting the non-terminal enquiry outcome "%s" WITHOUT a next follow-up date still shows the required error (does not waive AC4)',
+    async (status) => {
+      renderForm();
+      const user = userEvent.setup();
+      await user.selectOptions(screen.getByLabelText(/follow-up type/i), 'Call');
+      await user.type(screen.getByLabelText(/remarks/i), 'Marking interest level.');
+      await user.selectOptions(screen.getByLabelText(/enquiry outcome/i), status);
+      await user.click(screen.getByRole('button', { name: /log follow-up|submit|save/i }));
+
+      expect(
+        await screen.findByText(/next follow-up date is required unless the enquiry is marked lost or booked/i),
+      ).toBeInTheDocument();
+      expect(mockedApi.logFollowup).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['Hot', 'Warm', 'Cold'])(
+    'AC1: selecting the non-terminal enquiry outcome "%s" WITH a next follow-up date submits successfully',
+    async (status) => {
+      mockedApi.logFollowup.mockResolvedValue({
+        followupId: 'followup-3',
+        enquiryId: 'enq-1',
+        type: 'Call',
+        remarks: 'Marking interest level.',
+        loggedBy: 'dse-1',
+        locationId: 'loc-1',
+        loggedAt: new Date().toISOString(),
+        nextFollowUpAt: '2026-09-15T00:00:00.000Z',
+        resultingStatus: status,
+      });
+
+      renderForm();
+      const user = userEvent.setup();
+      await user.selectOptions(screen.getByLabelText(/follow-up type/i), 'Call');
+      await user.type(screen.getByLabelText(/remarks/i), 'Marking interest level.');
+      await user.type(screen.getByLabelText(/next follow-up date/i), '2026-09-15');
+      await user.selectOptions(screen.getByLabelText(/enquiry outcome/i), status);
+      await user.click(screen.getByRole('button', { name: /log follow-up|submit|save/i }));
+
+      expect(await screen.findByText(/follow-up logged/i)).toBeInTheDocument();
+      expect(mockedApi.logFollowup).toHaveBeenCalledWith('enq-1', {
+        type: 'Call',
+        remarks: 'Marking interest level.',
+        nextFollowUpAt: '2026-09-15',
+        enquiryStatus: status,
+      });
+    },
+  );
+
   it('maps a server 400 field error onto the matching form field', async () => {
     mockedApi.logFollowup.mockRejectedValue(
       new ApiError(400, [{ field: 'remarks', message: 'remarks is required' }], 'Bad request'),

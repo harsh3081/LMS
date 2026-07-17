@@ -3,18 +3,39 @@ import { jsonbTransformer } from '../../common/jsonb.transformer';
 
 export const ENQUIRY_STATUS_NEW = 'New';
 
-/** NEW (issue #31, AC2): the minimal terminal-state subset needed for this
+/** NEW (issue #31, AC2): the minimal terminal-state subset needed for that
  * Story's "closing a Follow-up without a Next Follow-up Date" exception.
  * Issue #33 ("Update Enquiry Status as Part of a Follow-up") owns the FULL
- * status vocabulary/transition workflow (reasons, permissions nuance,
- * audit) — this Story only needs to recognize these two values as
- * "terminal" for FollowupsService's AC2 check, and allows the SAME
- * follow-up-logging request to optionally set one of them (see
- * LogFollowupDto.enquiryStatus). See
- * .phoenix-os/project/specs/31/NOTES.md for the full boundary reasoning. */
+ * status vocabulary (see ENQUIRY_ALL_LOGGABLE_STATUSES below) — this subset
+ * remains exactly the two values that are "terminal" for
+ * FollowupsService.assertNextFollowUpOrTerminalStatus's AC4 check (only
+ * Lost/Booked waive the Next Follow-up Date requirement; Hot/Warm/Cold do
+ * not). See .phoenix-os/project/specs/31/NOTES.md for the original boundary
+ * reasoning and .phoenix-os/project/specs/33/NOTES.md for how #33 widened
+ * the loggable set on top of it. */
 export const ENQUIRY_STATUS_LOST = 'Lost';
 export const ENQUIRY_STATUS_BOOKED = 'Booked';
 export const ENQUIRY_TERMINAL_STATUSES = [ENQUIRY_STATUS_LOST, ENQUIRY_STATUS_BOOKED] as const;
+
+/** NEW (issue #33, AC1/AC5): the full status vocabulary a DSE may set as
+ * part of logging a Follow-up (`LogFollowupDto.enquiryStatus`). Hot/Warm/
+ * Cold are non-terminal — they are valid `enquiryStatus` values but do NOT
+ * appear in ENQUIRY_TERMINAL_STATUSES above, so they still require a
+ * `nextFollowUpAt` (AC4). Lost/Booked remain the only terminal values. This
+ * is deliberately still scoped to "statuses loggable via a Follow-up", not
+ * every possible Enquiry status in the system (e.g. `ENQUIRY_STATUS_NEW` is
+ * server-assigned at creation and intentionally excluded — this endpoint is
+ * not a general status-reset surface). */
+export const ENQUIRY_STATUS_HOT = 'Hot';
+export const ENQUIRY_STATUS_WARM = 'Warm';
+export const ENQUIRY_STATUS_COLD = 'Cold';
+export const ENQUIRY_ALL_LOGGABLE_STATUSES = [
+  ENQUIRY_STATUS_HOT,
+  ENQUIRY_STATUS_WARM,
+  ENQUIRY_STATUS_COLD,
+  ENQUIRY_STATUS_LOST,
+  ENQUIRY_STATUS_BOOKED,
+] as const;
 
 /** Distinguishes a Direct Enquiry (issue #26, no parent Lead) from one
  * converted from an existing Lead (issue #25). See migration

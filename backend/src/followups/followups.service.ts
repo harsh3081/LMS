@@ -6,7 +6,7 @@ import { AuditLogRepository } from '../audit-log/audit-log.repository';
 import { LogFollowupDto } from './dto/log-followup.dto';
 import { FollowupEntity } from './entities/followup.entity';
 import { FollowupEnquiryNotFoundError, NextFollowUpRequiredError } from './followups.errors';
-import { EnquiryEntity } from '../enquiries/entities/enquiry.entity';
+import { ENQUIRY_TERMINAL_STATUSES, EnquiryEntity } from '../enquiries/entities/enquiry.entity';
 import { Principal } from '../common/principal';
 
 /**
@@ -126,16 +126,20 @@ export class FollowupsService {
     return this.followupsRepository.findUpcomingForActor(actor);
   }
 
-  /** AC2: "System does not allow closing a follow-up without a Next
-   * Follow-up Date, unless Enquiry status is set to a terminal state
-   * (Lost/Booked)." `dto.enquiryStatus` is already constrained to
-   * Lost/Booked by LogFollowupDto's `@IsIn` — its mere presence is
-   * sufficient to prove the exception applies. Mirrors
-   * FieldConfigService.assertMandatoryFieldsPresent's manual
-   * conditional-mandatory pattern. */
+  /** AC4 (issue #33) / AC2 (issue #31): "System does not allow closing a
+   * follow-up without a Next Follow-up Date, unless Enquiry status is set to
+   * a terminal state (Lost/Booked)." FIXED (issue #33): `dto.enquiryStatus`
+   * is now validated against the FULL loggable set
+   * (ENQUIRY_ALL_LOGGABLE_STATUSES — Hot/Warm/Cold/Lost/Booked) by
+   * LogFollowupDto's `@IsIn`, so its mere presence is no longer sufficient
+   * to prove the terminal exception applies — Hot/Warm/Cold are legal
+   * `enquiryStatus` values that do NOT waive this requirement. `isTerminal`
+   * must check membership in `ENQUIRY_TERMINAL_STATUSES` specifically (only
+   * Lost/Booked). Mirrors FieldConfigService.assertMandatoryFieldsPresent's
+   * manual conditional-mandatory pattern. */
   private assertNextFollowUpOrTerminalStatus(dto: LogFollowupDto): void {
     const hasNextFollowUp = typeof dto.nextFollowUpAt === 'string' && dto.nextFollowUpAt.trim().length > 0;
-    const isTerminal = dto.enquiryStatus !== undefined;
+    const isTerminal = dto.enquiryStatus !== undefined && ENQUIRY_TERMINAL_STATUSES.includes(dto.enquiryStatus as (typeof ENQUIRY_TERMINAL_STATUSES)[number]);
     if (!hasNextFollowUp && !isTerminal) {
       throw new NextFollowUpRequiredError([
         {

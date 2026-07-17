@@ -18,7 +18,14 @@ import { DuplicatesService } from '../../src/duplicates/duplicates.service';
 import { DuplicatesRepository } from '../../src/duplicates/duplicates.repository';
 import { FollowupEnquiryNotFoundError, NextFollowUpRequiredError } from '../../src/followups/followups.errors';
 import { FOLLOWUP_TYPE_CALL, FOLLOWUP_TYPE_HOME_VISIT } from '../../src/followups/entities/followup.entity';
-import { ENQUIRY_STATUS_BOOKED, ENQUIRY_STATUS_LOST, ENQUIRY_STATUS_NEW } from '../../src/enquiries/entities/enquiry.entity';
+import {
+  ENQUIRY_STATUS_BOOKED,
+  ENQUIRY_STATUS_COLD,
+  ENQUIRY_STATUS_HOT,
+  ENQUIRY_STATUS_LOST,
+  ENQUIRY_STATUS_NEW,
+  ENQUIRY_STATUS_WARM,
+} from '../../src/enquiries/entities/enquiry.entity';
 import { Principal } from '../../src/common/principal';
 
 describe('FollowupsService.logFollowup (issue #30)', () => {
@@ -388,6 +395,71 @@ describe('FollowupsService.logFollowup (issue #30)', () => {
         const upcomingForC = await service.findUpcoming(actorC);
         expect(upcomingForC.some((f) => f.enquiryId === enquiry.enquiryId)).toBe(false);
       });
+    });
+
+    describe('issue #33: Update Enquiry Status as Part of a Follow-up (AC1/AC4/AC5)', () => {
+      // AC4's negative case: this is the bug #33 fixes — previously ANY
+      // enquiryStatus (including non-terminal Hot/Warm/Cold) waived the
+      // nextFollowUpAt requirement. Hot/Warm/Cold must NOT waive it.
+      it.each([ENQUIRY_STATUS_HOT, ENQUIRY_STATUS_WARM, ENQUIRY_STATUS_COLD])(
+        'AC4: setting enquiryStatus to "%s" WITHOUT a nextFollowUpAt still throws NextFollowUpRequiredError (non-terminal)',
+        async (nonTerminalStatus) => {
+          const enquiry = await enquiriesService.createDirect(validEnquiryDto(), actorA);
+          await expect(
+            service.logFollowup(
+              enquiry.enquiryId,
+              { type: FOLLOWUP_TYPE_CALL, remarks: 'Marking interest level.', enquiryStatus: nonTerminalStatus },
+              actorA,
+            ),
+          ).rejects.toBeInstanceOf(NextFollowUpRequiredError);
+        },
+      );
+
+      it.each([ENQUIRY_STATUS_HOT, ENQUIRY_STATUS_WARM, ENQUIRY_STATUS_COLD])(
+        'AC1: setting enquiryStatus to "%s" WITH a nextFollowUpAt succeeds and updates the Enquiry status',
+        async (nonTerminalStatus) => {
+          const enquiry = await enquiriesService.createDirect(validEnquiryDto(), actorA);
+          const followup = await service.logFollowup(
+            enquiry.enquiryId,
+            {
+              type: FOLLOWUP_TYPE_CALL,
+              remarks: 'Marking interest level.',
+              nextFollowUpAt: '2026-09-15',
+              enquiryStatus: nonTerminalStatus,
+            },
+            actorA,
+          );
+          expect(followup.resultingStatus).toBe(nonTerminalStatus);
+          expect(followup.nextFollowUpAt).toBeInstanceOf(Date);
+
+          const rows = await dataSource.query('SELECT status FROM enquiries WHERE enquiry_id = $1', [
+            enquiry.enquiryId,
+          ]);
+          expect(rows[0].status).toBe(nonTerminalStatus);
+        },
+      );
+
+      // Negative case already covered above at line ~222 for the "no
+      // enquiryStatus at all" path; this asserts the DTO-level rejection
+      // (AC5) is also honored when a raw plain object bypasses class-validator
+      // (defensive: the service itself does not re-validate enquiryStatus
+      // membership, since LogFollowupDto's `@IsIn` is the single source of
+      // truth for AC5 — see log-followup.dto.spec.ts for the full AC5
+      // coverage at the DTO layer).
+
+      it.each([ENQUIRY_STATUS_LOST, ENQUIRY_STATUS_BOOKED])(
+        'AC4 regression: terminal enquiryStatus "%s" without nextFollowUpAt still succeeds (unchanged by the fix)',
+        async (terminalStatus) => {
+          const enquiry = await enquiriesService.createDirect(validEnquiryDto(), actorA);
+          const followup = await service.logFollowup(
+            enquiry.enquiryId,
+            { type: FOLLOWUP_TYPE_CALL, remarks: 'Closing this out.', enquiryStatus: terminalStatus },
+            actorA,
+          );
+          expect(followup.resultingStatus).toBe(terminalStatus);
+          expect(followup.nextFollowUpAt).toBeNull();
+        },
+      );
     });
   });
 });

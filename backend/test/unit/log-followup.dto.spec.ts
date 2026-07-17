@@ -100,26 +100,41 @@ describe('LogFollowupDto', () => {
     });
   });
 
-  describe('enquiryStatus (AC2)', () => {
+  // MODIFIED (issue #33, AC1/AC5): enquiryStatus now accepts the full
+  // loggable set (Hot/Warm/Cold/Lost/Booked), not just the two terminal
+  // values — see ENQUIRY_ALL_LOGGABLE_STATUSES in enquiry.entity.ts. The
+  // cross-field "which values waive nextFollowUpAt" rule (AC4) is a
+  // FollowupsService concern, covered in followups.service.spec.ts, not here.
+  describe('enquiryStatus (issue #31 AC2, widened by issue #33 AC1/AC5)', () => {
     it('passes when enquiryStatus is omitted', async () => {
       const errors = await validateDto(validPayload);
       expect(errors.some((e) => e.property === 'enquiryStatus')).toBe(false);
     });
 
-    for (const status of ['Lost', 'Booked']) {
+    for (const status of ['Hot', 'Warm', 'Cold', 'Lost', 'Booked']) {
       it(`passes for enquiryStatus "${status}"`, async () => {
         const errors = await validateDto({ ...validPayload, enquiryStatus: status });
         expect(errors.some((e) => e.property === 'enquiryStatus')).toBe(false);
       });
     }
 
-    it('fails for an enquiryStatus outside the terminal set (e.g. "New") — not a general status-update surface', async () => {
+    it('fails for an enquiryStatus outside the loggable set (e.g. "New") — not a general status-update surface', async () => {
       const errors = await validateDto({ ...validPayload, enquiryStatus: 'New' });
       expect(errors.some((e) => e.property === 'enquiryStatus')).toBe(true);
     });
 
-    it('fails for an unrecognized enquiryStatus value', async () => {
+    it('fails for an unrecognized enquiryStatus value (AC5)', async () => {
       const errors = await validateDto({ ...validPayload, enquiryStatus: 'Won' });
+      expect(errors.some((e) => e.property === 'enquiryStatus')).toBe(true);
+    });
+
+    it('fails for a case-mismatched enquiryStatus value (AC5: "hot" is not "Hot")', async () => {
+      const errors = await validateDto({ ...validPayload, enquiryStatus: 'hot' });
+      expect(errors.some((e) => e.property === 'enquiryStatus')).toBe(true);
+    });
+
+    it('fails for an enquiryStatus with surrounding whitespace (AC5: no implicit trimming)', async () => {
+      const errors = await validateDto({ ...validPayload, enquiryStatus: ' Hot ' });
       expect(errors.some((e) => e.property === 'enquiryStatus')).toBe(true);
     });
   });

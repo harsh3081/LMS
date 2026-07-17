@@ -115,17 +115,18 @@ export interface DuplicateMatch {
 }
 
 /** LogFollowupDto fields (issue #30, AC1-AC4, extended by issue #31 AC1-AC4
- * with `nextFollowUpAt`/`enquiryStatus`) — backend/src/followups/dto/
- * log-followup.dto.ts. `enquiryId` is deliberately not part of the body; it
- * travels in the URL path (mirrors ConvertLeadInput / convertLead's leadId
- * path-param convention). `nextFollowUpAt` is required unless
- * `enquiryStatus` is 'Lost'/'Booked' (AC2) — enforced both client-side
+ * with `nextFollowUpAt`/`enquiryStatus`, WIDENED by issue #33 AC1/AC5 to the
+ * full loggable status set) — backend/src/followups/dto/log-followup.dto.ts.
+ * `enquiryId` is deliberately not part of the body; it travels in the URL
+ * path (mirrors ConvertLeadInput / convertLead's leadId path-param
+ * convention). `nextFollowUpAt` is required unless `enquiryStatus` is
+ * terminal ('Lost'/'Booked', AC4) — enforced both client-side
  * (LogFollowupForm) and server-side (FollowupsService). */
 export interface LogFollowupInput {
   type: 'Home Visit' | 'Showroom Visit' | 'Call';
   remarks: string;
   nextFollowUpAt?: string;
-  enquiryStatus?: 'Lost' | 'Booked';
+  enquiryStatus?: 'Hot' | 'Warm' | 'Cold' | 'Lost' | 'Booked';
 }
 
 /** Mirrors FollowupResponseDto (dealerGroupId intentionally excluded, same

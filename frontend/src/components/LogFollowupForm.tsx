@@ -13,16 +13,27 @@ const FOLLOWUP_TYPES = ['Home Visit', 'Showroom Visit', 'Call'] as const;
 
 /** NEW (issue #31, AC2) — mirrors
  * backend/src/enquiries/entities/enquiry.entity.ts ENQUIRY_TERMINAL_STATUSES
- * exactly. Deliberately just these two values (not the full status
- * vocabulary) — this form is not a general enquiry-status-update surface;
- * see .phoenix-os/project/specs/31/NOTES.md. */
+ * exactly. Deliberately just these two values — used ONLY to decide whether
+ * the Next Follow-up Date requirement is waived (AC4); NOT the full set of
+ * selectable statuses (see ENQUIRY_ALL_LOGGABLE_STATUSES below). See
+ * .phoenix-os/project/specs/31/NOTES.md. */
 const ENQUIRY_TERMINAL_STATUSES = ['Lost', 'Booked'] as const;
+
+/** NEW (issue #33, AC1/AC5) — mirrors
+ * backend/src/enquiries/entities/enquiry.entity.ts
+ * ENQUIRY_ALL_LOGGABLE_STATUSES exactly. The full set of Enquiry Outcome
+ * options offered by this form. Hot/Warm/Cold are NOT in
+ * ENQUIRY_TERMINAL_STATUSES above, so selecting them does NOT waive the Next
+ * Follow-up Date requirement below — mirrors
+ * FollowupsService.assertNextFollowUpOrTerminalStatus's server-side rule
+ * exactly. See .phoenix-os/project/specs/33/NOTES.md. */
+const ENQUIRY_ALL_LOGGABLE_STATUSES = ['Hot', 'Warm', 'Cold', 'Lost', 'Booked'] as const;
 
 type FormValues = {
   type: '' | (typeof FOLLOWUP_TYPES)[number];
   remarks: string;
   nextFollowUpAt: string;
-  enquiryStatus: '' | (typeof ENQUIRY_TERMINAL_STATUSES)[number];
+  enquiryStatus: '' | (typeof ENQUIRY_ALL_LOGGABLE_STATUSES)[number];
 };
 
 export interface LogFollowupFormProps {
@@ -116,8 +127,13 @@ export function LogFollowupForm({ enquiryId, onLogged }: LogFollowupFormProps) {
           id="nextFollowUpAt"
           type="date"
           {...register('nextFollowUpAt', {
+            // MODIFIED (issue #33, AC4): the waiver is keyed ONLY to the
+            // terminal statuses (Lost/Booked), mirroring
+            // FollowupsService.assertNextFollowUpOrTerminalStatus's fixed
+            // server-side check exactly — selecting a non-terminal outcome
+            // (Hot/Warm/Cold) must NOT waive this requirement.
             validate: (value, formValues) =>
-              value || formValues.enquiryStatus
+              value || ENQUIRY_TERMINAL_STATUSES.includes(formValues.enquiryStatus as (typeof ENQUIRY_TERMINAL_STATUSES)[number])
                 ? true
                 : 'Next follow-up date is required unless the enquiry is marked Lost or Booked',
           })}
@@ -127,7 +143,7 @@ export function LogFollowupForm({ enquiryId, onLogged }: LogFollowupFormProps) {
       <FormField label="Enquiry Outcome (optional)" htmlFor="enquiryStatus" error={errors.enquiryStatus?.message}>
         <Select id="enquiryStatus" {...register('enquiryStatus')}>
           <option value="">Keep enquiry open</option>
-          {ENQUIRY_TERMINAL_STATUSES.map((status) => (
+          {ENQUIRY_ALL_LOGGABLE_STATUSES.map((status) => (
             <option key={status} value={status}>
               {status}
             </option>

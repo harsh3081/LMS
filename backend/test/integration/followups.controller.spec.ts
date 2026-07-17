@@ -282,6 +282,51 @@ describe('issue #31: Schedule Next Follow-up and Auto-Generate Reminder', () => 
     expect(updated.status).toBe('Booked');
   });
 
+  describe('issue #33: Update Enquiry Status as Part of a Follow-up (AC1/AC4/AC5)', () => {
+    it.each(['Hot', 'Warm', 'Cold'])(
+      'AC1: accepts enquiryStatus "%s" (widened set) when nextFollowUpAt is also given',
+      async (status) => {
+        const created = await dseAAgent.post(ENQUIRIES_PATH).send(validEnquiryPayload());
+        const res = await dseAAgent
+          .post(followupPath(created.body.enquiryId))
+          .send({ type: 'Call', remarks: 'Marking interest level.', nextFollowUpAt: '2026-09-15', enquiryStatus: status });
+        expect(res.status).toBe(201);
+        expect(res.body.resultingStatus).toBe(status);
+      },
+    );
+
+    it.each(['Hot', 'Warm', 'Cold'])(
+      'AC4: enquiryStatus "%s" WITHOUT nextFollowUpAt -> 400 (non-terminal, does not waive the requirement)',
+      async (status) => {
+        const created = await dseAAgent.post(ENQUIRIES_PATH).send(validEnquiryPayload());
+        const res = await dseAAgent
+          .post(followupPath(created.body.enquiryId))
+          .send({ type: 'Call', remarks: 'Marking interest level.', enquiryStatus: status });
+        expect(res.status).toBe(400);
+        expect(JSON.stringify(res.body).toLowerCase()).toContain('nextfollowupat');
+      },
+    );
+
+    it('AC1: setting enquiryStatus to "Hot" updates the Enquiry visible on GET /api/v1/enquiries', async () => {
+      const created = await dseAAgent.post(ENQUIRIES_PATH).send(validEnquiryPayload());
+      await dseAAgent
+        .post(followupPath(created.body.enquiryId))
+        .send({ type: 'Call', remarks: 'Warming up.', nextFollowUpAt: '2026-09-15', enquiryStatus: 'Hot' });
+
+      const list = await dseAAgent.get(ENQUIRIES_PATH);
+      const updated = list.body.find((e: { enquiryId: string }) => e.enquiryId === created.body.enquiryId);
+      expect(updated.status).toBe('Hot');
+    });
+
+    it('AC5: an invalid/unrecognized enquiryStatus value -> 400', async () => {
+      const created = await dseAAgent.post(ENQUIRIES_PATH).send(validEnquiryPayload());
+      const res = await dseAAgent
+        .post(followupPath(created.body.enquiryId))
+        .send({ type: 'Call', remarks: 'Bad status.', nextFollowUpAt: '2026-09-15', enquiryStatus: 'Bogus' });
+      expect(res.status).toBe(400);
+    });
+  });
+
   describe('GET /api/v1/follow-ups/upcoming (AC4)', () => {
     it('returns the calling DSE\'s own upcoming Follow-ups, most-overdue-first', async () => {
       const created = await dseAAgent.post(ENQUIRIES_PATH).send(validEnquiryPayload());
