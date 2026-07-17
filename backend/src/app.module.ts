@@ -22,6 +22,9 @@ import { FieldConfigRepository } from './field-config/field-config.repository';
 import { DuplicatesController } from './duplicates/duplicates.controller';
 import { DuplicatesService } from './duplicates/duplicates.service';
 import { DuplicatesRepository } from './duplicates/duplicates.repository';
+import { FollowupsController } from './followups/followups.controller';
+import { FollowupsService } from './followups/followups.service';
+import { FollowupsRepository } from './followups/followups.repository';
 
 /**
  * Built via `forRoot(dataSource)` rather than `TypeOrmModule.forRootAsync`
@@ -46,6 +49,7 @@ export class AppModule {
         VehicleModelsController,
         FieldConfigController,
         DuplicatesController,
+        FollowupsController,
       ],
       providers: [
         { provide: DataSource, useValue: dataSource },
@@ -62,6 +66,8 @@ export class AppModule {
         FieldConfigRepository,
         DuplicatesService,
         DuplicatesRepository,
+        FollowupsService,
+        FollowupsRepository,
       ],
     };
   }

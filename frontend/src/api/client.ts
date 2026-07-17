@@ -114,6 +114,27 @@ export interface DuplicateMatch {
   status: string;
 }
 
+/** LogFollowupDto fields (issue #30, AC1-AC4) — backend/src/followups/dto/
+ * log-followup.dto.ts. `enquiryId` is deliberately not part of the body; it
+ * travels in the URL path (mirrors ConvertLeadInput / convertLead's leadId
+ * path-param convention). */
+export interface LogFollowupInput {
+  type: 'Home Visit' | 'Showroom Visit' | 'Call';
+  remarks: string;
+}
+
+/** Mirrors FollowupResponseDto (dealerGroupId intentionally excluded, same
+ * convention as Enquiry). */
+export interface Followup {
+  followupId: string;
+  enquiryId: string;
+  type: string;
+  remarks: string;
+  loggedBy: string;
+  locationId: string;
+  loggedAt: string;
+}
+
 export interface FieldError {
   field: string;
   message: string;
@@ -201,4 +222,10 @@ export const api = {
   // ---- issue #29: duplicate detection (FR-06, AC1/AC6) ----
   checkDuplicates: (mobile: string) =>
     request<DuplicateMatch[]>(`/api/v1/duplicates?mobile=${encodeURIComponent(mobile)}`),
+
+  // ---- issue #30: log a follow-up against an Enquiry (AC1-AC5) ----
+  logFollowup: (enquiryId: string, input: LogFollowupInput) =>
+    request<Followup>(`/api/v1/enquiries/${enquiryId}/follow-ups`, { method: 'POST', body: JSON.stringify(input) }),
+
+  getFollowups: (enquiryId: string) => request<Followup[]>(`/api/v1/enquiries/${enquiryId}/follow-ups`),
 };

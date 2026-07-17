@@ -172,4 +172,47 @@ describe('api client', () => {
       api.updateFieldConfig({ fields: [{ fieldName: 'sourceId', mandatory: false }] }),
     ).rejects.toMatchObject({ status: 403 });
   });
+
+  // -----------------------------------------------------------------
+  // issue #30 — logFollowup / getFollowups (AC1-AC5)
+  // -----------------------------------------------------------------
+  it('logFollowup posts to /api/v1/enquiries/{enquiryId}/follow-ups and returns the created Follow-up', async () => {
+    mockFetchOnce(201, {
+      followupId: 'followup-1',
+      enquiryId: 'enq-1',
+      type: 'Home Visit',
+      remarks: 'Discussed financing options.',
+      loggedBy: 'dse-1',
+      locationId: 'loc-1',
+      loggedAt: '2026-01-01T00:00:00.000Z',
+    });
+    const result = await api.logFollowup('enq-1', { type: 'Home Visit', remarks: 'Discussed financing options.' });
+    expect(result.followupId).toBe('followup-1');
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/v1/enquiries/enq-1/follow-ups',
+      expect.objectContaining({ method: 'POST', credentials: 'include' }),
+    );
+  });
+
+  it('logFollowup surfaces a 400 field error as ApiError.fieldErrors', async () => {
+    mockFetchOnce(400, [{ field: 'remarks', message: 'remarks is required' }]);
+    await expect(api.logFollowup('enq-1', { type: 'Call', remarks: '' })).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it('logFollowup surfaces a 404 (enquiry not found / not owned) as ApiError', async () => {
+    mockFetchOnce(404, [{ field: 'enquiryId', message: 'Enquiry enq-1 not found' }]);
+    await expect(
+      api.logFollowup('enq-1', { type: 'Call', remarks: 'Discussed financing options.' }),
+    ).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('getFollowups fetches /api/v1/enquiries/{enquiryId}/follow-ups', async () => {
+    mockFetchOnce(200, [{ followupId: 'followup-1', enquiryId: 'enq-1', type: 'Call' }]);
+    const result = await api.getFollowups('enq-1');
+    expect(result).toEqual([{ followupId: 'followup-1', enquiryId: 'enq-1', type: 'Call' }]);
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/v1/enquiries/enq-1/follow-ups',
+      expect.objectContaining({ credentials: 'include' }),
+    );
+  });
 });

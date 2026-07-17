@@ -34,6 +34,23 @@ export class EnquiriesRepository {
     });
   }
 
+  /** NEW (issue #30) — owner/tenant-scoped single-Enquiry lookup, mirrors
+   * LeadsRepository.findOwnedById exactly. Backs FollowupsService's
+   * eligibility check: a DSE may only log/view a Follow-up against an
+   * Enquiry they own within their own tenant (indistinguishable from
+   * non-existent otherwise — no cross-tenant/cross-owner leakage). */
+  async findOwnedById(enquiryId: string, actor: Principal, manager?: EntityManager): Promise<EnquiryEntity | null> {
+    const repository = this.repo(manager);
+    return repository.findOne({
+      where: {
+        enquiryId,
+        ownerId: actor.userId,
+        locationId: actor.locationId,
+        dealerGroupId: actor.dealerGroupId,
+      },
+    });
+  }
+
   /** NEW (issue #28, AC4) — reassigns an Enquiry's owner and stamps
    * `ownerUpdatedAt`. Mirrors LeadsRepository.reassignOwner exactly
    * (not owner/tenant-scoped here; a future reassignment endpoint owns

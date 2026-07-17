@@ -9,6 +9,7 @@ import { AuditLogEntity } from './audit-log/entities/audit-log.entity';
 import { LeadEntity } from './leads/entities/lead.entity';
 import { EnquiryEntity } from './enquiries/entities/enquiry.entity';
 import { FieldConfigEntity } from './field-config/entities/field-config.entity';
+import { FollowupEntity } from './followups/entities/followup.entity';
 import { CreateFoundationalTables1700000000001 } from './migrations/1700000000001-CreateFoundationalTables';
 import { CreateLeads1700000000002 } from './migrations/1700000000002-CreateLeads';
 import { CreateEnquiries1700000000003 } from './migrations/1700000000003-CreateEnquiries';
@@ -18,6 +19,7 @@ import { CreateFieldConfig1700000000006 } from './migrations/1700000000006-Creat
 import { MakeLeadFieldsNullable1700000000007 } from './migrations/1700000000007-MakeLeadFieldsNullable';
 import { SeedAdminUser1700000000008 } from './migrations/1700000000008-SeedAdminUser';
 import { AddOwnerUpdatedAt1700000000009 } from './migrations/1700000000009-AddOwnerUpdatedAt';
+import { CreateFollowups1700000000010 } from './migrations/1700000000010-CreateFollowups';
 
 /**
  * Real PostgreSQL 16 DataSource (tech-design.md: TypeORM, resolved) — used by
@@ -39,6 +41,7 @@ export const entities = [
   LeadEntity,
   EnquiryEntity,
   FieldConfigEntity,
+  FollowupEntity,
 ];
 
 export const migrations = [
@@ -51,6 +54,7 @@ export const migrations = [
   MakeLeadFieldsNullable1700000000007,
   SeedAdminUser1700000000008,
   AddOwnerUpdatedAt1700000000009,
+  CreateFollowups1700000000010,
 ];
 
 export const dataSourceOptions: DataSourceOptions = {

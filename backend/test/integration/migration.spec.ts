@@ -83,11 +83,13 @@ describe('leads migration (Task 1.2.1 / 1.2.2)', () => {
     // issue #25 added CreateEnquiries1700000000003, the seed-data fix added
     // SeedMasterData1700000000004, issue #26 added DirectEnquiry1700000000005,
     // issue #27 added CreateFieldConfig1700000000006 /
-    // MakeLeadFieldsNullable1700000000007 / SeedAdminUser1700000000008, and
-    // issue #28 added AddOwnerUpdatedAt1700000000009 — seven migrations
-    // after this one, so undoLastMigration() now reverts them first, in
-    // reverse order; undo eight times to reach and verify the leads
-    // migration's own reversibility.
+    // MakeLeadFieldsNullable1700000000007 / SeedAdminUser1700000000008,
+    // issue #28 added AddOwnerUpdatedAt1700000000009, and issue #30 added
+    // CreateFollowups1700000000010 — eight migrations after this one, so
+    // undoLastMigration() now reverts them first, in reverse order; undo
+    // nine times to reach and verify the leads migration's own
+    // reversibility.
+    await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
@@ -200,11 +202,13 @@ describe('enquiries migration (Task 1.1.1, issue #25)', () => {
     dataSource = await createTestDataSource();
     // SeedMasterData1700000000004, DirectEnquiry1700000000005 (issue #26),
     // CreateFieldConfig1700000000006 / MakeLeadFieldsNullable1700000000007
-    // / SeedAdminUser1700000000008 (issue #27), and
-    // AddOwnerUpdatedAt1700000000009 (issue #28) were all added after this
+    // / SeedAdminUser1700000000008 (issue #27),
+    // AddOwnerUpdatedAt1700000000009 (issue #28), and
+    // CreateFollowups1700000000010 (issue #30) were all added after this
     // migration, so undoLastMigration() now reverts them first, in reverse
-    // order; undo seven times to reach and verify the enquiries migration's
+    // order; undo eight times to reach and verify the enquiries migration's
     // own reversibility (drop-table).
+    await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
