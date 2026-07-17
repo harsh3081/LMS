@@ -49,4 +49,15 @@ export class FollowupEntity {
    * single-timestamp convention, not the mutable leads/enquiries pair). */
   @CreateDateColumn({ name: 'logged_at', type: 'timestamptz' })
   loggedAt!: Date;
+
+  /** NEW (issue #31, AC1-AC4): the DSE's confirmed Next Follow-up Date —
+   * this value IS the reminder (no separate Reminder entity; see
+   * .phoenix-os/project/specs/31/NOTES.md for the AC3-AC5 design
+   * reasoning). Nullable additive column (migration
+   * 1700000000011-AddNextFollowUpAt), exactly as anticipated by #30's
+   * migration comment. NULL only when this Follow-up was logged against an
+   * Enquiry closed to a terminal status in the same request (AC2's
+   * exception — see FollowupsService.assertNextFollowUpOrTerminalStatus). */
+  @Column({ name: 'next_follow_up_at', type: 'timestamptz', nullable: true })
+  nextFollowUpAt!: Date | null;
 }

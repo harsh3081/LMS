@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource, DeepPartial, EntityManager } from 'typeorm';
+import { DataSource, DeepPartial, EntityManager, IsNull, Not } from 'typeorm';
 import { FollowupEntity } from './entities/followup.entity';
 import { Principal } from '../common/principal';
 
@@ -36,6 +36,26 @@ export class FollowupsRepository {
     return repository.find({
       where: { enquiryId, locationId: actor.locationId, dealerGroupId: actor.dealerGroupId },
       order: { loggedAt: 'DESC' },
+    });
+  }
+
+  /** NEW (issue #31, AC4) — "reminder/task is visible to the DSE ahead of
+   * the due date": every Follow-up the actor themselves logged
+   * (`loggedBy`, not `enquiries.owner_id` — the DSE who scheduled the next
+   * action is the one who should see the reminder) that carries a
+   * `nextFollowUpAt`, tenant-scoped, most-overdue-first (ascending —
+   * earliest due date first covers both overdue and future reminders in
+   * one simple sort, per the parent issue's guidance). */
+  async findUpcomingForActor(actor: Principal, manager?: EntityManager): Promise<FollowupEntity[]> {
+    const repository = this.repo(manager);
+    return repository.find({
+      where: {
+        loggedBy: actor.userId,
+        locationId: actor.locationId,
+        dealerGroupId: actor.dealerGroupId,
+        nextFollowUpAt: Not(IsNull()),
+      },
+      order: { nextFollowUpAt: 'ASC' },
     });
   }
 }

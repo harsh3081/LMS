@@ -12,5 +12,10 @@ export function toFollowupResponse(followup: FollowupEntity): FollowupResponseDt
     loggedBy: followup.loggedBy,
     locationId: followup.locationId,
     loggedAt: followup.loggedAt instanceof Date ? followup.loggedAt.toISOString() : followup.loggedAt,
+    nextFollowUpAt: followup.nextFollowUpAt
+      ? followup.nextFollowUpAt instanceof Date
+        ? followup.nextFollowUpAt.toISOString()
+        : followup.nextFollowUpAt
+      : null,
   };
 }

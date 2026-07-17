@@ -68,4 +68,21 @@ export class EnquiriesRepository {
     enquiry.ownerUpdatedAt = new Date();
     return repository.save(enquiry);
   }
+
+  /** NEW (issue #31, AC2) — the minimal status-write this Story needs: sets
+   * `status` to one of the two terminal values (LogFollowupDto.enquiryStatus,
+   * already validated to Lost/Booked before this is called). Deliberately
+   * NOT a general status-update method (no transition rules, no reason
+   * capture) — issue #33 ("Update Enquiry Status as Part of a Follow-up")
+   * owns the fuller version; this exists only to satisfy AC2's exception.
+   * Called from within FollowupsService's transaction alongside the
+   * Follow-up insert (ADR-009). Returns null if no Enquiry with that id
+   * exists (mirrors reassignOwner's contract). */
+  async updateStatus(enquiryId: string, status: string, manager?: EntityManager): Promise<EnquiryEntity | null> {
+    const repository = this.repo(manager);
+    const enquiry = await repository.findOne({ where: { enquiryId } });
+    if (!enquiry) return null;
+    enquiry.status = status;
+    return repository.save(enquiry);
+  }
 }

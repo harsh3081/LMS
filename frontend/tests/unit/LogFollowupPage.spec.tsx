@@ -54,6 +54,7 @@ describe('LogFollowupPage (issue #30)', () => {
       loggedBy: 'dse-1',
       locationId: 'loc-1',
       loggedAt: new Date().toISOString(),
+      nextFollowUpAt: '2026-08-01T00:00:00.000Z',
     });
 
     renderPage('enq-42');
@@ -61,9 +62,14 @@ describe('LogFollowupPage (issue #30)', () => {
 
     await user.selectOptions(screen.getByLabelText(/follow-up type/i), 'Call');
     await user.type(screen.getByLabelText(/remarks/i), 'Left a voicemail.');
+    await user.type(screen.getByLabelText(/next follow-up date/i), '2026-08-01');
     await user.click(screen.getByRole('button', { name: /log follow-up|submit|save/i }));
 
     expect(await screen.findByText(/follow-up logged/i)).toBeInTheDocument();
-    expect(mockedApi.logFollowup).toHaveBeenCalledWith('enq-42', { type: 'Call', remarks: 'Left a voicemail.' });
+    expect(mockedApi.logFollowup).toHaveBeenCalledWith('enq-42', {
+      type: 'Call',
+      remarks: 'Left a voicemail.',
+      nextFollowUpAt: '2026-08-01',
+    });
   });
 });

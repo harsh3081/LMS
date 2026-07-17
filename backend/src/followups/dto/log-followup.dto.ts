@@ -1,9 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsIn, IsNotEmpty, IsString, Matches } from 'class-validator';
+import { IsIn, IsISO8601, IsNotEmpty, IsOptional, IsString, Matches, ValidateIf } from 'class-validator';
 import { FOLLOWUP_TYPES } from '../entities/followup.entity';
+import { ENQUIRY_TERMINAL_STATUSES } from '../../enquiries/entities/enquiry.entity';
 
 /**
- * Client-supplied fields ONLY for logging a Follow-up (issue #30 AC1-AC4).
+ * Client-supplied fields ONLY for logging a Follow-up (issue #30 AC1-AC4,
+ * extended by issue #31 AC1-AC4 with `nextFollowUpAt`/`enquiryStatus`).
  * `enquiryId` is deliberately NOT here — it comes from the route param
  * (`POST /api/v1/enquiries/:enquiryId/follow-ups`), and `loggedBy`/
  * `locationId`/`dealerGroupId` are server-derived from the Principal (never
@@ -31,4 +33,46 @@ export class LogFollowupDto {
   @IsNotEmpty({ message: 'remarks is required' })
   @Matches(/\S/, { message: 'remarks is required' })
   remarks!: string;
+
+  /**
+   * NEW (issue #31, AC1-AC3): the DSE's confirmed Next Follow-up Date — this
+   * value IS the auto-generated reminder (no separate Reminder entity, see
+   * .phoenix-os/project/specs/31/NOTES.md). Optional/format-only at the
+   * DTO/class-validator level — `@ValidateIf` skips the ISO-format check
+   * entirely when the value is omitted/blank — because WHETHER it is
+   * mandatory depends on the sibling `enquiryStatus` field (AC2's
+   * terminal-status exception), which class-validator's single-property
+   * decorators cannot express cleanly. That cross-field rule is enforced by
+   * FollowupsService.assertNextFollowUpOrTerminalStatus, mirroring
+   * FieldConfigService.assertMandatoryFieldsPresent's convention of doing
+   * conditional-mandatory checks in the service layer rather than the DTO.
+   */
+  @ApiProperty({
+    required: false,
+    example: '2026-08-01',
+    description: 'ISO 8601 date/date-time. Required unless enquiryStatus is Lost or Booked (AC2).',
+  })
+  @ValidateIf((dto) => dto.nextFollowUpAt !== undefined && dto.nextFollowUpAt !== null && dto.nextFollowUpAt !== '')
+  @IsISO8601({}, { message: 'nextFollowUpAt must be a valid ISO 8601 date' })
+  nextFollowUpAt?: string;
+
+  /**
+   * NEW (issue #31, AC2): the minimum slice of issue #33 ("Update Enquiry
+   * Status as Part of a Follow-up") pulled forward just far enough to make
+   * AC2's terminal-state exception correct — see NOTES.md "Terminal-status
+   * boundary" for the full reasoning and the explicit hand-off to #33
+   * (transitions, reasons, permissions nuance, and audit trail beyond the
+   * single audit_log row written here all remain #33's to build).
+   * Deliberately restricted to the two terminal values only via `@IsIn`
+   * (not the full status vocabulary) — this endpoint is not a general
+   * enquiry-status-update surface.
+   */
+  @ApiProperty({
+    required: false,
+    example: ENQUIRY_TERMINAL_STATUSES[0],
+    description: ENQUIRY_TERMINAL_STATUSES.join(' | '),
+  })
+  @IsOptional()
+  @IsIn(ENQUIRY_TERMINAL_STATUSES, { message: `enquiryStatus must be one of: ${ENQUIRY_TERMINAL_STATUSES.join(', ')}` })
+  enquiryStatus?: string;
 }

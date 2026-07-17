@@ -83,7 +83,8 @@ describe('LogFollowupForm', () => {
     expect(mockedApi.logFollowup).not.toHaveBeenCalled();
   });
 
-  it('AC1/AC2/AC5: submitting valid data calls logFollowup with type + remarks and shows success', async () => {
+  // ---- issue #31: Next Follow-up Date / Enquiry Outcome (AC1-AC4) ----
+  it('AC1/AC2/AC3/AC5: submitting valid data (incl. next follow-up date) calls logFollowup and shows success', async () => {
     const onLogged = vi.fn();
     mockedApi.logFollowup.mockResolvedValue({
       followupId: 'followup-1',
@@ -93,6 +94,7 @@ describe('LogFollowupForm', () => {
       loggedBy: 'dse-1',
       locationId: 'loc-1',
       loggedAt: new Date().toISOString(),
+      nextFollowUpAt: '2026-08-01T00:00:00.000Z',
     });
 
     renderForm(onLogged);
@@ -100,15 +102,60 @@ describe('LogFollowupForm', () => {
 
     await user.selectOptions(screen.getByLabelText(/follow-up type/i), 'Home Visit');
     await user.type(screen.getByLabelText(/remarks/i), 'Discussed financing options.');
+    await user.type(screen.getByLabelText(/next follow-up date/i), '2026-08-01');
     await user.click(screen.getByRole('button', { name: /log follow-up|submit|save/i }));
 
     expect(await screen.findByText(/follow-up logged/i)).toBeInTheDocument();
     expect(mockedApi.logFollowup).toHaveBeenCalledWith('enq-1', {
       type: 'Home Visit',
       remarks: 'Discussed financing options.',
+      nextFollowUpAt: '2026-08-01',
     });
     await waitFor(() => expect(onLogged).toHaveBeenCalled());
   });
+
+  it('AC2: submitting without a next follow-up date or an enquiry outcome shows an inline error and does not call the API', async () => {
+    renderForm();
+    const user = userEvent.setup();
+    await user.selectOptions(screen.getByLabelText(/follow-up type/i), 'Call');
+    await user.type(screen.getByLabelText(/remarks/i), 'Left a voicemail.');
+    await user.click(screen.getByRole('button', { name: /log follow-up|submit|save/i }));
+
+    expect(
+      await screen.findByText(/next follow-up date is required unless the enquiry is marked lost or booked/i),
+    ).toBeInTheDocument();
+    expect(mockedApi.logFollowup).not.toHaveBeenCalled();
+  });
+
+  it.each(['Lost', 'Booked'])(
+    'AC2: selecting enquiry outcome "%s" allows submitting without a next follow-up date',
+    async (status) => {
+      mockedApi.logFollowup.mockResolvedValue({
+        followupId: 'followup-2',
+        enquiryId: 'enq-1',
+        type: 'Call',
+        remarks: 'Closing this out.',
+        loggedBy: 'dse-1',
+        locationId: 'loc-1',
+        loggedAt: new Date().toISOString(),
+        nextFollowUpAt: null,
+      });
+
+      renderForm();
+      const user = userEvent.setup();
+      await user.selectOptions(screen.getByLabelText(/follow-up type/i), 'Call');
+      await user.type(screen.getByLabelText(/remarks/i), 'Closing this out.');
+      await user.selectOptions(screen.getByLabelText(/enquiry outcome/i), status);
+      await user.click(screen.getByRole('button', { name: /log follow-up|submit|save/i }));
+
+      expect(await screen.findByText(/follow-up logged/i)).toBeInTheDocument();
+      expect(mockedApi.logFollowup).toHaveBeenCalledWith('enq-1', {
+        type: 'Call',
+        remarks: 'Closing this out.',
+        enquiryStatus: status,
+      });
+    },
+  );
 
   it('maps a server 400 field error onto the matching form field', async () => {
     mockedApi.logFollowup.mockRejectedValue(
@@ -120,9 +167,30 @@ describe('LogFollowupForm', () => {
 
     await user.selectOptions(screen.getByLabelText(/follow-up type/i), 'Call');
     await user.type(screen.getByLabelText(/remarks/i), 'x');
+    await user.type(screen.getByLabelText(/next follow-up date/i), '2026-08-01');
     await user.click(screen.getByRole('button', { name: /log follow-up|submit|save/i }));
 
     expect(await screen.findByText(/remarks is required/i)).toBeInTheDocument();
+  });
+
+  it('maps a server 400 nextFollowUpAt field error onto the matching form field', async () => {
+    mockedApi.logFollowup.mockRejectedValue(
+      new ApiError(
+        400,
+        [{ field: 'nextFollowUpAt', message: 'nextFollowUpAt is required unless enquiryStatus is Lost or Booked' }],
+        'Bad request',
+      ),
+    );
+
+    renderForm();
+    const user = userEvent.setup();
+
+    await user.selectOptions(screen.getByLabelText(/follow-up type/i), 'Call');
+    await user.type(screen.getByLabelText(/remarks/i), 'Discussed financing options.');
+    await user.type(screen.getByLabelText(/next follow-up date/i), '2026-08-01');
+    await user.click(screen.getByRole('button', { name: /log follow-up|submit|save/i }));
+
+    expect(await screen.findByText(/nextfollowupat is required/i)).toBeInTheDocument();
   });
 
   it('surfaces a non-field-error (e.g. 404 enquiry not found) as a form-level alert', async () => {
@@ -133,6 +201,7 @@ describe('LogFollowupForm', () => {
 
     await user.selectOptions(screen.getByLabelText(/follow-up type/i), 'Call');
     await user.type(screen.getByLabelText(/remarks/i), 'Discussed financing options.');
+    await user.type(screen.getByLabelText(/next follow-up date/i), '2026-08-01');
     await user.click(screen.getByRole('button', { name: /log follow-up|submit|save/i }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/enquiry not found/i);

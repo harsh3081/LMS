@@ -9,7 +9,7 @@ import { validationExceptionFactory } from './common/validation-exception.factor
 import { ReferentialValidationExceptionFilter } from './common/referential-validation.filter';
 import { EnquiryEligibilityExceptionFilter } from './common/enquiry-eligibility.filter';
 import { MandatoryFieldValidationExceptionFilter, UnknownFieldConfigExceptionFilter } from './field-config/field-config.filters';
-import { FollowupEnquiryNotFoundExceptionFilter } from './followups/followups.filters';
+import { FollowupEnquiryNotFoundExceptionFilter, NextFollowUpRequiredExceptionFilter } from './followups/followups.filters';
 
 /**
  * Builds a fully configured Nest application from an already-initialized
@@ -46,6 +46,7 @@ export async function createApp(dataSource: DataSource): Promise<INestApplicatio
     new MandatoryFieldValidationExceptionFilter(),
     new UnknownFieldConfigExceptionFilter(),
     new FollowupEnquiryNotFoundExceptionFilter(),
+    new NextFollowUpRequiredExceptionFilter(),
   );
 
   const config = new DocumentBuilder()
