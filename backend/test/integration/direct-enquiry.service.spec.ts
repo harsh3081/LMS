@@ -12,6 +12,8 @@ import { LeadsRepository } from '../../src/leads/leads.repository';
 import { AuditLogRepository } from '../../src/audit-log/audit-log.repository';
 import { FieldConfigService } from '../../src/field-config/field-config.service';
 import { FieldConfigRepository } from '../../src/field-config/field-config.repository';
+import { DuplicatesService } from '../../src/duplicates/duplicates.service';
+import { DuplicatesRepository } from '../../src/duplicates/duplicates.repository';
 import { ReferentialValidationError } from '../../src/leads/leads.errors';
 import { ENQUIRY_STATUS_NEW, ENQUIRY_ENTRY_TYPE_DIRECT } from '../../src/enquiries/entities/enquiry.entity';
 import { Principal } from '../../src/common/principal';
@@ -30,12 +32,14 @@ describe('EnquiriesService.createDirect (Task 2.4, issue #26)', () => {
     enquiriesRepository = new EnquiriesRepository(dataSource);
     auditLogRepository = new AuditLogRepository(dataSource);
     const fieldConfigService = new FieldConfigService(dataSource, new FieldConfigRepository(dataSource), auditLogRepository);
+    const duplicatesService = new DuplicatesService(new DuplicatesRepository(dataSource));
     service = new EnquiriesService(
       dataSource,
       enquiriesRepository,
       new LeadsRepository(dataSource),
       auditLogRepository,
       fieldConfigService,
+      duplicatesService,
     );
 
     const dseA = seed.users['dseA'];
@@ -134,5 +138,62 @@ describe('EnquiriesService.createDirect (Task 2.4, issue #26)', () => {
     const created = await service.createDirect(validDto(), actor);
     const queue = await service.findOwnQueue(actor);
     expect(queue.some((e) => e.enquiryId === created.enquiryId)).toBe(true);
+  });
+
+  // -------------------------------------------------------------------
+  // issue #29 (FR-06, AC3) — mirrors leads.service.spec.ts's duplicate-audit
+  // block exactly.
+  // -------------------------------------------------------------------
+  describe('duplicate-mobile audit note (issue #29)', () => {
+    it('still creates the Direct Enquiry when a duplicate mobile exists (advisory only, never blocks)', async () => {
+      const sharedMobile = '9444400001';
+      const first = await service.createDirect({ ...validDto(), mobile: sharedMobile }, actor);
+      const second = await service.createDirect({ ...validDto(), mobile: sharedMobile }, actor);
+      expect(second.enquiryId).not.toBe(first.enquiryId);
+    });
+
+    it('writes DUPLICATE_OVERRIDE_UNACKNOWLEDGED when a duplicate exists and acknowledgeDuplicate is absent', async () => {
+      const sharedMobile = '9444400002';
+      await service.createDirect({ ...validDto(), mobile: sharedMobile }, actor);
+      const second = await service.createDirect({ ...validDto(), mobile: sharedMobile }, actor);
+
+      const auditRows = await dataSource.query(
+        'SELECT * FROM audit_log WHERE entity_id = $1 AND action = $2',
+        [second.enquiryId, 'DUPLICATE_OVERRIDE_UNACKNOWLEDGED'],
+      );
+      expect(auditRows).toHaveLength(1);
+      expect(auditRows[0].entity_type).toBe('enquiry');
+    });
+
+    it('writes DUPLICATE_OVERRIDE_ACKNOWLEDGED when a duplicate exists and acknowledgeDuplicate is true', async () => {
+      const sharedMobile = '9444400003';
+      const first = await service.createDirect({ ...validDto(), mobile: sharedMobile }, actor);
+      const second = await service.createDirect(
+        { ...validDto(), mobile: sharedMobile, acknowledgeDuplicate: true },
+        actor,
+      );
+
+      const auditRows = await dataSource.query(
+        'SELECT * FROM audit_log WHERE entity_id = $1 AND action = $2',
+        [second.enquiryId, 'DUPLICATE_OVERRIDE_ACKNOWLEDGED'],
+      );
+      expect(auditRows).toHaveLength(1);
+      const after = typeof auditRows[0].after === 'string' ? JSON.parse(auditRows[0].after) : auditRows[0].after;
+      expect(after.matchedIds).toContain(first.enquiryId);
+    });
+
+    it('writes no duplicate-audit row when the mobile is not a duplicate', async () => {
+      const uniqueMobile = '9444400004';
+      const saved = await service.createDirect(
+        { ...validDto(), mobile: uniqueMobile, acknowledgeDuplicate: true },
+        actor,
+      );
+
+      const auditRows = await dataSource.query(
+        "SELECT * FROM audit_log WHERE entity_id = $1 AND action LIKE 'DUPLICATE_OVERRIDE%'",
+        [saved.enquiryId],
+      );
+      expect(auditRows).toHaveLength(0);
+    });
   });
 });

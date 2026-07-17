@@ -9,6 +9,7 @@ import { VehicleModelEntity } from '../vehicle-models/entities/vehicle-model.ent
 import { ReferentialValidationError, LeadReassignTargetNotFoundError } from './leads.errors';
 import { Principal } from '../common/principal';
 import { FieldConfigService } from '../field-config/field-config.service';
+import { DuplicatesService } from '../duplicates/duplicates.service';
 
 /**
  * Create-Lead use case (tech-design.md Component 2 / ref-code.md Sample 2).
@@ -19,7 +20,16 @@ import { FieldConfigService } from '../field-config/field-config.service';
  * of #24), then the Lead + audit_log rows are persisted atomically in one
  * transaction (ADR-009) with owner/tenant/status/audit fully server-derived
  * from the `Principal` — never from the client DTO (ADR-003/009).
- * No duplicate/mobile-uniqueness check here (deferred to FR-06).
+ * MODIFIED (issue #29, FR-06): a mobile-number duplicate is NEVER blocked
+ * here — creation always proceeds (AC3: "DSE can choose to proceed... [the
+ * client-side warning is] advisory, not blocking" — see NOTES.md "Design
+ * decisions"). When dto.mobile matches an existing open Lead/Direct-Enquiry
+ * at the same location, an extra audit_log row is written in the SAME
+ * transaction, action = DUPLICATE_OVERRIDE_ACKNOWLEDGED (dto.acknowledgeDuplicate
+ * true — the DSE saw and dismissed the NewLeadForm warning) or
+ * DUPLICATE_OVERRIDE_UNACKNOWLEDGED (flag absent/false — the DSE's client
+ * either found no duplicate, or the request bypassed the UI check
+ * entirely, e.g. a direct API call).
  */
 @Injectable()
 export class LeadsService {
@@ -28,6 +38,7 @@ export class LeadsService {
     private readonly leadsRepository: LeadsRepository,
     private readonly auditLogRepository: AuditLogRepository,
     private readonly fieldConfigService: FieldConfigService,
+    private readonly duplicatesService: DuplicatesService,
   ) {}
 
   async create(dto: CreateLeadDto, actor: Principal): Promise<LeadEntity> {
@@ -39,6 +50,10 @@ export class LeadsService {
     });
     if (dto.sourceId !== undefined) await this.assertSourceExists(dto.sourceId);
     if (dto.modelId !== undefined) await this.assertModelExists(dto.modelId);
+
+    const duplicateMatches = dto.mobile
+      ? await this.duplicatesService.findMatches(dto.mobile, actor.locationId)
+      : [];
 
     return this.dataSource.transaction(async (manager) => {
       const saved = await this.leadsRepository.insert(
@@ -71,6 +86,22 @@ export class LeadsService {
         },
         manager,
       );
+
+      if (duplicateMatches.length > 0) {
+        await this.auditLogRepository.record(
+          {
+            actor: actor.userId,
+            action: dto.acknowledgeDuplicate ? 'DUPLICATE_OVERRIDE_ACKNOWLEDGED' : 'DUPLICATE_OVERRIDE_UNACKNOWLEDGED',
+            entityType: 'lead',
+            entityId: String(saved.leadId),
+            before: null,
+            after: { mobile: dto.mobile, matchedIds: duplicateMatches.map((m) => m.id) },
+            locationId: actor.locationId,
+            dealerGroupId: actor.dealerGroupId,
+          },
+          manager,
+        );
+      }
 
       return saved;
     });

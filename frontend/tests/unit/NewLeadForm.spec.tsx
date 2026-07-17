@@ -10,7 +10,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NewLeadForm } from '../../src/components/NewLeadForm';
-import { api, ApiError } from '../../src/api/client';
+import { api, ApiError, DuplicateMatch } from '../../src/api/client';
 
 vi.mock('../../src/api/client', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../src/api/client')>();
@@ -24,6 +24,9 @@ vi.mock('../../src/api/client', async (importOriginal) => {
       getConfig: vi.fn(),
       login: vi.fn(),
       getFieldConfig: vi.fn(),
+      // issue #29 (AC1/AC5): defaults to "no duplicates" so every
+      // pre-existing test's mobile blur is a no-op unless a test overrides it.
+      checkDuplicates: vi.fn(),
     },
   };
 });
@@ -61,6 +64,7 @@ describe('NewLeadForm', () => {
     mockedApi.getFieldConfig.mockResolvedValue(ALL_MANDATORY_FIELD_CONFIG);
     mockedApi.getLeadSources.mockResolvedValue(sources);
     mockedApi.getVehicleModels.mockResolvedValue(models);
+    mockedApi.checkDuplicates.mockResolvedValue([]);
   });
 
   it('EVAL-AC1-01: renders all 4 mandatory fields and a submit control', async () => {
@@ -228,6 +232,132 @@ describe('NewLeadForm', () => {
 
       expect(await screen.findByText(/source.*required|required.*source/i)).toBeInTheDocument();
       expect(mockedApi.createLead).not.toHaveBeenCalled();
+    });
+  });
+
+  // -----------------------------------------------------------------
+  // ADDED (issue #29, FR-06) — duplicate-mobile real-time warning (AC1/AC2/
+  // AC3/AC5). The real HTTP path (GET /api/v1/duplicates) is proven by the
+  // backend Supertest suite (duplicates.controller.spec.ts); here only the
+  // client-side wiring/gating is exercised, with api.checkDuplicates mocked.
+  // -----------------------------------------------------------------
+  describe('duplicate-mobile warning (issue #29)', () => {
+    const oneMatch: DuplicateMatch[] = [{ id: 'lead-existing-1', type: 'LEAD', label: 'Existing Customer', status: 'New' }];
+
+    async function fillValidFormExceptMobile(user: ReturnType<typeof userEvent.setup>) {
+      await waitFor(() => expect(screen.getByRole('option', { name: 'Walk-in' })).toBeInTheDocument());
+      await user.type(screen.getByLabelText(/customer name/i), 'Asha Rao');
+      await user.selectOptions(screen.getByLabelText(/source/i), '1');
+      await user.selectOptions(screen.getByLabelText(/model/i), '101');
+    }
+
+    it('AC1/AC5: checks for duplicates on blur of a validly formatted mobile number', async () => {
+      mockedApi.checkDuplicates.mockResolvedValue([]);
+      renderForm();
+      const user = userEvent.setup();
+      await waitFor(() => expect(screen.getByRole('option', { name: 'Walk-in' })).toBeInTheDocument());
+
+      await user.type(screen.getByLabelText(/mobile/i), '9876543210');
+      await user.tab();
+
+      await waitFor(() => expect(mockedApi.checkDuplicates).toHaveBeenCalledWith('9876543210'));
+    });
+
+    it('does not check for duplicates on blur of an invalid/incomplete mobile number', async () => {
+      renderForm();
+      const user = userEvent.setup();
+      await waitFor(() => expect(screen.getByRole('option', { name: 'Walk-in' })).toBeInTheDocument());
+
+      await user.type(screen.getByLabelText(/mobile/i), '987');
+      await user.tab();
+
+      expect(mockedApi.checkDuplicates).not.toHaveBeenCalled();
+    });
+
+    it('AC2: shows a warning listing the matching record(s) when a duplicate is found', async () => {
+      mockedApi.checkDuplicates.mockResolvedValue(oneMatch);
+      renderForm();
+      const user = userEvent.setup();
+      await waitFor(() => expect(screen.getByRole('option', { name: 'Walk-in' })).toBeInTheDocument());
+
+      await user.type(screen.getByLabelText(/mobile/i), '9876543210');
+      await user.tab();
+
+      expect(await screen.findByTestId('duplicate-warning')).toBeInTheDocument();
+      expect(screen.getByText(/existing customer/i)).toBeInTheDocument();
+    });
+
+    it('AC3: blocks submission while the warning is showing and unacknowledged', async () => {
+      mockedApi.checkDuplicates.mockResolvedValue(oneMatch);
+      renderForm();
+      const user = userEvent.setup();
+      await fillValidFormExceptMobile(user);
+      await user.type(screen.getByLabelText(/mobile/i), '9876543210');
+      await user.tab();
+      await screen.findByTestId('duplicate-warning');
+
+      await user.click(screen.getByRole('button', { name: /submit|create|save/i }));
+
+      expect(mockedApi.createLead).not.toHaveBeenCalled();
+    });
+
+    it('AC3: "Cancel" dismisses the warning without submitting', async () => {
+      mockedApi.checkDuplicates.mockResolvedValue(oneMatch);
+      renderForm();
+      const user = userEvent.setup();
+      await waitFor(() => expect(screen.getByRole('option', { name: 'Walk-in' })).toBeInTheDocument());
+      await user.type(screen.getByLabelText(/mobile/i), '9876543210');
+      await user.tab();
+      await screen.findByTestId('duplicate-warning');
+
+      await user.click(screen.getByRole('button', { name: /cancel/i }));
+
+      expect(screen.queryByTestId('duplicate-warning')).not.toBeInTheDocument();
+      expect(mockedApi.createLead).not.toHaveBeenCalled();
+    });
+
+    it('AC3: "Proceed anyway" creates the Lead with acknowledgeDuplicate: true', async () => {
+      mockedApi.checkDuplicates.mockResolvedValue(oneMatch);
+      mockedApi.createLead.mockResolvedValue({
+        leadId: 'lead-duplicate-proceed',
+        customerName: 'Asha Rao',
+        mobile: '9876543210',
+        sourceId: 1,
+        modelId: 101,
+        status: 'New',
+        ownerId: 'owner-1',
+        locationId: 'loc-1',
+        createdAt: new Date().toISOString(),
+      });
+
+      renderForm();
+      const user = userEvent.setup();
+      await fillValidFormExceptMobile(user);
+      await user.type(screen.getByLabelText(/mobile/i), '9876543210');
+      await user.tab();
+      await screen.findByTestId('duplicate-warning');
+
+      await user.click(screen.getByRole('button', { name: /proceed anyway/i }));
+
+      expect(await screen.findByText(/lead created|success/i)).toBeInTheDocument();
+      expect(mockedApi.createLead).toHaveBeenCalledWith(
+        expect.objectContaining({ mobile: '9876543210', acknowledgeDuplicate: true }),
+      );
+    });
+
+    it('re-checks and clears a stale warning when the mobile number is edited', async () => {
+      mockedApi.checkDuplicates.mockResolvedValue(oneMatch);
+      renderForm();
+      const user = userEvent.setup();
+      await waitFor(() => expect(screen.getByRole('option', { name: 'Walk-in' })).toBeInTheDocument());
+      await user.type(screen.getByLabelText(/mobile/i), '9876543210');
+      await user.tab();
+      await screen.findByTestId('duplicate-warning');
+
+      await user.clear(screen.getByLabelText(/mobile/i));
+      await user.type(screen.getByLabelText(/mobile/i), '1');
+
+      expect(screen.queryByTestId('duplicate-warning')).not.toBeInTheDocument();
     });
   });
 });

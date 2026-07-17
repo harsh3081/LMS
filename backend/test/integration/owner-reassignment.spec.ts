@@ -25,6 +25,8 @@ import { EnquiryReassignTargetNotFoundError } from '../../src/enquiries/enquirie
 import { AuditLogRepository } from '../../src/audit-log/audit-log.repository';
 import { FieldConfigService } from '../../src/field-config/field-config.service';
 import { FieldConfigRepository } from '../../src/field-config/field-config.repository';
+import { DuplicatesService } from '../../src/duplicates/duplicates.service';
+import { DuplicatesRepository } from '../../src/duplicates/duplicates.repository';
 import { Principal } from '../../src/common/principal';
 
 describe('Owner reassignment (issue #28 Task 2.1, AC4)', () => {
@@ -49,13 +51,15 @@ describe('Owner reassignment (issue #28 Task 2.1, AC4)', () => {
       new FieldConfigRepository(dataSource),
       auditLogRepository,
     );
-    leadsService = new LeadsService(dataSource, leadsRepository, auditLogRepository, fieldConfigService);
+    const duplicatesService = new DuplicatesService(new DuplicatesRepository(dataSource));
+    leadsService = new LeadsService(dataSource, leadsRepository, auditLogRepository, fieldConfigService, duplicatesService);
     enquiriesService = new EnquiriesService(
       dataSource,
       enquiriesRepository,
       leadsRepository,
       auditLogRepository,
       fieldConfigService,
+      duplicatesService,
     );
 
     const dseAUser = seed.users['dseA'];

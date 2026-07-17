@@ -4,8 +4,10 @@ import { useLeadSources } from '../hooks/useLeadSources';
 import { useVehicleModels } from '../hooks/useVehicleModels';
 import { useCreateDirectEnquiry } from '../hooks/useEnquiries';
 import { useFieldConfig, isFieldMandatory } from '../hooks/useFieldConfig';
-import { ApiError, CreateDirectEnquiryInput } from '../api/client';
+import { useDuplicateCheck } from '../hooks/useDuplicateCheck';
+import { ApiError, CreateDirectEnquiryInput, DuplicateMatch } from '../api/client';
 import { Button, FormField, Select, TextInput } from './ui';
+import { DuplicateWarning } from './DuplicateWarning';
 
 /** Mirrors NewLeadForm's INDIA_MOBILE_REGEX exactly (AC3, server rule:
  * backend/src/common/mobile.util.ts). */
@@ -33,14 +35,19 @@ type FormValues = {
  * one step, independent of any existing Lead (AC1). Submission is blocked
  * client-side if any mandatory field is missing/invalid (AC3), mirroring the
  * server-side CreateDirectEnquiryDto validation exactly.
+ * MODIFIED (issue #29): mobile-duplicate check on blur, mirrors NewLeadForm
+ * exactly — see that file's comments for the full design rationale.
  */
 export function NewEnquiryForm() {
   const { data: sources } = useLeadSources();
   const { data: models } = useVehicleModels();
   const { data: fieldConfig } = useFieldConfig();
   const createDirectEnquiry = useCreateDirectEnquiry();
+  const duplicateCheck = useDuplicateCheck();
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [duplicateMatches, setDuplicateMatches] = useState<DuplicateMatch[]>([]);
+  const [duplicateAcknowledged, setDuplicateAcknowledged] = useState(false);
 
   // AC3: mandatory-ness for the Lead-equivalent fields is config-driven
   // (issue #27, FR-04, mirrors NewLeadForm exactly). The qualifying-details
@@ -70,7 +77,29 @@ export function NewEnquiryForm() {
     },
   });
 
-  const onSubmit = handleSubmit(async (values) => {
+  const mobileRegistration = register('mobile', {
+    required: mobileMandatory ? 'Mobile is required' : false,
+    validate: (value) =>
+      !value || INDIA_MOBILE_REGEX.test(value) || 'Enter a valid 10-digit mobile number (leading 6-9)',
+  });
+
+  /** issue #29 (AC1/AC5) — mirrors NewLeadForm.handleMobileBlur exactly. */
+  async function handleMobileBlur(value: string) {
+    if (!INDIA_MOBILE_REGEX.test(value)) return;
+    try {
+      const matches = await duplicateCheck.mutateAsync(value);
+      setDuplicateMatches(matches);
+      setDuplicateAcknowledged(false);
+    } catch {
+      // advisory only — a failed check must never block data entry
+    }
+  }
+
+  /** issue #29 (AC3) — mirrors NewLeadForm.performCreate exactly. */
+  async function performCreate(values: FormValues, acknowledged: boolean) {
+    if (duplicateMatches.length > 0 && !acknowledged) {
+      return;
+    }
     setSuccessMessage(null);
     setFormError(null);
     const input: CreateDirectEnquiryInput = {
@@ -82,10 +111,13 @@ export function NewEnquiryForm() {
       variant: values.variant,
       exchangeInterest: values.exchangeInterest === 'true',
       financeInterest: values.financeInterest === 'true',
+      acknowledgeDuplicate: duplicateMatches.length > 0 ? true : undefined,
     };
     try {
       await createDirectEnquiry.mutateAsync(input);
       setSuccessMessage('Enquiry created successfully.');
+      setDuplicateMatches([]);
+      setDuplicateAcknowledged(false);
       reset();
     } catch (err) {
       if (err instanceof ApiError && err.fieldErrors) {
@@ -102,7 +134,10 @@ export function NewEnquiryForm() {
         setFormError(err instanceof Error ? err.message : 'Failed to create enquiry.');
       }
     }
-  });
+  }
+
+  const onSubmit = handleSubmit((values) => performCreate(values, duplicateAcknowledged));
+  const onProceedAnyway = handleSubmit((values) => performCreate(values, true));
 
   return (
     <form onSubmit={onSubmit} noValidate aria-label="New Enquiry" className="space-y-1">
@@ -116,13 +151,31 @@ export function NewEnquiryForm() {
       <FormField label="Mobile Number" htmlFor="mobile" error={errors.mobile?.message}>
         <TextInput
           id="mobile"
-          {...register('mobile', {
-            required: mobileMandatory ? 'Mobile is required' : false,
-            validate: (value) =>
-              !value || INDIA_MOBILE_REGEX.test(value) || 'Enter a valid 10-digit mobile number (leading 6-9)',
-          })}
+          {...mobileRegistration}
+          onChange={(e) => {
+            void mobileRegistration.onChange(e);
+            setDuplicateMatches([]);
+            setDuplicateAcknowledged(false);
+          }}
+          onBlur={(e) => {
+            void mobileRegistration.onBlur(e);
+            void handleMobileBlur(e.target.value);
+          }}
         />
       </FormField>
+
+      <DuplicateWarning
+        matches={duplicateMatches}
+        acknowledged={duplicateAcknowledged}
+        onProceed={() => {
+          setDuplicateAcknowledged(true);
+          void onProceedAnyway();
+        }}
+        onCancel={() => {
+          setDuplicateMatches([]);
+          setDuplicateAcknowledged(false);
+        }}
+      />
 
       <FormField label="Source" htmlFor="sourceId" error={errors.sourceId?.message}>
         <Select id="sourceId" {...register('sourceId', { required: sourceIdMandatory ? 'Source is required' : false })}>

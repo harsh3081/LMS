@@ -64,4 +64,11 @@ export class CreateDirectEnquiryDto {
   @ApiProperty({ example: false })
   @IsBoolean({ message: 'financeInterest is required and must be a boolean' })
   financeInterest!: boolean;
+
+  /** NEW (issue #29, AC3) — mirrors CreateLeadDto.acknowledgeDuplicate
+   * exactly; see that file's comment. */
+  @ApiProperty({ required: false, description: 'true if the DSE dismissed a duplicate-mobile warning and chose to proceed' })
+  @IsOptional()
+  @IsBoolean({ message: 'acknowledgeDuplicate must be a boolean' })
+  acknowledgeDuplicate?: boolean;
 }

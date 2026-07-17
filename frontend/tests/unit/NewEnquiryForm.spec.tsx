@@ -9,7 +9,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NewEnquiryForm } from '../../src/components/NewEnquiryForm';
-import { api, ApiError } from '../../src/api/client';
+import { api, ApiError, DuplicateMatch } from '../../src/api/client';
 
 vi.mock('../../src/api/client', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../src/api/client')>();
@@ -21,6 +21,8 @@ vi.mock('../../src/api/client', async (importOriginal) => {
       getVehicleModels: vi.fn(),
       createDirectEnquiry: vi.fn(),
       getFieldConfig: vi.fn(),
+      // issue #29 (AC1/AC5) — mirrors NewLeadForm.spec.tsx's mock exactly.
+      checkDuplicates: vi.fn(),
     },
   };
 });
@@ -49,6 +51,7 @@ describe('NewEnquiryForm', () => {
     mockedApi.getFieldConfig.mockResolvedValue(ALL_MANDATORY_FIELD_CONFIG);
     mockedApi.getLeadSources.mockResolvedValue([{ sourceId: 1, name: 'Walk-in' }]);
     mockedApi.getVehicleModels.mockResolvedValue([{ modelId: 101, name: 'Compact Hatchback LX' }]);
+    mockedApi.checkDuplicates.mockResolvedValue([]);
   });
 
   it('AC2: renders all 4 Lead-equivalent fields plus all 4 qualifying fields, and a submit control', async () => {
@@ -213,6 +216,105 @@ describe('NewEnquiryForm', () => {
       expect(mockedApi.createDirectEnquiry).toHaveBeenCalledWith(
         expect.objectContaining({ customerName: undefined }),
       );
+    });
+  });
+
+  // -----------------------------------------------------------------
+  // ADDED (issue #29, FR-06) — duplicate-mobile real-time warning, mirrors
+  // NewLeadForm.spec.tsx's equivalent block exactly.
+  // -----------------------------------------------------------------
+  describe('duplicate-mobile warning (issue #29)', () => {
+    const oneMatch: DuplicateMatch[] = [
+      { id: 'enquiry-existing-1', type: 'ENQUIRY', label: 'Existing Walk-in', status: 'New' },
+    ];
+
+    async function fillValidFormExceptMobile(user: ReturnType<typeof userEvent.setup>) {
+      await waitFor(() => expect(screen.getByRole('option', { name: 'Walk-in' })).toBeInTheDocument());
+      await user.type(screen.getByLabelText(/customer name/i), 'Walk-in Customer');
+      await user.selectOptions(screen.getByLabelText(/source/i), '1');
+      await user.selectOptions(screen.getByLabelText(/model/i), '101');
+      await user.type(screen.getByLabelText(/budget/i), '300000');
+      await user.type(screen.getByLabelText(/variant/i), 'LX');
+      await user.selectOptions(screen.getByLabelText(/exchange interest/i), 'false');
+      await user.selectOptions(screen.getByLabelText(/finance interest/i), 'true');
+    }
+
+    it('AC2: shows a warning listing the matching record(s) when a duplicate is found', async () => {
+      mockedApi.checkDuplicates.mockResolvedValue(oneMatch);
+      renderForm();
+      const user = userEvent.setup();
+      await waitFor(() => expect(screen.getByRole('option', { name: 'Walk-in' })).toBeInTheDocument());
+
+      await user.type(screen.getByLabelText(/mobile/i), '9876543210');
+      await user.tab();
+
+      expect(await screen.findByTestId('duplicate-warning')).toBeInTheDocument();
+      expect(screen.getByText(/existing walk-in/i)).toBeInTheDocument();
+    });
+
+    it('AC3: blocks submission while the warning is showing and unacknowledged', async () => {
+      mockedApi.checkDuplicates.mockResolvedValue(oneMatch);
+      renderForm();
+      const user = userEvent.setup();
+      await fillValidFormExceptMobile(user);
+      await user.type(screen.getByLabelText(/mobile/i), '9876543210');
+      await user.tab();
+      await screen.findByTestId('duplicate-warning');
+
+      await user.click(screen.getByRole('button', { name: /submit|create|save/i }));
+
+      expect(mockedApi.createDirectEnquiry).not.toHaveBeenCalled();
+    });
+
+    it('AC3: "Proceed anyway" creates the Enquiry with acknowledgeDuplicate: true', async () => {
+      mockedApi.checkDuplicates.mockResolvedValue(oneMatch);
+      mockedApi.createDirectEnquiry.mockResolvedValue({
+        enquiryId: 'enq-duplicate-proceed',
+        leadId: null,
+        entryType: 'DIRECT',
+        customerName: 'Walk-in Customer',
+        mobile: '9876543210',
+        sourceId: 1,
+        modelId: 101,
+        budget: 300000,
+        variant: 'LX',
+        exchangeInterest: false,
+        financeInterest: true,
+        convertedBy: 'owner-1',
+        convertedAt: new Date().toISOString(),
+        status: 'New',
+        ownerId: 'owner-1',
+        locationId: 'loc-1',
+      });
+
+      renderForm();
+      const user = userEvent.setup();
+      await fillValidFormExceptMobile(user);
+      await user.type(screen.getByLabelText(/mobile/i), '9876543210');
+      await user.tab();
+      await screen.findByTestId('duplicate-warning');
+
+      await user.click(screen.getByRole('button', { name: /proceed anyway/i }));
+
+      expect(await screen.findByText(/enquiry created/i)).toBeInTheDocument();
+      expect(mockedApi.createDirectEnquiry).toHaveBeenCalledWith(
+        expect.objectContaining({ mobile: '9876543210', acknowledgeDuplicate: true }),
+      );
+    });
+
+    it('AC3: "Cancel" dismisses the warning without submitting', async () => {
+      mockedApi.checkDuplicates.mockResolvedValue(oneMatch);
+      renderForm();
+      const user = userEvent.setup();
+      await waitFor(() => expect(screen.getByRole('option', { name: 'Walk-in' })).toBeInTheDocument());
+      await user.type(screen.getByLabelText(/mobile/i), '9876543210');
+      await user.tab();
+      await screen.findByTestId('duplicate-warning');
+
+      await user.click(screen.getByRole('button', { name: /cancel/i }));
+
+      expect(screen.queryByTestId('duplicate-warning')).not.toBeInTheDocument();
+      expect(mockedApi.createDirectEnquiry).not.toHaveBeenCalled();
     });
   });
 });

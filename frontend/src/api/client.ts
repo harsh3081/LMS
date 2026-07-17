@@ -17,12 +17,17 @@ export interface VehicleModel {
  * optional here — whether they are actually required at submission time is
  * config-driven (see useFieldConfig/FieldConfigEntry below), enforced both
  * client-side (NewLeadForm reads the config) and server-side (backend
- * FieldConfigService), not hardcoded on this type anymore. */
+ * FieldConfigService), not hardcoded on this type anymore.
+ * MODIFIED (issue #29, AC3): `acknowledgeDuplicate` mirrors
+ * CreateLeadDto.acknowledgeDuplicate exactly (backend/src/leads/dto/
+ * create-lead.dto.ts) — set to `true` by NewLeadForm only when the DSE
+ * dismissed a duplicate-mobile warning and chose to proceed anyway. */
 export interface CreateLeadInput {
   customerName?: string;
   mobile?: string;
   sourceId?: number;
   modelId?: number;
+  acknowledgeDuplicate?: boolean;
 }
 
 export interface Lead {
@@ -96,6 +101,17 @@ export interface CreateDirectEnquiryInput {
   variant: string;
   exchangeInterest: boolean;
   financeInterest: boolean;
+  /** NEW (issue #29, AC3) — mirrors CreateLeadInput.acknowledgeDuplicate exactly. */
+  acknowledgeDuplicate?: boolean;
+}
+
+/** GET /api/v1/duplicates response shape (issue #29, AC2/AC6) — mirrors
+ * backend/src/duplicates/dto/duplicate-match.dto.ts exactly. */
+export interface DuplicateMatch {
+  id: string;
+  type: 'LEAD' | 'ENQUIRY';
+  label: string | null;
+  status: string;
 }
 
 export interface FieldError {
@@ -181,4 +197,8 @@ export const api = {
 
   updateFieldConfig: (input: UpdateFieldConfigInput) =>
     request<FieldConfigEntry[]>('/api/v1/field-config', { method: 'PUT', body: JSON.stringify(input) }),
+
+  // ---- issue #29: duplicate detection (FR-06, AC1/AC6) ----
+  checkDuplicates: (mobile: string) =>
+    request<DuplicateMatch[]>(`/api/v1/duplicates?mobile=${encodeURIComponent(mobile)}`),
 };
