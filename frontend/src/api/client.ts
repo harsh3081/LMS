@@ -13,6 +13,30 @@ export interface VehicleModel {
   name: string;
 }
 
+/** Closed-set dropdown vocabularies (issue #114, AC4) — mirror
+ * backend/src/leads/entities/lead.entity.ts's exported constants exactly
+ * (CUSTOMER_TYPES/PREFERRED_LANGUAGES/FUEL_TYPES/TRANSMISSIONS/
+ * BUYING_TIMELINES/PAYMENT_MODES), duplicated here (not shared across the
+ * two independent app packages, same convention as INDIA_MOBILE_REGEX in
+ * NewLeadForm.tsx) so the `<select>` options and TS union types are backed
+ * by one literal list each. */
+export const CUSTOMER_TYPES = ['Individual', 'Corporate', 'Government', 'Fleet'] as const;
+export const PREFERRED_LANGUAGES = [
+  'English',
+  'Hindi',
+  'Marathi',
+  'Gujarati',
+  'Tamil',
+  'Telugu',
+  'Kannada',
+  'Bengali',
+  'Punjabi',
+] as const;
+export const FUEL_TYPES = ['Petrol', 'Diesel', 'CNG', 'Electric', 'Hybrid'] as const;
+export const TRANSMISSIONS = ['Manual', 'Automatic'] as const;
+export const BUYING_TIMELINES = ['Immediate', 'Within 1 Month', '1-3 Months', '3-6 Months', '6+ Months'] as const;
+export const PAYMENT_MODES = ['Cash', 'Loan', 'Lease'] as const;
+
 /** MODIFIED (issue #27, FR-04): the four Lead-equivalent fields are now
  * optional here — whether they are actually required at submission time is
  * config-driven (see useFieldConfig/FieldConfigEntry below), enforced both
@@ -21,15 +45,62 @@ export interface VehicleModel {
  * MODIFIED (issue #29, AC3): `acknowledgeDuplicate` mirrors
  * CreateLeadDto.acknowledgeDuplicate exactly (backend/src/leads/dto/
  * create-lead.dto.ts) — set to `true` by NewLeadForm only when the DSE
- * dismissed a duplicate-mobile warning and chose to proceed anyway. */
+ * dismissed a duplicate-mobile warning and chose to proceed anyway.
+ * MODIFIED (issue #114): 22 new optional fields (mirrors CreateLeadDto's new
+ * fields exactly, grouped by the New Lead form's 6 UI sections), plus
+ * `communicationConsentVerified` — the one field that is NOT optional here
+ * either (the hard compliance gate, AC2). */
 export interface CreateLeadInput {
   customerName?: string;
   mobile?: string;
   sourceId?: number;
   modelId?: number;
+
+  // ---- 1. Customer Details ----
+  email?: string;
+  customerType?: (typeof CUSTOMER_TYPES)[number];
+  city?: string;
+  pinCode?: string;
+  preferredLanguage?: (typeof PREFERRED_LANGUAGES)[number];
+
+  // ---- 2. Vehicle Interest ----
+  variant?: string;
+  fuelType?: (typeof FUEL_TYPES)[number];
+  transmission?: (typeof TRANSMISSIONS)[number];
+  budgetMin?: number;
+  budgetMax?: number;
+  buyingTimeline?: (typeof BUYING_TIMELINES)[number];
+
+  // ---- 3. Exchange Vehicle ----
+  exchangeInterest?: boolean;
+  currentVehicle?: string;
+  kmsDriven?: number;
+  registrationNumber?: string;
+  expectedValue?: number;
+
+  // ---- 4. Finance ----
+  paymentMode?: (typeof PAYMENT_MODES)[number];
+  preferredFinancer?: string;
+  downPaymentCapacity?: number;
+
+  // ---- 5. Source & Assignment ----
+  referrerName?: string;
+  assignedOwnerId?: string;
+
+  // ---- 6. Follow-up & Consent ----
+  firstFollowUpAt?: string;
+  remarks?: string;
+  /** Hard compliance gate (AC2) — must be `true` to submit; NewLeadForm
+   * blocks submission client-side until the checkbox is checked, and the
+   * server independently rejects (400) anything else (defense-in-depth). */
+  communicationConsentVerified: boolean;
+
   acknowledgeDuplicate?: boolean;
 }
 
+/** MODIFIED (issue #114, AC6): 22 new fields added, one per new Lead column
+ * — mirrors LeadResponseDto exactly, so every new field is visible wherever
+ * Lead details are already surfaced. */
 export interface Lead {
   leadId: string;
   customerName: string | null;
@@ -40,6 +111,45 @@ export interface Lead {
   ownerId: string;
   locationId: string;
   createdAt: string;
+
+  email?: string | null;
+  customerType?: string | null;
+  city?: string | null;
+  pinCode?: string | null;
+  preferredLanguage?: string | null;
+
+  variant?: string | null;
+  fuelType?: string | null;
+  transmission?: string | null;
+  budgetMin?: number | null;
+  budgetMax?: number | null;
+  buyingTimeline?: string | null;
+
+  exchangeInterest?: boolean | null;
+  currentVehicle?: string | null;
+  kmsDriven?: number | null;
+  registrationNumber?: string | null;
+  expectedValue?: number | null;
+
+  paymentMode?: string | null;
+  preferredFinancer?: string | null;
+  downPaymentCapacity?: number | null;
+
+  referrerName?: string | null;
+
+  firstFollowUpAt?: string | null;
+  remarks?: string | null;
+  communicationConsentVerified?: boolean;
+}
+
+/** GET /api/v1/consultants response shape (issue #114, AC5) — mirrors
+ * backend/src/users/consultants.controller.ts's ConsultantResponseDto.
+ * Location-scoped (the caller's own location's DSE roster only), deliberately
+ * minimal — not a general user-management API, just enough to populate the
+ * "Assign to Consultant" dropdown. */
+export interface Consultant {
+  userId: string;
+  displayName: string;
 }
 
 /** One field's current configuration (issue #27, GET/PUT /api/v1/field-config). */
@@ -330,4 +440,7 @@ export const api = {
     request<SchedulerSlot[]>(
       `/api/v1/test-drives?${new URLSearchParams({ vehicleId: query.vehicleId, from: query.from, to: query.to }).toString()}`,
     ),
+
+  // ---- issue #114: the caller's own location's DSE roster, for "Assign to Consultant" (AC5) ----
+  getConsultants: () => request<Consultant[]>('/api/v1/consultants'),
 };

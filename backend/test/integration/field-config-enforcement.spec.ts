@@ -19,11 +19,16 @@ describe('field-config-driven mandatory enforcement (issue #27 Task 3.2/4.1)', (
   let adminAgent: ReturnType<typeof request.agent>;
   let dseAAgent: ReturnType<typeof request.agent>;
 
+  // NEW (issue #114, AC2): communicationConsentVerified is a hard,
+  // always-required compliance gate — added here so this shared payload
+  // helper keeps producing a 201-eligible request; unrelated to this file's
+  // own field-config-driven mandatory-ness assertions.
   const validLeadPayload = () => ({
     customerName: `Config Test ${Date.now()}-${Math.random()}`,
     mobile: '9876543210',
     sourceId: 1,
     modelId: 101,
+    communicationConsentVerified: true,
   });
 
   const validDirectEnquiryPayload = () => ({

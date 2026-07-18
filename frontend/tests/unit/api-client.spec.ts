@@ -23,7 +23,13 @@ describe('api client', () => {
 
   it('createLead posts to /api/v1/leads and returns the created Lead', async () => {
     mockFetchOnce(201, { leadId: 'abc', status: 'New' });
-    const result = await api.createLead({ customerName: 'A', mobile: '9876543210', sourceId: 1, modelId: 101 });
+    const result = await api.createLead({
+      customerName: 'A',
+      mobile: '9876543210',
+      sourceId: 1,
+      modelId: 101,
+      communicationConsentVerified: true,
+    });
     expect(result.leadId).toBe('abc');
     expect(fetch).toHaveBeenCalledWith(
       '/api/v1/leads',
@@ -52,7 +58,13 @@ describe('api client', () => {
   it('throws ApiError with fieldErrors on a 400 array response', async () => {
     mockFetchOnce(400, [{ field: 'mobile', message: 'mobile must be valid' }]);
     await expect(
-      api.createLead({ customerName: 'A', mobile: 'bad', sourceId: 1, modelId: 101 }),
+      api.createLead({
+        customerName: 'A',
+        mobile: 'bad',
+        sourceId: 1,
+        modelId: 101,
+        communicationConsentVerified: true,
+      }),
     ).rejects.toBeInstanceOf(ApiError);
   });
 

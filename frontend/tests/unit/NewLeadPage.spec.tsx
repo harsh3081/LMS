@@ -20,6 +20,10 @@ vi.mock('../../src/api/client', async (importOriginal) => {
       createLead: vi.fn(),
       getMyLeads: vi.fn(),
       getFieldConfig: vi.fn(),
+      // issue #114 (AC5): backs the "Assign to Consultant" dropdown.
+      getConsultants: vi.fn(),
+      // issue #29 (AC1/AC5): defaults to "no duplicates" so the mobile blur is a no-op.
+      checkDuplicates: vi.fn(),
     },
   };
 });
@@ -39,6 +43,8 @@ describe('NewLeadPage queue reflection (AC6)', () => {
     mockedApi.getLeadSources.mockResolvedValue([{ sourceId: 1, name: 'Walk-in' }]);
     mockedApi.getVehicleModels.mockResolvedValue([{ modelId: 101, name: 'Compact Hatchback LX' }]);
     mockedApi.getMyLeads.mockResolvedValue([]);
+    mockedApi.getConsultants.mockResolvedValue([]);
+    mockedApi.checkDuplicates.mockResolvedValue([]);
   });
 
   it('EVAL-AC6-01: created lead appears at the top of the queue without a full page reload', async () => {
@@ -68,6 +74,10 @@ describe('NewLeadPage queue reflection (AC6)', () => {
     await user.type(screen.getByLabelText(/mobile/i), '9876543210');
     await user.selectOptions(screen.getByLabelText(/source/i), '1');
     await user.selectOptions(screen.getByLabelText(/model/i), '101');
+    // NEW (issue #114, AC2): communicationConsentVerified is a hard,
+    // always-required compliance gate blocking submission client-side until
+    // checked — unrelated to this file's own queue-reflection assertion.
+    await user.click(screen.getByLabelText(/customer consents/i));
     await user.click(screen.getByRole('button', { name: /submit|create|save/i }));
 
     expect(await screen.findByText('Queue Check 123')).toBeInTheDocument();

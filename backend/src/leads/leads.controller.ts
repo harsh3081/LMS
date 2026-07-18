@@ -23,6 +23,31 @@ function toResponse(lead: LeadEntity): LeadResponseDto {
     locationId: lead.locationId,
     createdBy: lead.createdBy,
     createdAt: lead.createdAt instanceof Date ? lead.createdAt.toISOString() : lead.createdAt,
+
+    // ---- issue #114: new fields, visible wherever Lead details are surfaced ----
+    email: lead.email,
+    customerType: lead.customerType,
+    city: lead.city,
+    pinCode: lead.pinCode,
+    preferredLanguage: lead.preferredLanguage,
+    variant: lead.variant,
+    fuelType: lead.fuelType,
+    transmission: lead.transmission,
+    budgetMin: lead.budgetMin,
+    budgetMax: lead.budgetMax,
+    buyingTimeline: lead.buyingTimeline,
+    exchangeInterest: lead.exchangeInterest,
+    currentVehicle: lead.currentVehicle,
+    kmsDriven: lead.kmsDriven,
+    registrationNumber: lead.registrationNumber,
+    expectedValue: lead.expectedValue,
+    paymentMode: lead.paymentMode,
+    preferredFinancer: lead.preferredFinancer,
+    downPaymentCapacity: lead.downPaymentCapacity,
+    referrerName: lead.referrerName,
+    firstFollowUpAt: lead.firstFollowUpAt instanceof Date ? lead.firstFollowUpAt.toISOString() : lead.firstFollowUpAt,
+    remarks: lead.remarks,
+    communicationConsentVerified: lead.communicationConsentVerified,
   };
 }
 

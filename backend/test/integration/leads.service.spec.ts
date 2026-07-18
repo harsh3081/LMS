@@ -46,11 +46,16 @@ describe('LeadsService (Task 2.2 / 2.3)', () => {
     await dataSource.destroy();
   });
 
+  // NEW (issue #114, AC2): communicationConsentVerified is now a hard,
+  // always-required compliance gate — added here so this frozen-in-spirit
+  // #24/#27/#29 suite's shared validDto() helper keeps compiling/passing;
+  // no other field on this DTO changed for those Stories' own assertions.
   const validDto = () => ({
     customerName: 'Asha Rao',
     mobile: '9876543210',
     sourceId: 1,
     modelId: 101,
+    communicationConsentVerified: true as const,
   });
 
   // -------------------------------------------------------------------

@@ -27,6 +27,8 @@ vi.mock('../../src/api/client', async (importOriginal) => {
       // issue #29 (AC1/AC5): defaults to "no duplicates" so every
       // pre-existing test's mobile blur is a no-op unless a test overrides it.
       checkDuplicates: vi.fn(),
+      // issue #114 (AC5): backs the "Assign to Consultant" dropdown.
+      getConsultants: vi.fn(),
     },
   };
 });
@@ -65,6 +67,7 @@ describe('NewLeadForm', () => {
     mockedApi.getLeadSources.mockResolvedValue(sources);
     mockedApi.getVehicleModels.mockResolvedValue(models);
     mockedApi.checkDuplicates.mockResolvedValue([]);
+    mockedApi.getConsultants.mockResolvedValue([]);
   });
 
   it('EVAL-AC1-01: renders all 4 mandatory fields and a submit control', async () => {
@@ -148,6 +151,7 @@ describe('NewLeadForm', () => {
     await user.type(screen.getByLabelText(/mobile/i), '9876543210');
     await user.selectOptions(screen.getByLabelText(/source/i), '1');
     await user.selectOptions(screen.getByLabelText(/model/i), '101');
+    await user.click(screen.getByLabelText(/customer consents/i));
     await user.click(screen.getByRole('button', { name: /submit|create|save/i }));
 
     expect(await screen.findByText(/lead created|success/i)).toBeInTheDocument();
@@ -156,6 +160,7 @@ describe('NewLeadForm', () => {
       mobile: '9876543210',
       sourceId: 1,
       modelId: 101,
+      communicationConsentVerified: true,
     });
   });
 
@@ -172,6 +177,7 @@ describe('NewLeadForm', () => {
     await user.type(screen.getByLabelText(/mobile/i), '9876543210');
     await user.selectOptions(screen.getByLabelText(/source/i), '1');
     await user.selectOptions(screen.getByLabelText(/model/i), '101');
+    await user.click(screen.getByLabelText(/customer consents/i));
     await user.click(screen.getByRole('button', { name: /submit|create|save/i }));
 
     expect(await screen.findByText(/mobile must be a valid india 10-digit number/i)).toBeInTheDocument();
@@ -207,6 +213,7 @@ describe('NewLeadForm', () => {
       await user.type(screen.getByLabelText(/customer name/i), 'Asha Rao');
       await user.type(screen.getByLabelText(/mobile/i), '9876543210');
       await user.selectOptions(screen.getByLabelText(/model/i), '101');
+      await user.click(screen.getByLabelText(/customer consents/i));
       await user.click(screen.getByRole('button', { name: /submit|create|save/i }));
 
       expect(await screen.findByText(/lead created|success/i)).toBeInTheDocument();
@@ -216,6 +223,7 @@ describe('NewLeadForm', () => {
         mobile: '9876543210',
         sourceId: undefined,
         modelId: 101,
+        communicationConsentVerified: true,
       });
     });
 
@@ -249,6 +257,7 @@ describe('NewLeadForm', () => {
       await user.type(screen.getByLabelText(/customer name/i), 'Asha Rao');
       await user.selectOptions(screen.getByLabelText(/source/i), '1');
       await user.selectOptions(screen.getByLabelText(/model/i), '101');
+      await user.click(screen.getByLabelText(/customer consents/i));
     }
 
     it('AC1/AC5: checks for duplicates on blur of a validly formatted mobile number', async () => {
@@ -358,6 +367,270 @@ describe('NewLeadForm', () => {
       await user.type(screen.getByLabelText(/mobile/i), '1');
 
       expect(screen.queryByTestId('duplicate-warning')).not.toBeInTheDocument();
+    });
+  });
+
+  // -----------------------------------------------------------------
+  // ADDED (issue #114) — 6-section redesign: new fields, closed-set
+  // dropdowns, the consent compliance gate, conditional referrer-name
+  // display, and the "Assign to Consultant" dropdown.
+  // -----------------------------------------------------------------
+  describe('customer-details redesign (issue #114)', () => {
+    async function fillMandatoryFields(user: ReturnType<typeof userEvent.setup>) {
+      await waitFor(() => expect(screen.getByRole('option', { name: 'Walk-in' })).toBeInTheDocument());
+      await user.type(screen.getByLabelText(/customer name/i), 'Asha Rao');
+      await user.type(screen.getByLabelText(/mobile/i), '9876543210');
+      await user.selectOptions(screen.getByLabelText(/^source$/i), '1');
+      await user.selectOptions(screen.getByLabelText(/model/i), '101');
+    }
+
+    it('AC1: renders all 6 section headings', async () => {
+      renderForm();
+      expect(screen.getByRole('heading', { name: 'Customer Details' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Vehicle Interest' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Exchange Vehicle' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Finance' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Source & Assignment' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Follow-up & Consent' })).toBeInTheDocument();
+    });
+
+    it('AC1: renders the side-panel section nav with a link per section', () => {
+      renderForm();
+      expect(screen.getByRole('navigation', { name: /form sections/i })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Customer Details' })).toHaveAttribute(
+        'href',
+        '#section-customer-details',
+      );
+      expect(screen.getByRole('link', { name: 'Follow-up & Consent' })).toHaveAttribute(
+        'href',
+        '#section-followup-consent',
+      );
+    });
+
+    it('AC1: renders every new field from the 6 sections', () => {
+      renderForm();
+      expect(screen.getByLabelText(/^email$/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/customer type/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/^city$/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/pin code/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/preferred language/i)).toBeInTheDocument();
+
+      expect(screen.getByLabelText(/^variant$/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/fuel type/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/transmission/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/budget min/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/budget max/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/buying timeline/i)).toBeInTheDocument();
+
+      expect(screen.getByLabelText(/customer has a vehicle to exchange/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/current vehicle/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/kms driven/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/registration number/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/expected value/i)).toBeInTheDocument();
+
+      expect(screen.getByLabelText(/payment mode/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/preferred financer/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/down payment capacity/i)).toBeInTheDocument();
+
+      expect(screen.getByLabelText(/assign to consultant/i)).toBeInTheDocument();
+
+      expect(screen.getByLabelText(/first follow-up date/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/^remarks$/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/customer consents/i)).toBeInTheDocument();
+    });
+
+    it('AC4: closed-set dropdowns render only their fixed option set (customerType example)', () => {
+      renderForm();
+      const select = screen.getByLabelText(/customer type/i) as HTMLSelectElement;
+      const optionLabels = Array.from(select.options).map((o) => o.textContent);
+      expect(optionLabels).toEqual(['Select a customer type', 'Individual', 'Corporate', 'Government', 'Fleet']);
+      expect(select.tagName).toBe('SELECT');
+    });
+
+    it('AC2: consent checkbox is unchecked by default', () => {
+      renderForm();
+      expect(screen.getByLabelText(/customer consents/i)).not.toBeChecked();
+    });
+
+    it('AC2: submit is blocked client-side while consent is unchecked, even with all other fields valid', async () => {
+      renderForm();
+      const user = userEvent.setup();
+      await fillMandatoryFields(user);
+      await user.click(screen.getByRole('button', { name: /submit|create|save/i }));
+
+      expect(await screen.findByText(/consent must be confirmed/i)).toBeInTheDocument();
+      expect(mockedApi.createLead).not.toHaveBeenCalled();
+    });
+
+    it('AC2: checking consent unblocks submission and all other new fields default to omitted', async () => {
+      mockedApi.createLead.mockResolvedValue({
+        leadId: 'lead-114-minimal',
+        customerName: 'Asha Rao',
+        mobile: '9876543210',
+        sourceId: 1,
+        modelId: 101,
+        status: 'New',
+        ownerId: 'owner-1',
+        locationId: 'loc-1',
+        createdAt: new Date().toISOString(),
+      });
+
+      renderForm();
+      const user = userEvent.setup();
+      await fillMandatoryFields(user);
+      await user.click(screen.getByLabelText(/customer consents/i));
+      await user.click(screen.getByRole('button', { name: /submit|create|save/i }));
+
+      expect(await screen.findByText(/lead created|success/i)).toBeInTheDocument();
+      expect(mockedApi.createLead).toHaveBeenCalledWith({
+        customerName: 'Asha Rao',
+        mobile: '9876543210',
+        sourceId: 1,
+        modelId: 101,
+        communicationConsentVerified: true,
+      });
+    });
+
+    it('AC2/AC4: submits with every new field populated, mapped onto the CreateLeadInput contract', async () => {
+      mockedApi.createLead.mockResolvedValue({
+        leadId: 'lead-114-full',
+        customerName: 'Asha Rao',
+        mobile: '9876543210',
+        sourceId: 1,
+        modelId: 101,
+        status: 'New',
+        ownerId: 'owner-1',
+        locationId: 'loc-1',
+        createdAt: new Date().toISOString(),
+      });
+
+      renderForm();
+      const user = userEvent.setup();
+      await fillMandatoryFields(user);
+
+      await user.type(screen.getByLabelText(/^email$/i), 'asha.rao@example.com');
+      await user.selectOptions(screen.getByLabelText(/customer type/i), 'Individual');
+      await user.type(screen.getByLabelText(/^city$/i), 'Pune');
+      await user.type(screen.getByLabelText(/pin code/i), '411001');
+      await user.selectOptions(screen.getByLabelText(/preferred language/i), 'Hindi');
+
+      await user.type(screen.getByLabelText(/^variant$/i), 'VXi (O) CVT');
+      await user.selectOptions(screen.getByLabelText(/fuel type/i), 'Petrol');
+      await user.selectOptions(screen.getByLabelText(/transmission/i), 'Manual');
+      await user.type(screen.getByLabelText(/budget min/i), '800000');
+      await user.type(screen.getByLabelText(/budget max/i), '1200000');
+      await user.selectOptions(screen.getByLabelText(/buying timeline/i), 'Immediate');
+
+      await user.click(screen.getByLabelText(/customer has a vehicle to exchange/i));
+      await user.type(screen.getByLabelText(/current vehicle/i), 'Maruti Swift 2018');
+      await user.type(screen.getByLabelText(/kms driven/i), '45000');
+      await user.type(screen.getByLabelText(/registration number/i), 'MH12AB1234');
+      await user.type(screen.getByLabelText(/expected value/i), '350000');
+
+      await user.selectOptions(screen.getByLabelText(/payment mode/i), 'Loan');
+      await user.type(screen.getByLabelText(/preferred financer/i), 'HDFC Bank');
+      await user.type(screen.getByLabelText(/down payment capacity/i), '100000');
+
+      await user.type(screen.getByLabelText(/^remarks$/i), 'Interested in a test drive.');
+      await user.click(screen.getByLabelText(/customer consents/i));
+      await user.click(screen.getByRole('button', { name: /submit|create|save/i }));
+
+      expect(await screen.findByText(/lead created|success/i)).toBeInTheDocument();
+      expect(mockedApi.createLead).toHaveBeenCalledWith(
+        expect.objectContaining({
+          email: 'asha.rao@example.com',
+          customerType: 'Individual',
+          city: 'Pune',
+          pinCode: '411001',
+          preferredLanguage: 'Hindi',
+          variant: 'VXi (O) CVT',
+          fuelType: 'Petrol',
+          transmission: 'Manual',
+          budgetMin: 800000,
+          budgetMax: 1200000,
+          buyingTimeline: 'Immediate',
+          exchangeInterest: true,
+          currentVehicle: 'Maruti Swift 2018',
+          kmsDriven: 45000,
+          registrationNumber: 'MH12AB1234',
+          expectedValue: 350000,
+          paymentMode: 'Loan',
+          preferredFinancer: 'HDFC Bank',
+          downPaymentCapacity: 100000,
+          remarks: 'Interested in a test drive.',
+          communicationConsentVerified: true,
+        }),
+      );
+    });
+
+    it('AC3: shows an inline error for an invalid pin code and blocks submission', async () => {
+      renderForm();
+      const user = userEvent.setup();
+      await fillMandatoryFields(user);
+      await user.type(screen.getByLabelText(/pin code/i), '00000');
+      await user.click(screen.getByLabelText(/customer consents/i));
+      await user.click(screen.getByRole('button', { name: /submit|create|save/i }));
+
+      expect(await screen.findByText(/valid.*pin code|pin code.*valid/i)).toBeInTheDocument();
+      expect(mockedApi.createLead).not.toHaveBeenCalled();
+    });
+
+    it('AC2: referrerName field is hidden until Source = Referral is selected', async () => {
+      renderForm();
+      const user = userEvent.setup();
+      await waitFor(() => expect(screen.getByRole('option', { name: 'Walk-in' })).toBeInTheDocument());
+
+      expect(screen.queryByLabelText(/referrer name/i)).not.toBeInTheDocument();
+
+      await user.selectOptions(screen.getByLabelText(/^source$/i), '2'); // Referral
+      expect(screen.getByLabelText(/referrer name/i)).toBeInTheDocument();
+
+      await user.selectOptions(screen.getByLabelText(/^source$/i), '1'); // Walk-in
+      expect(screen.queryByLabelText(/referrer name/i)).not.toBeInTheDocument();
+    });
+
+    it('AC5: "Assign to Consultant" dropdown populates from GET /api/v1/consultants and defaults to self-assignment', async () => {
+      mockedApi.getConsultants.mockResolvedValue([
+        { userId: 'dse-b', displayName: 'Dealer Sales Executive Loc1-B' },
+      ]);
+      renderForm();
+
+      await waitFor(() =>
+        expect(screen.getByRole('option', { name: 'Dealer Sales Executive Loc1-B' })).toBeInTheDocument(),
+      );
+      expect(screen.getByRole('option', { name: /assign to myself/i })).toBeInTheDocument();
+    });
+
+    it('AC5: submitting with a consultant selected sends assignedOwnerId', async () => {
+      mockedApi.getConsultants.mockResolvedValue([
+        { userId: 'dse-b', displayName: 'Dealer Sales Executive Loc1-B' },
+      ]);
+      mockedApi.createLead.mockResolvedValue({
+        leadId: 'lead-114-assigned',
+        customerName: 'Asha Rao',
+        mobile: '9876543210',
+        sourceId: 1,
+        modelId: 101,
+        status: 'New',
+        ownerId: 'dse-b',
+        locationId: 'loc-1',
+        createdAt: new Date().toISOString(),
+      });
+
+      renderForm();
+      const user = userEvent.setup();
+      await fillMandatoryFields(user);
+      await waitFor(() =>
+        expect(screen.getByRole('option', { name: 'Dealer Sales Executive Loc1-B' })).toBeInTheDocument(),
+      );
+      await user.selectOptions(screen.getByLabelText(/assign to consultant/i), 'dse-b');
+      await user.click(screen.getByLabelText(/customer consents/i));
+      await user.click(screen.getByRole('button', { name: /submit|create|save/i }));
+
+      expect(await screen.findByText(/lead created|success/i)).toBeInTheDocument();
+      expect(mockedApi.createLead).toHaveBeenCalledWith(
+        expect.objectContaining({ assignedOwnerId: 'dse-b' }),
+      );
     });
   });
 });
