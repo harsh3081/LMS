@@ -34,7 +34,7 @@ export function LeadManagementPage() {
           <div className="flex items-center gap-3">
             {config?.directEnquiryEnabled !== false && (
               <Link
-                to="/enquiries/new"
+                to="/enquiries"
                 role="link"
                 className={`${buttonStyles.base} ${buttonStyles.secondary}`}
               >
