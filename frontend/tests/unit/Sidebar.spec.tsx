@@ -23,9 +23,22 @@ describe('Sidebar (issue #126)', () => {
   it('AC1: renders the Dashboard link and all 3 group labels', () => {
     renderSidebar();
     expect(screen.getByRole('link', { name: 'Dashboard' })).toHaveAttribute('href', '/');
-    expect(screen.getByText('Lead Management')).toBeInTheDocument();
+    // issue #128: "Lead Management" is now a link to its own landing page.
+    expect(screen.getByRole('link', { name: 'Lead Management' })).toHaveAttribute('href', '/leads');
+    // Enquiry Management / Test Drive Scheduling have no landing page yet —
+    // still plain, non-clickable labels.
     expect(screen.getByText('Enquiry Management')).toBeInTheDocument();
     expect(screen.getByText('Test Drive Scheduling')).toBeInTheDocument();
+  });
+
+  it('AC2 (issue #128): highlights the "Lead Management" group link when on its own landing page', () => {
+    renderSidebar('/leads');
+    expect(screen.getByRole('link', { name: 'Lead Management' })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('AC2 (issue #128): highlights the "Lead Management" group link when on a nested Lead route too', () => {
+    renderSidebar('/leads/new');
+    expect(screen.getByRole('link', { name: 'Lead Management' })).toHaveAttribute('aria-current', 'page');
   });
 
   it('AC1: renders every sub-link with the exact route from the issue body', () => {

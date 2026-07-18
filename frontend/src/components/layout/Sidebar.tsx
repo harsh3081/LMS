@@ -7,15 +7,23 @@ interface NavItem {
 
 interface NavGroup {
   label: string;
+  /** When present, the group label itself becomes a link to that section's
+   * own landing page (issue #128). Groups without a landing page yet
+   * (Enquiry Management, Test Drive Scheduling) keep a plain, non-clickable
+   * label until one exists. */
+  to?: string;
   items: NavItem[];
 }
 
 /** Sidebar structure per issue #126 — EXACT routes/labels from the issue
  * body ("Step 1 — navigation shell only"). No new routes/pages are
- * introduced here; every `to` below already exists in App.tsx. */
+ * introduced here; every `to` below already exists in App.tsx.
+ * MODIFIED (issue #128): "Lead Management" now links to `/leads`, its new
+ * landing page (formerly mislabeled `/` — see DashboardPage.tsx). */
 const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Lead Management',
+    to: '/leads',
     items: [
       { label: 'New Lead', to: '/leads/new' },
       { label: 'Field Configuration', to: '/admin/field-config' },
@@ -74,9 +82,20 @@ export function Sidebar() {
 
       {NAV_GROUPS.map((group) => (
         <div key={group.label}>
-          <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
-            {group.label}
-          </p>
+          {group.to ? (
+            <NavLink
+              to={group.to}
+              className={(state) =>
+                `mb-2 block px-3 text-xs font-semibold uppercase tracking-wide ${
+                  state.isActive ? 'text-brand-700' : 'text-slate-400 hover:text-slate-600'
+                }`
+              }
+            >
+              {group.label}
+            </NavLink>
+          ) : (
+            <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wide text-slate-400">{group.label}</p>
+          )}
           <ul className="space-y-1">
             {group.items.map((item) => (
               <li key={item.to}>
