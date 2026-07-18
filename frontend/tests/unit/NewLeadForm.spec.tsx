@@ -6,10 +6,10 @@
  * run against the live app).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { NewLeadForm } from '../../src/components/NewLeadForm';
+import { NewLeadForm, SUCCESS_AUTO_CLOSE_MS } from '../../src/components/NewLeadForm';
 import { api, ApiError, DuplicateMatch } from '../../src/api/client';
 
 vi.mock('../../src/api/client', async (importOriginal) => {
@@ -631,6 +631,114 @@ describe('NewLeadForm', () => {
       expect(mockedApi.createLead).toHaveBeenCalledWith(
         expect.objectContaining({ assignedOwnerId: 'dse-b' }),
       );
+    });
+  });
+
+  /**
+   * RED->GREEN — issue #118 (AC4): optional `onSuccess` prop, used by the
+   * New Lead slide-over panel (LandingPage) to auto-close itself shortly
+   * after a successful creation. `vi.useFakeTimers()` (the approach used
+   * elsewhere in this suite, e.g. useSchedulerSlots.spec.tsx) hangs here
+   * when combined with userEvent's full form-fill + React Query's own
+   * internal timer usage, so this instead spies on `window.setTimeout`
+   * scoped to exactly the SUCCESS_AUTO_CLOSE_MS delay — every other
+   * setTimeout call (Testing Library's own polling included) passes
+   * through untouched. This keeps the assertion fully deterministic (the
+   * captured callback is invoked directly, no real 1.5s wall-clock wait)
+   * without destabilizing the rest of the interaction.
+   */
+  describe('onSuccess auto-close (issue #118, AC4)', () => {
+    function spyOnSuccessAutoCloseTimer() {
+      const originalSetTimeout = window.setTimeout;
+      let capturedCallback: (() => void) | null = null;
+      const spy = vi
+        .spyOn(window, 'setTimeout')
+        .mockImplementation(((fn: TimerHandler, delay?: number, ...args: unknown[]) => {
+          if (delay === SUCCESS_AUTO_CLOSE_MS) {
+            capturedCallback = fn as () => void;
+            return 0 as unknown as ReturnType<typeof setTimeout>;
+          }
+          return originalSetTimeout(fn as TimerHandler, delay, ...args);
+        }) as typeof setTimeout);
+      return {
+        spy,
+        getCapturedCallback: () => capturedCallback,
+      };
+    }
+
+    it('calls onSuccess ~1.5s after a successful creation, once the success message has shown', async () => {
+      mockedApi.createLead.mockResolvedValue({
+        leadId: 'lead-panel-1',
+        customerName: 'Panel Test',
+        mobile: '9876543210',
+        sourceId: 1,
+        modelId: 101,
+        status: 'New',
+        ownerId: 'owner-1',
+        locationId: 'loc-1',
+        createdAt: new Date().toISOString(),
+      });
+      const onSuccess = vi.fn();
+      const { spy, getCapturedCallback } = spyOnSuccessAutoCloseTimer();
+      const user = userEvent.setup();
+      const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      render(
+        <QueryClientProvider client={queryClient}>
+          <NewLeadForm onSuccess={onSuccess} />
+        </QueryClientProvider>,
+      );
+
+      await waitFor(() => expect(screen.getByRole('option', { name: 'Walk-in' })).toBeInTheDocument());
+
+      await user.type(screen.getByLabelText(/customer name/i), 'Panel Test');
+      await user.type(screen.getByLabelText(/mobile/i), '9876543210');
+      await user.selectOptions(screen.getByLabelText(/source/i), '1');
+      await user.selectOptions(screen.getByLabelText(/model/i), '101');
+      await user.click(screen.getByLabelText(/customer consents/i));
+      await user.click(screen.getByRole('button', { name: /submit|create|save/i }));
+
+      expect(await screen.findByText(/lead created|success/i)).toBeInTheDocument();
+      expect(onSuccess).not.toHaveBeenCalled();
+
+      const capturedCallback = getCapturedCallback();
+      expect(capturedCallback).not.toBeNull();
+      await act(async () => capturedCallback!());
+      expect(onSuccess).toHaveBeenCalledTimes(1);
+
+      spy.mockRestore();
+    });
+
+    it('does not call onSuccess when the prop is omitted (standalone /leads/new page behavior unchanged)', async () => {
+      mockedApi.createLead.mockResolvedValue({
+        leadId: 'lead-standalone-1',
+        customerName: 'No Panel',
+        mobile: '9876543210',
+        sourceId: 1,
+        modelId: 101,
+        status: 'New',
+        ownerId: 'owner-1',
+        locationId: 'loc-1',
+        createdAt: new Date().toISOString(),
+      });
+      const { spy, getCapturedCallback } = spyOnSuccessAutoCloseTimer();
+      const user = userEvent.setup();
+      renderForm();
+
+      await waitFor(() => expect(screen.getByRole('option', { name: 'Walk-in' })).toBeInTheDocument());
+
+      await user.type(screen.getByLabelText(/customer name/i), 'No Panel');
+      await user.type(screen.getByLabelText(/mobile/i), '9876543210');
+      await user.selectOptions(screen.getByLabelText(/source/i), '1');
+      await user.selectOptions(screen.getByLabelText(/model/i), '101');
+      await user.click(screen.getByLabelText(/customer consents/i));
+      await user.click(screen.getByRole('button', { name: /submit|create|save/i }));
+
+      expect(await screen.findByText(/lead created|success/i)).toBeInTheDocument();
+      // No onSuccess prop was passed, so NewLeadForm never schedules the
+      // SUCCESS_AUTO_CLOSE_MS timer at all — nothing was captured.
+      expect(getCapturedCallback()).toBeNull();
+
+      spy.mockRestore();
     });
   });
 });

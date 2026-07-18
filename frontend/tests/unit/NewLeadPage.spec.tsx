@@ -1,7 +1,10 @@
 /**
- * RED->GREEN — Task 5.4: created Lead appears in the DSE queue immediately
- * after a successful submit (AC6), without a full page reload — the cache
- * update happens via useCreateLead's onSuccess (src/hooks/useLeads.ts).
+ * RED->GREEN — Task 5.4 (original); UPDATED (issue #118, AC5): NewLeadPage
+ * ("/leads/new") no longer redundantly re-displays the "My Leads" table
+ * below the form — LandingPage already shows the same DSE queue, and the
+ * Dashboard's own "New Lead" entry point now opens this same form in a
+ * slide-over panel instead of navigating here. This route still exists for
+ * direct navigation/bookmarking and still renders just the form.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
@@ -37,7 +40,18 @@ const ALL_MANDATORY_FIELD_CONFIG = [
   { fieldName: 'modelId', label: 'Model of Interest', mandatory: true, updatedBy: null, updatedAt: null },
 ];
 
-describe('NewLeadPage queue reflection (AC6)', () => {
+function renderPage() {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>
+        <NewLeadPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
+
+describe('NewLeadPage (issue #118, AC5)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockedApi.getFieldConfig.mockResolvedValue(ALL_MANDATORY_FIELD_CONFIG);
@@ -48,7 +62,24 @@ describe('NewLeadPage queue reflection (AC6)', () => {
     mockedApi.checkDuplicates.mockResolvedValue([]);
   });
 
-  it('EVAL-AC6-01: created lead appears at the top of the queue without a full page reload', async () => {
+  it('renders the New Lead form', async () => {
+    renderPage();
+    expect(screen.getByRole('heading', { name: /new lead/i })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('option', { name: 'Walk-in' })).toBeInTheDocument());
+    expect(screen.getByLabelText(/customer name/i)).toBeInTheDocument();
+  });
+
+  it('AC5: does not render the "My Leads" table on this route anymore', async () => {
+    renderPage();
+    await waitFor(() => expect(screen.getByRole('option', { name: 'Walk-in' })).toBeInTheDocument());
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    expect(screen.queryByText('My Leads')).not.toBeInTheDocument();
+    // Confirms the queue was never mounted here at all, not merely hidden —
+    // the read that backs LeadQueue is never even called from this page.
+    expect(mockedApi.getMyLeads).not.toHaveBeenCalled();
+  });
+
+  it('EVAL-AC1-01: submitting valid data still calls createLead and shows a success message on this route', async () => {
     mockedApi.createLead.mockResolvedValue({
       leadId: 'lead-new',
       customerName: 'Queue Check 123',
@@ -61,19 +92,7 @@ describe('NewLeadPage queue reflection (AC6)', () => {
       createdAt: new Date().toISOString(),
     });
 
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
-      <QueryClientProvider client={queryClient}>
-        {/* MemoryRouter added (issue #116): LeadQueue (rendered by
-         * NewLeadPage) now renders a react-router `Link` per row (the new
-         * "View" action into LeadDetailPage), which throws outside a
-         * Router context. */}
-        <MemoryRouter>
-          <NewLeadPage />
-        </MemoryRouter>
-      </QueryClientProvider>,
-    );
-
+    renderPage();
     const user = userEvent.setup();
     await waitFor(() => expect(screen.getByRole('option', { name: 'Walk-in' })).toBeInTheDocument());
 
@@ -83,14 +102,11 @@ describe('NewLeadPage queue reflection (AC6)', () => {
     await user.selectOptions(screen.getByLabelText(/model/i), '101');
     // NEW (issue #114, AC2): communicationConsentVerified is a hard,
     // always-required compliance gate blocking submission client-side until
-    // checked — unrelated to this file's own queue-reflection assertion.
+    // checked — unrelated to this file's own success-message assertion.
     await user.click(screen.getByLabelText(/customer consents/i));
     await user.click(screen.getByRole('button', { name: /submit|create|save/i }));
 
-    expect(await screen.findByText('Queue Check 123')).toBeInTheDocument();
-    // getMyLeads (the network read) is called exactly once — the initial
-    // mount fetch — proving the queue update came from the mutation's cache
-    // write, not a refetch/reload.
-    expect(mockedApi.getMyLeads).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText(/lead created|success/i)).toBeInTheDocument();
+    expect(mockedApi.createLead).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useLeadSources } from '../hooks/useLeadSources';
 import { useVehicleModels } from '../hooks/useVehicleModels';
@@ -129,7 +129,25 @@ function strOrUndefined(value: string): string | undefined {
   return value === '' ? undefined : value;
 }
 
-export function NewLeadForm() {
+/** issue #118 (AC4): when rendered inside the New-Lead slide-over panel, the
+ * panel should close itself shortly after a successful creation rather than
+ * staying open — but the "Lead created successfully." confirmation should
+ * still be visible for a beat first, matching how the standalone
+ * `/leads/new` page has always shown that message. 1.5s is long enough to
+ * read a short confirmation but short enough not to feel stuck. See
+ * .phoenix-os/project/specs/118/NOTES.md for the fuller rationale. */
+export const SUCCESS_AUTO_CLOSE_MS = 1500;
+
+export interface NewLeadFormProps {
+  /** Optional — called ~1.5s after a successful Lead creation (once the
+   * success message has been shown), letting a parent (e.g. the New Lead
+   * slide-over panel) close itself. The standalone `/leads/new` page does
+   * not pass this and keeps its existing behavior unchanged: the success
+   * message stays until the DSE submits again or navigates away. */
+  onSuccess?: () => void;
+}
+
+export function NewLeadForm({ onSuccess }: NewLeadFormProps = {}) {
   const { data: sources } = useLeadSources();
   const { data: models } = useVehicleModels();
   const { data: consultants } = useConsultants();
@@ -143,6 +161,18 @@ export function NewLeadForm() {
   // resulting warning and chosen to proceed anyway.
   const [duplicateMatches, setDuplicateMatches] = useState<DuplicateMatch[]>([]);
   const [duplicateAcknowledged, setDuplicateAcknowledged] = useState(false);
+  // issue #118 (AC4): tracks the pending auto-close timer so it can be
+  // cleared on unmount (e.g. the panel is closed/re-opened before the timer
+  // fires) — avoids calling onSuccess or touching state after unmount.
+  const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (successTimeoutRef.current) {
+        clearTimeout(successTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // AC3: mandatory-ness is config-driven (issue #27, FR-04) — defaults to
   // required while the config is loading/unknown (fail-safe, matches the
@@ -241,6 +271,11 @@ export function NewLeadForm() {
       setDuplicateMatches([]);
       setDuplicateAcknowledged(false);
       reset();
+      if (onSuccess) {
+        successTimeoutRef.current = setTimeout(() => {
+          onSuccess();
+        }, SUCCESS_AUTO_CLOSE_MS);
+      }
     } catch (err) {
       if (err instanceof ApiError && err.fieldErrors) {
         for (const fieldError of err.fieldErrors) {
