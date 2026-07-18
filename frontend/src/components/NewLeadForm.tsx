@@ -303,153 +303,166 @@ export function NewLeadForm({ onSuccess }: NewLeadFormProps = {}) {
       </div>
 
       <form onSubmit={onSubmit} noValidate aria-label="New Lead" className="min-w-0 flex-1 space-y-6">
-        <section id="section-customer-details" className="space-y-1">
+        <section id="section-customer-details" className="space-y-3">
           <h2 className="text-base font-semibold text-slate-900">
             Customer Details
           </h2>
 
-          <FormField label="Customer Name" htmlFor="customerName" error={errors.customerName?.message}>
-            <TextInput
-              id="customerName"
-              {...register('customerName', {
-                required: customerNameMandatory ? 'Customer name is required' : false,
-              })}
-            />
-          </FormField>
+          <div className="grid grid-cols-1 gap-x-4 gap-y-1 md:grid-cols-2">
+            <FormField label="Customer Name" htmlFor="customerName" error={errors.customerName?.message}>
+              <TextInput
+                id="customerName"
+                {...register('customerName', {
+                  required: customerNameMandatory ? 'Customer name is required' : false,
+                })}
+              />
+            </FormField>
 
-          <FormField label="Email" htmlFor="email" error={errors.email?.message}>
-            <TextInput id="email" type="email" {...register('email')} />
-          </FormField>
+            <FormField label="Email" htmlFor="email" error={errors.email?.message}>
+              <TextInput id="email" type="email" {...register('email')} />
+            </FormField>
 
-          <FormField label="Customer Type" htmlFor="customerType" error={errors.customerType?.message}>
-            <Select id="customerType" {...register('customerType')}>
-              <option value="">Select a customer type</option>
-              {CUSTOMER_TYPES.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </Select>
-          </FormField>
+            <FormField label="Customer Type" htmlFor="customerType" error={errors.customerType?.message}>
+              <Select id="customerType" {...register('customerType')}>
+                <option value="">Select a customer type</option>
+                {CUSTOMER_TYPES.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
 
-          <FormField label="Mobile Number" htmlFor="mobile" error={errors.mobile?.message}>
-            <TextInput
-              id="mobile"
-              {...mobileRegistration}
-              onChange={(e) => {
-                void mobileRegistration.onChange(e);
-                setDuplicateMatches([]);
-                setDuplicateAcknowledged(false);
-              }}
-              onBlur={(e) => {
-                void mobileRegistration.onBlur(e);
-                void handleMobileBlur(e.target.value);
-              }}
-            />
-          </FormField>
+            <FormField label="Mobile Number" htmlFor="mobile" error={errors.mobile?.message}>
+              <TextInput
+                id="mobile"
+                {...mobileRegistration}
+                onChange={(e) => {
+                  void mobileRegistration.onChange(e);
+                  setDuplicateMatches([]);
+                  setDuplicateAcknowledged(false);
+                }}
+                onBlur={(e) => {
+                  void mobileRegistration.onBlur(e);
+                  void handleMobileBlur(e.target.value);
+                }}
+              />
+            </FormField>
 
-          <DuplicateWarning
-            matches={duplicateMatches}
-            acknowledged={duplicateAcknowledged}
-            onProceed={() => {
-              setDuplicateAcknowledged(true);
-              void onProceedAnyway();
-            }}
-            onCancel={() => {
-              setDuplicateMatches([]);
-              setDuplicateAcknowledged(false);
-            }}
-          />
+            <div className="md:col-span-2">
+              <DuplicateWarning
+                matches={duplicateMatches}
+                acknowledged={duplicateAcknowledged}
+                onProceed={() => {
+                  setDuplicateAcknowledged(true);
+                  void onProceedAnyway();
+                }}
+                onCancel={() => {
+                  setDuplicateMatches([]);
+                  setDuplicateAcknowledged(false);
+                }}
+              />
+            </div>
 
-          <FormField label="City" htmlFor="city" error={errors.city?.message}>
-            <TextInput id="city" {...register('city')} />
-          </FormField>
+            <FormField label="City" htmlFor="city" error={errors.city?.message}>
+              <TextInput id="city" {...register('city')} />
+            </FormField>
 
-          <FormField label="Pin Code" htmlFor="pinCode" error={errors.pinCode?.message}>
-            <TextInput
-              id="pinCode"
-              {...register('pinCode', {
-                validate: (value) =>
-                  !value || INDIA_PIN_CODE_REGEX.test(value) || 'Enter a valid 6-digit India pin code',
-              })}
-            />
-          </FormField>
+            <FormField label="Pin Code" htmlFor="pinCode" error={errors.pinCode?.message}>
+              <TextInput
+                id="pinCode"
+                {...register('pinCode', {
+                  validate: (value) =>
+                    !value || INDIA_PIN_CODE_REGEX.test(value) || 'Enter a valid 6-digit India pin code',
+                })}
+              />
+            </FormField>
 
-          <FormField label="Preferred Language" htmlFor="preferredLanguage" error={errors.preferredLanguage?.message}>
-            <Select id="preferredLanguage" {...register('preferredLanguage')}>
-              <option value="">Select a language</option>
-              {PREFERRED_LANGUAGES.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </Select>
-          </FormField>
+            <FormField
+              label="Preferred Language"
+              htmlFor="preferredLanguage"
+              error={errors.preferredLanguage?.message}
+            >
+              <Select id="preferredLanguage" {...register('preferredLanguage')}>
+                <option value="">Select a language</option>
+                {PREFERRED_LANGUAGES.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+          </div>
         </section>
 
-        <section id="section-vehicle-interest" className="space-y-1">
+        <section id="section-vehicle-interest" className="space-y-3">
           <h2 className="text-base font-semibold text-slate-900">
             Vehicle Interest
           </h2>
 
-          <FormField label="Model of Interest" htmlFor="modelId" error={errors.modelId?.message}>
-            <Select id="modelId" {...register('modelId', { required: modelIdMandatory ? 'Model is required' : false })}>
-              <option value="">Select a model</option>
-              {(models ?? []).map((m) => (
-                <option key={m.modelId} value={m.modelId}>
-                  {m.name}
-                </option>
-              ))}
-            </Select>
-          </FormField>
+          <div className="grid grid-cols-1 gap-x-4 gap-y-1 md:grid-cols-2">
+            <FormField label="Model of Interest" htmlFor="modelId" error={errors.modelId?.message}>
+              <Select
+                id="modelId"
+                {...register('modelId', { required: modelIdMandatory ? 'Model is required' : false })}
+              >
+                <option value="">Select a model</option>
+                {(models ?? []).map((m) => (
+                  <option key={m.modelId} value={m.modelId}>
+                    {m.name}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
 
-          <FormField label="Variant" htmlFor="variant" error={errors.variant?.message}>
-            <TextInput id="variant" {...register('variant')} />
-          </FormField>
+            <FormField label="Variant" htmlFor="variant" error={errors.variant?.message}>
+              <TextInput id="variant" {...register('variant')} />
+            </FormField>
 
-          <FormField label="Fuel Type" htmlFor="fuelType" error={errors.fuelType?.message}>
-            <Select id="fuelType" {...register('fuelType')}>
-              <option value="">Select a fuel type</option>
-              {FUEL_TYPES.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </Select>
-          </FormField>
+            <FormField label="Fuel Type" htmlFor="fuelType" error={errors.fuelType?.message}>
+              <Select id="fuelType" {...register('fuelType')}>
+                <option value="">Select a fuel type</option>
+                {FUEL_TYPES.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
 
-          <FormField label="Transmission" htmlFor="transmission" error={errors.transmission?.message}>
-            <Select id="transmission" {...register('transmission')}>
-              <option value="">Select a transmission</option>
-              {TRANSMISSIONS.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </Select>
-          </FormField>
+            <FormField label="Transmission" htmlFor="transmission" error={errors.transmission?.message}>
+              <Select id="transmission" {...register('transmission')}>
+                <option value="">Select a transmission</option>
+                {TRANSMISSIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
 
-          <FormField label="Budget Min (INR)" htmlFor="budgetMin" error={errors.budgetMin?.message}>
-            <TextInput id="budgetMin" type="number" min={0} {...register('budgetMin')} />
-          </FormField>
+            <FormField label="Budget Min (INR)" htmlFor="budgetMin" error={errors.budgetMin?.message}>
+              <TextInput id="budgetMin" type="number" min={0} {...register('budgetMin')} />
+            </FormField>
 
-          <FormField label="Budget Max (INR)" htmlFor="budgetMax" error={errors.budgetMax?.message}>
-            <TextInput id="budgetMax" type="number" min={0} {...register('budgetMax')} />
-          </FormField>
+            <FormField label="Budget Max (INR)" htmlFor="budgetMax" error={errors.budgetMax?.message}>
+              <TextInput id="budgetMax" type="number" min={0} {...register('budgetMax')} />
+            </FormField>
 
-          <FormField label="Buying Timeline" htmlFor="buyingTimeline" error={errors.buyingTimeline?.message}>
-            <Select id="buyingTimeline" {...register('buyingTimeline')}>
-              <option value="">Select a timeline</option>
-              {BUYING_TIMELINES.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </Select>
-          </FormField>
+            <FormField label="Buying Timeline" htmlFor="buyingTimeline" error={errors.buyingTimeline?.message}>
+              <Select id="buyingTimeline" {...register('buyingTimeline')}>
+                <option value="">Select a timeline</option>
+                {BUYING_TIMELINES.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+          </div>
         </section>
 
-        <section id="section-exchange-vehicle" className="space-y-1">
+        <section id="section-exchange-vehicle" className="space-y-3">
           <h2 className="text-base font-semibold text-slate-900">
             Exchange Vehicle
           </h2>
@@ -462,98 +475,123 @@ export function NewLeadForm({ onSuccess }: NewLeadFormProps = {}) {
             </label>
           </div>
 
-          <FormField label="Current Vehicle" htmlFor="currentVehicle" error={errors.currentVehicle?.message}>
-            <TextInput id="currentVehicle" {...register('currentVehicle')} />
-          </FormField>
+          <div className="grid grid-cols-1 gap-x-4 gap-y-1 md:grid-cols-2">
+            <FormField label="Current Vehicle" htmlFor="currentVehicle" error={errors.currentVehicle?.message}>
+              <TextInput id="currentVehicle" {...register('currentVehicle')} />
+            </FormField>
 
-          <FormField label="KMs Driven" htmlFor="kmsDriven" error={errors.kmsDriven?.message}>
-            <TextInput id="kmsDriven" type="number" min={0} {...register('kmsDriven')} />
-          </FormField>
+            <FormField label="KMs Driven" htmlFor="kmsDriven" error={errors.kmsDriven?.message}>
+              <TextInput id="kmsDriven" type="number" min={0} {...register('kmsDriven')} />
+            </FormField>
 
-          <FormField label="Registration Number" htmlFor="registrationNumber" error={errors.registrationNumber?.message}>
-            <TextInput id="registrationNumber" {...register('registrationNumber')} />
-          </FormField>
+            <FormField
+              label="Registration Number"
+              htmlFor="registrationNumber"
+              error={errors.registrationNumber?.message}
+            >
+              <TextInput id="registrationNumber" {...register('registrationNumber')} />
+            </FormField>
 
-          <FormField label="Expected Value (INR)" htmlFor="expectedValue" error={errors.expectedValue?.message}>
-            <TextInput id="expectedValue" type="number" min={0} {...register('expectedValue')} />
-          </FormField>
+            <FormField label="Expected Value (INR)" htmlFor="expectedValue" error={errors.expectedValue?.message}>
+              <TextInput id="expectedValue" type="number" min={0} {...register('expectedValue')} />
+            </FormField>
+          </div>
         </section>
 
-        <section id="section-finance" className="space-y-1">
+        <section id="section-finance" className="space-y-3">
           <h2 className="text-base font-semibold text-slate-900">
             Finance
           </h2>
 
-          <FormField label="Payment Mode" htmlFor="paymentMode" error={errors.paymentMode?.message}>
-            <Select id="paymentMode" {...register('paymentMode')}>
-              <option value="">Select a payment mode</option>
-              {PAYMENT_MODES.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </Select>
-          </FormField>
+          <div className="grid grid-cols-1 gap-x-4 gap-y-1 md:grid-cols-2">
+            <FormField label="Payment Mode" htmlFor="paymentMode" error={errors.paymentMode?.message}>
+              <Select id="paymentMode" {...register('paymentMode')}>
+                <option value="">Select a payment mode</option>
+                {PAYMENT_MODES.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
 
-          <FormField label="Preferred Financer" htmlFor="preferredFinancer" error={errors.preferredFinancer?.message}>
-            <TextInput id="preferredFinancer" {...register('preferredFinancer')} />
-          </FormField>
+            <FormField
+              label="Preferred Financer"
+              htmlFor="preferredFinancer"
+              error={errors.preferredFinancer?.message}
+            >
+              <TextInput id="preferredFinancer" {...register('preferredFinancer')} />
+            </FormField>
 
-          <FormField
-            label="Down Payment Capacity (INR)"
-            htmlFor="downPaymentCapacity"
-            error={errors.downPaymentCapacity?.message}
-          >
-            <TextInput id="downPaymentCapacity" type="number" min={0} {...register('downPaymentCapacity')} />
-          </FormField>
+            <FormField
+              label="Down Payment Capacity (INR)"
+              htmlFor="downPaymentCapacity"
+              error={errors.downPaymentCapacity?.message}
+            >
+              <TextInput id="downPaymentCapacity" type="number" min={0} {...register('downPaymentCapacity')} />
+            </FormField>
+          </div>
         </section>
 
-        <section id="section-source-assignment" className="space-y-1">
+        <section id="section-source-assignment" className="space-y-3">
           <h2 className="text-base font-semibold text-slate-900">
             Source & Assignment
           </h2>
 
-          <FormField label="Source" htmlFor="sourceId" error={errors.sourceId?.message}>
-            <Select id="sourceId" {...register('sourceId', { required: sourceIdMandatory ? 'Source is required' : false })}>
-              <option value="">Select a source</option>
-              {(sources ?? []).map((s) => (
-                <option key={s.sourceId} value={s.sourceId}>
-                  {s.name}
-                </option>
-              ))}
-            </Select>
-          </FormField>
-
-          {showReferrerName && (
-            <FormField label="Referrer Name" htmlFor="referrerName" error={errors.referrerName?.message}>
-              <TextInput id="referrerName" {...register('referrerName')} />
+          <div className="grid grid-cols-1 gap-x-4 gap-y-1 md:grid-cols-2">
+            <FormField label="Source" htmlFor="sourceId" error={errors.sourceId?.message}>
+              <Select
+                id="sourceId"
+                {...register('sourceId', { required: sourceIdMandatory ? 'Source is required' : false })}
+              >
+                <option value="">Select a source</option>
+                {(sources ?? []).map((s) => (
+                  <option key={s.sourceId} value={s.sourceId}>
+                    {s.name}
+                  </option>
+                ))}
+              </Select>
             </FormField>
-          )}
 
-          <FormField label="Assign to Consultant" htmlFor="assignedOwnerId" error={errors.assignedOwnerId?.message}>
-            <Select id="assignedOwnerId" {...register('assignedOwnerId')}>
-              <option value="">Assign to myself (default)</option>
-              {(consultants ?? []).map((c) => (
-                <option key={c.userId} value={c.userId}>
-                  {c.displayName}
-                </option>
-              ))}
-            </Select>
-          </FormField>
+            {showReferrerName && (
+              <FormField label="Referrer Name" htmlFor="referrerName" error={errors.referrerName?.message}>
+                <TextInput id="referrerName" {...register('referrerName')} />
+              </FormField>
+            )}
+
+            <FormField label="Assign to Consultant" htmlFor="assignedOwnerId" error={errors.assignedOwnerId?.message}>
+              <Select id="assignedOwnerId" {...register('assignedOwnerId')}>
+                <option value="">Assign to myself (default)</option>
+                {(consultants ?? []).map((c) => (
+                  <option key={c.userId} value={c.userId}>
+                    {c.displayName}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+          </div>
         </section>
 
-        <section id="section-followup-consent" className="space-y-1">
+        <section id="section-followup-consent" className="space-y-3">
           <h2 className="text-base font-semibold text-slate-900">
             Follow-up & Consent
           </h2>
 
-          <FormField label="First Follow-up Date" htmlFor="firstFollowUpAt" error={errors.firstFollowUpAt?.message}>
-            <TextInput id="firstFollowUpAt" type="date" {...register('firstFollowUpAt')} />
-          </FormField>
+          <div className="grid grid-cols-1 gap-x-4 gap-y-1 md:grid-cols-2">
+            <FormField
+              label="First Follow-up Date"
+              htmlFor="firstFollowUpAt"
+              error={errors.firstFollowUpAt?.message}
+            >
+              <TextInput id="firstFollowUpAt" type="date" {...register('firstFollowUpAt')} />
+            </FormField>
 
-          <FormField label="Remarks" htmlFor="remarks" error={errors.remarks?.message}>
-            <Textarea id="remarks" {...register('remarks')} />
-          </FormField>
+            <div className="md:col-span-2">
+              <FormField label="Remarks" htmlFor="remarks" error={errors.remarks?.message}>
+                <Textarea id="remarks" {...register('remarks')} />
+              </FormField>
+            </div>
+          </div>
 
           <div className="flex items-start gap-2 py-1">
             <Checkbox
