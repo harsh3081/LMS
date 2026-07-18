@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { DataSource, In } from 'typeorm';
 import { LeadsRepository } from './leads.repository';
 import { AuditLogRepository } from '../audit-log/audit-log.repository';
 import { CreateLeadDto } from './dto/create-lead.dto';
@@ -8,9 +8,18 @@ import { LeadSourceEntity } from '../lead-sources/entities/lead-source.entity';
 import { VehicleModelEntity } from '../vehicle-models/entities/vehicle-model.entity';
 import { UserEntity } from '../users/entities/user.entity';
 import { ReferentialValidationError, LeadReassignTargetNotFoundError } from './leads.errors';
+import { LeadNotFoundError } from '../enquiries/enquiries.errors';
 import { Principal, ROLE_DSE } from '../common/principal';
 import { FieldConfigService } from '../field-config/field-config.service';
 import { DuplicatesService } from '../duplicates/duplicates.service';
+
+/** NEW (issue #116): a Lead plus its denormalized, human-readable names —
+ * see LeadsService.attachNames. */
+export type EnrichedLead = LeadEntity & {
+  sourceName: string | null;
+  modelName: string | null;
+  ownerName: string | null;
+};
 
 /**
  * Create-Lead use case (tech-design.md Component 2 / ref-code.md Sample 2).
@@ -140,8 +149,75 @@ export class LeadsService {
     });
   }
 
-  async findOwnQueue(actor: Principal): Promise<LeadEntity[]> {
-    return this.leadsRepository.findOwnQueue(actor);
+  /** MODIFIED (issue #116, AC1): now returns names denormalized alongside
+   * the raw ids — a LIST view read by a human benefits from human-readable
+   * Source/Model/Assigned-To, unlike the flat CREATE response (see
+   * LeadResponseDto's comment for why this Story adds them here without
+   * disturbing #34/#114's minimal-create precedent). */
+  async findOwnQueue(actor: Principal): Promise<EnrichedLead[]> {
+    const leads = await this.leadsRepository.findOwnQueue(actor);
+    return this.attachNames(leads);
+  }
+
+  /**
+   * NEW (issue #116, AC2): single-Lead detail read, backing the new Lead
+   * Detail page. Owner-scoped via LeadsRepository.findOwnedById — mirrors
+   * EnquiriesRepository.findOwnedById / FollowupsService.
+   * assertEnquiryOwnedByActor's exact eligibility pattern: the caller must
+   * own the Lead (same ownerId + locationId + dealerGroupId), otherwise a
+   * 404 (LeadNotFoundError, reused from enquiries.errors.ts — its
+   * "not found, or out of scope, indistinguishable from non-existent"
+   * semantics and its already-globally-registered 404 filter
+   * (EnquiryEligibilityExceptionFilter) are exactly what this needs, so a
+   * second near-duplicate error class + filter would be pure repetition).
+   */
+  async findOwnedById(leadId: string, actor: Principal): Promise<EnrichedLead> {
+    const lead = await this.leadsRepository.findOwnedById(leadId, actor);
+    if (!lead) {
+      throw new LeadNotFoundError([{ field: 'leadId', message: `Lead ${leadId} not found` }]);
+    }
+    const [enriched] = await this.attachNames([lead]);
+    return enriched;
+  }
+
+  /**
+   * NEW (issue #116): denormalizes sourceId/modelId/ownerId into
+   * human-readable names for read surfaces (list + detail) — a LIST/DETAIL
+   * view read by a human benefits from this, unlike the flat CREATE
+   * response which #34/#114 deliberately kept minimal since the client
+   * already has what it just submitted. Batched into at most 3 queries
+   * TOTAL regardless of how many leads are passed in (one `IN (...)` query
+   * per master table), not one query per row — avoids N+1.
+   */
+  private async attachNames(leads: LeadEntity[]): Promise<EnrichedLead[]> {
+    if (leads.length === 0) return [];
+
+    const sourceIds = [...new Set(leads.map((l) => l.sourceId).filter((id): id is number => id !== null))];
+    const modelIds = [...new Set(leads.map((l) => l.modelId).filter((id): id is number => id !== null))];
+    const ownerIds = [...new Set(leads.map((l) => l.ownerId))];
+
+    const [sources, models, owners] = await Promise.all([
+      sourceIds.length
+        ? this.dataSource.getRepository(LeadSourceEntity).find({ where: { sourceId: In(sourceIds) } })
+        : Promise.resolve([]),
+      modelIds.length
+        ? this.dataSource.getRepository(VehicleModelEntity).find({ where: { modelId: In(modelIds) } })
+        : Promise.resolve([]),
+      ownerIds.length
+        ? this.dataSource.getRepository(UserEntity).find({ where: { userId: In(ownerIds) } })
+        : Promise.resolve([]),
+    ]);
+
+    const sourceMap = new Map(sources.map((s) => [s.sourceId, s.name]));
+    const modelMap = new Map(models.map((m) => [m.modelId, m.name]));
+    const ownerMap = new Map(owners.map((o) => [o.userId, o.displayName]));
+
+    return leads.map((lead) => ({
+      ...lead,
+      sourceName: lead.sourceId !== null ? (sourceMap.get(lead.sourceId) ?? null) : null,
+      modelName: lead.modelId !== null ? (modelMap.get(lead.modelId) ?? null) : null,
+      ownerName: ownerMap.get(lead.ownerId) ?? null,
+    }));
   }
 
   /**

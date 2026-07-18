@@ -1,6 +1,7 @@
 import { Route, Routes } from 'react-router-dom';
 import { LandingPage } from './pages/LandingPage';
 import { NewLeadPage } from './pages/NewLeadPage';
+import { LeadDetailPage } from './pages/LeadDetailPage';
 import { NewEnquiryPage } from './pages/NewEnquiryPage';
 import { LoginPage } from './pages/LoginPage';
 import { FieldConfigPage } from './pages/FieldConfigPage';
@@ -16,6 +17,7 @@ export function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/" element={<LandingPage />} />
       <Route path="/leads/new" element={<NewLeadPage />} />
+      <Route path="/leads/:leadId" element={<LeadDetailPage />} />
       <Route path="/enquiries/new" element={<NewEnquiryPage />} />
       <Route path="/enquiries/:enquiryId/follow-up" element={<LogFollowupPage />} />
       <Route path="/follow-ups/upcoming" element={<UpcomingFollowupsPage />} />

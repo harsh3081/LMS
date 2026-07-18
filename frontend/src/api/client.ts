@@ -100,15 +100,23 @@ export interface CreateLeadInput {
 
 /** MODIFIED (issue #114, AC6): 22 new fields added, one per new Lead column
  * — mirrors LeadResponseDto exactly, so every new field is visible wherever
- * Lead details are already surfaced. */
+ * Lead details are already surfaced.
+ * MODIFIED (issue #116, AC1/AC2): `sourceName`/`modelName`/`ownerName` are
+ * NEW, denormalized read-only fields — mirrors LeadResponseDto's `?:`
+ * typing exactly: populated (string or null) on the LIST/DETAIL responses,
+ * `undefined` on the flat POST create response (see backend
+ * lead-response.dto.ts's comment for why). */
 export interface Lead {
   leadId: string;
   customerName: string | null;
   mobile: string | null;
   sourceId: number | null;
+  sourceName?: string | null;
   modelId: number | null;
+  modelName?: string | null;
   status: string;
   ownerId: string;
+  ownerName?: string | null;
   locationId: string;
   createdAt: string;
 
@@ -399,6 +407,9 @@ export const api = {
     request<Lead>('/api/v1/leads', { method: 'POST', body: JSON.stringify(input) }),
 
   getMyLeads: () => request<Lead[]>('/api/v1/leads'),
+
+  // ---- issue #116: single-Lead detail read, backing the Lead Detail page (AC2) ----
+  getLead: (leadId: string) => request<Lead>(`/api/v1/leads/${leadId}`),
 
   convertLead: (leadId: string, input: ConvertLeadInput) =>
     request<Enquiry>(`/api/v1/leads/${leadId}/convert`, { method: 'POST', body: JSON.stringify(input) }),
