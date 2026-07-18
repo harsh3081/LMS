@@ -2,9 +2,23 @@
  * RED->GREEN — Task 5.5: entry point + feature toggle (CC-10). UPDATED
  * (issue #118): "New Lead" is now a button that opens a slide-over panel
  * (SlideOver + NewLeadForm) instead of a `<Link>` navigating to /leads/new.
+ *
+ * UPDATED (issue #126, AC4): the header link row is trimmed to just the two
+ * quick-action controls ("New Enquiry" link, "New Lead" button) — "My
+ * Upcoming Follow-ups", "My Upcoming Test Drives", "Book a Test Drive", and
+ * "Test Drive Scheduler" (along with their badge-count reads) are removed
+ * from LandingPage itself, since they're now covered by the persistent
+ * Sidebar rendered by AppShell (see Sidebar.spec.tsx for that coverage).
+ * Because AppShell now always renders the Sidebar too, and the Sidebar
+ * happens to render some of the SAME link text/hrefs (e.g. "New Enquiry")
+ * as this page's own quick actions, several queries below are scoped with
+ * `within(main)` to assert against LandingPage's own content specifically
+ * — a plain `getByRole('link', ...)` would otherwise match twice (once in
+ * the page, once in the Sidebar) or silently match the Sidebar's copy after
+ * a link was removed from the page.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -16,18 +30,12 @@ vi.mock('../../src/api/client', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../src/api/client')>();
   return {
     ...actual,
-    // NEW (issue #31): getUpcomingFollowups is called by LandingPage's new
-    // "My Upcoming Follow-ups" entry point via useUpcomingFollowups.
-    // NEW (issue #34): getUpcomingTestDrives is called by LandingPage's new
-    // "My Upcoming Test Drives" entry point via useUpcomingTestDrives.
     // NEW (issue #118): the New Lead slide-over panel mounts the real
     // NewLeadForm once opened, so its data reads/mutation are mocked here
     // too (mirrors NewLeadForm.spec.tsx / NewLeadPage.spec.tsx's mock set).
     api: {
       getConfig: vi.fn(),
       getMyLeads: vi.fn(),
-      getUpcomingFollowups: vi.fn(),
-      getUpcomingTestDrives: vi.fn(),
       getLeadSources: vi.fn(),
       getVehicleModels: vi.fn(),
       createLead: vi.fn(),
@@ -61,8 +69,6 @@ describe('LandingPage entry point / feature toggle (CC-10)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockedApi.getMyLeads.mockResolvedValue([]);
-    mockedApi.getUpcomingFollowups.mockResolvedValue([]);
-    mockedApi.getUpcomingTestDrives.mockResolvedValue([]);
     mockedApi.getFieldConfig.mockResolvedValue(ALL_MANDATORY_FIELD_CONFIG);
     mockedApi.getLeadSources.mockResolvedValue([{ sourceId: 1, name: 'Walk-in' }]);
     mockedApi.getVehicleModels.mockResolvedValue([{ modelId: 101, name: 'Compact Hatchback LX' }]);
@@ -70,33 +76,26 @@ describe('LandingPage entry point / feature toggle (CC-10)', () => {
     mockedApi.checkDuplicates.mockResolvedValue([]);
   });
 
-  // ---- issue #31 AC4: "My Upcoming Follow-ups" entry point ----
-  it('AC4: shows the "My Upcoming Follow-ups" entry point, badged with the current count', async () => {
+  // ---- issue #126 AC4: header link row trimmed to the 2 quick actions ----
+  it('AC4: no longer renders "My Upcoming Follow-ups", "My Upcoming Test Drives", "Book a Test Drive", "Test Drive Scheduler", or "Field Configuration" as part of its own content (now Sidebar-only nav)', async () => {
     mockedApi.getConfig.mockResolvedValue({ newLeadEnabled: true, convertLeadEnabled: true, directEnquiryEnabled: true });
-    mockedApi.getUpcomingFollowups.mockResolvedValue([
-      {
-        followupId: 'f1',
-        enquiryId: 'e1',
-        type: 'Call',
-        remarks: 'r',
-        loggedBy: 'dse-1',
-        locationId: 'loc-1',
-        loggedAt: new Date().toISOString(),
-        nextFollowUpAt: '2026-08-01T00:00:00.000Z',
-        resultingStatus: null,
-      },
-    ]);
     renderLanding();
-    const entry = await screen.findByRole('link', { name: /my upcoming follow-ups/i });
-    expect(entry).toHaveAttribute('href', '/follow-ups/upcoming');
-    expect(await screen.findByText('1')).toBeInTheDocument();
-  });
+    const main = await screen.findByRole('main');
 
-  it('AC4: shows no badge when there are no upcoming follow-ups', async () => {
-    mockedApi.getConfig.mockResolvedValue({ newLeadEnabled: true, convertLeadEnabled: true, directEnquiryEnabled: true });
-    renderLanding();
-    await screen.findByRole('link', { name: /my upcoming follow-ups/i });
-    expect(screen.queryByText('0')).not.toBeInTheDocument();
+    // Scoped to the page's own <main> — the Sidebar (rendered by AppShell
+    // alongside <main>, not inside it) still renders equivalent links, so
+    // an unscoped query would find those instead and mask a regression.
+    expect(within(main).queryByRole('link', { name: /my upcoming follow-ups/i })).not.toBeInTheDocument();
+    expect(within(main).queryByRole('link', { name: /my upcoming test drives/i })).not.toBeInTheDocument();
+    expect(within(main).queryByRole('link', { name: /book a test drive/i })).not.toBeInTheDocument();
+    expect(within(main).queryByRole('link', { name: /test drive scheduler/i })).not.toBeInTheDocument();
+    expect(within(main).queryByRole('link', { name: /field configuration/i })).not.toBeInTheDocument();
+
+    // The routes themselves are still reachable — just via the Sidebar now,
+    // not a page-level regression (these are the Sidebar's own links,
+    // outside <main>, verified in depth by Sidebar.spec.tsx).
+    expect(screen.getByRole('link', { name: /my upcoming follow-ups/i })).toHaveAttribute('href', '/follow-ups/upcoming');
+    expect(screen.getByRole('link', { name: /field configuration/i })).toHaveAttribute('href', '/admin/field-config');
   });
 
   it('EVAL-CC-10: shows the New Lead entry point when the toggle is enabled', async () => {
@@ -222,66 +221,33 @@ describe('LandingPage entry point / feature toggle (CC-10)', () => {
     });
   });
 
-  // ---- issue #34 AC5: "My Upcoming Test Drives" + "Book a Test Drive" entry points ----
-  it('AC5: shows the "My Upcoming Test Drives" entry point, badged with the current count', async () => {
-    mockedApi.getConfig.mockResolvedValue({ newLeadEnabled: true, convertLeadEnabled: true, directEnquiryEnabled: true });
-    mockedApi.getUpcomingTestDrives.mockResolvedValue([
-      {
-        testDriveId: 't1',
-        enquiryId: 'e1',
-        vehicleId: 'v1',
-        slotStart: '2026-08-01T10:00:00.000Z',
-        slotEnd: '2026-08-01T10:30:00.000Z',
-        status: 'Booked',
-        remarks: null,
-        bookedBy: 'dse-1',
-        locationId: 'loc-1',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-    ]);
-    renderLanding();
-    const entry = await screen.findByRole('link', { name: /my upcoming test drives/i });
-    expect(entry).toHaveAttribute('href', '/test-drives/upcoming');
-    expect(await screen.findByText('1')).toBeInTheDocument();
-  });
-
-  it('AC5: shows no badge when there are no upcoming test drives', async () => {
-    mockedApi.getConfig.mockResolvedValue({ newLeadEnabled: true, convertLeadEnabled: true, directEnquiryEnabled: true });
-    renderLanding();
-    await screen.findByRole('link', { name: /my upcoming test drives/i });
-    expect(screen.queryByText('0')).not.toBeInTheDocument();
-  });
-
-  it('AC1: shows the "Book a Test Drive" entry point', async () => {
-    mockedApi.getConfig.mockResolvedValue({ newLeadEnabled: true, convertLeadEnabled: true, directEnquiryEnabled: true });
-    renderLanding();
-    const entry = await screen.findByRole('link', { name: /book a test drive/i });
-    expect(entry).toHaveAttribute('href', '/test-drives/new');
-  });
-
-  // ---- issue #35: "Test Drive Scheduler" entry point ----
-  it('shows the "Test Drive Scheduler" entry point', async () => {
-    mockedApi.getConfig.mockResolvedValue({ newLeadEnabled: true, convertLeadEnabled: true, directEnquiryEnabled: true });
-    renderLanding();
-    const entry = await screen.findByRole('link', { name: /test drive scheduler/i });
-    expect(entry).toHaveAttribute('href', '/test-drives/scheduler');
-  });
-
   // -----------------------------------------------------------------
   // ADDED (issue #26) — New Enquiry entry point + its own feature toggle.
+  // UPDATED (issue #126): the Sidebar renders its own "New Enquiry" link
+  // to the same /enquiries/new route, with the same accessible name — so
+  // an unscoped `getByRole('link', { name: /new enquiry/i })` would now
+  // match BOTH the page's own quick action and the Sidebar's copy
+  // ("Found multiple elements"). Scoped to `within(main)` so these assert
+  // against LandingPage's own quick action specifically.
   // -----------------------------------------------------------------
   it('shows the New Enquiry entry point when directEnquiryEnabled is true', async () => {
     mockedApi.getConfig.mockResolvedValue({ newLeadEnabled: true, convertLeadEnabled: true, directEnquiryEnabled: true });
     renderLanding();
-    const entry = await screen.findByRole('link', { name: /new enquiry/i });
+    const main = await screen.findByRole('main');
+    const entry = await within(main).findByRole('link', { name: /new enquiry/i });
     expect(entry).toHaveAttribute('href', '/enquiries/new');
   });
 
   it('hides the New Enquiry entry point when directEnquiryEnabled is false', async () => {
     mockedApi.getConfig.mockResolvedValue({ newLeadEnabled: true, convertLeadEnabled: true, directEnquiryEnabled: false });
     renderLanding();
+    const main = await screen.findByRole('main');
     await waitFor(() => expect(mockedApi.getConfig).toHaveBeenCalled());
-    await waitFor(() => expect(screen.queryByRole('link', { name: /new enquiry/i })).not.toBeInTheDocument());
+    await waitFor(() => expect(within(main).queryByRole('link', { name: /new enquiry/i })).not.toBeInTheDocument());
+    // The route stays reachable via the Sidebar's own, unconditional
+    // "New Enquiry" link — the feature toggle only ever gated LandingPage's
+    // own quick-action copy, not the Sidebar (issue #126's minimal-shell
+    // scope: the Sidebar is not toggle-aware).
+    expect(screen.getByRole('link', { name: /new enquiry/i })).toHaveAttribute('href', '/enquiries/new');
   });
 });
