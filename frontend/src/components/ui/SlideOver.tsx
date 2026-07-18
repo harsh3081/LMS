@@ -5,6 +5,10 @@ export interface SlideOverProps {
   onClose: () => void;
   title: string;
   children: ReactNode;
+  /** Tailwind max-width class for the panel. Defaults to `max-w-xl`; pass a
+   * wider class (e.g. `max-w-3xl`) for content that needs more room, such as
+   * a multi-column form. */
+  maxWidthClassName?: string;
 }
 
 /**
@@ -15,8 +19,9 @@ export interface SlideOverProps {
  *
  * Behavior:
  * - Docked to the right edge, fixed position, full viewport height, capped
- *   at `max-w-xl` (the New Lead form has 6 sections — a wider panel keeps it
- *   readable, mirroring NewLeadPage's own `max-w-2xl` card).
+ *   at `maxWidthClassName` (defaults to `max-w-xl`; callers with wider
+ *   content, e.g. a multi-column form, can pass a wider Tailwind max-width
+ *   class).
  * - Semi-transparent backdrop covers the rest of the viewport; clicking it
  *   closes the panel. Clicking inside the panel itself does not (the click
  *   handler lives on the backdrop element only, not a document-level
@@ -43,7 +48,7 @@ export interface SlideOverProps {
  *   implemented (documented gap in NOTES.md) — this was judged
  *   disproportionate complexity for this Story.
  */
-export function SlideOver({ open, onClose, title, children }: SlideOverProps) {
+export function SlideOver({ open, onClose, title, children, maxWidthClassName = 'max-w-xl' }: SlideOverProps) {
   const titleId = useId();
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
@@ -93,7 +98,7 @@ export function SlideOver({ open, onClose, title, children }: SlideOverProps) {
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className={`fixed inset-y-0 right-0 z-50 flex w-full max-w-xl flex-col bg-white shadow-xl transition-transform duration-300 ease-out ${
+        className={`fixed inset-y-0 right-0 z-50 flex w-full ${maxWidthClassName} flex-col bg-white shadow-xl transition-transform duration-300 ease-out ${
           entered ? 'translate-x-0' : 'translate-x-full'
         }`}
       >

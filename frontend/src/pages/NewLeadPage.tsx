@@ -14,7 +14,7 @@ export function NewLeadPage() {
     <AppShell>
       <main>
         <h1 className="mb-6 text-2xl font-bold text-slate-900">New Lead</h1>
-        <Card className="max-w-2xl">
+        <Card className="max-w-4xl">
           <NewLeadForm />
         </Card>
       </main>

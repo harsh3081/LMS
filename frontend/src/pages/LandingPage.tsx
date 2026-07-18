@@ -86,7 +86,12 @@ export function LandingPage() {
         <LeadQueue />
       </main>
 
-      <SlideOver open={isNewLeadOpen} onClose={() => setIsNewLeadOpen(false)} title="New Lead">
+      <SlideOver
+        open={isNewLeadOpen}
+        onClose={() => setIsNewLeadOpen(false)}
+        title="New Lead"
+        maxWidthClassName="max-w-3xl"
+      >
         <NewLeadForm onSuccess={() => setIsNewLeadOpen(false)} />
       </SlideOver>
     </AppShell>
