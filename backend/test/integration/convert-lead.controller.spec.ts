@@ -253,4 +253,112 @@ describe('POST /api/v1/leads/:leadId/convert (Task 2.5)', () => {
     const res = await dseAAgent.post(LEADS_PATH).send(leadPayload());
     expect(res.status).toBe(201);
   });
+
+  // ---- issue #124: "Rewrite Convert Lead to Enquiry as a sectioned form" ----
+  describe('issue #124 — new sectioned-form fields', () => {
+    it('AC5: a fully populated payload (all 8 sections) is accepted (201) and every new field round-trips', async () => {
+      const lead = await createOpenLead(dseAAgent);
+      const res = await dseAAgent.post(convertPath(lead.leadId)).send(
+        validPayload({
+          modelId: 101,
+          fuelType: 'Petrol',
+          transmission: 'Automatic',
+          colorFirstPreference: 'Pearl White',
+          colorSecondPreference: 'Metallic Grey',
+          accessoriesInterest: 'Roof rails',
+          competitorConsideration: 'Rival Model X',
+          contactVerified: 'OTP Verified',
+          intentRating: 'Hot',
+          expectedClosureDate: '2026-08-01',
+          showroomVisits: '2',
+          quotationNumber: 'QT-1001',
+          quotedOnRoadPrice: 560000,
+          discountDiscussed: 'Rs 35,000 + corporate offer',
+          insurancePreference: 'Dealer In-house',
+          extendedWarrantyInterest: 'Interested',
+          corporateDiscountEligible: 'Acme Corp',
+          financeApplicationStatus: 'Login Done',
+          financier: 'HDFC Bank',
+          loanAmountSought: 400000,
+          tenureAndEmiDiscussed: '60 months, Rs 8,500/mo',
+          exchangeEvaluationStatus: 'Completed',
+          exchangeEvaluatedBy: 'Yard Inspector A',
+          exchangeEvaluatedPrice: 250000,
+          exchangeCustomerExpectation: 280000,
+          testDriveStatus: 'Scheduled',
+          testDriveDateTime: '2026-08-02T10:30:00.000Z',
+          quotationSharedVia: 'WhatsApp',
+          testDriveFeedback: 'Liked the ride quality',
+          panCardVerified: true,
+          addressProofVerified: true,
+          incomeProofVerified: false,
+          gstDetailsVerified: false,
+        }),
+      );
+
+      expect(res.status).toBe(201);
+      expect(res.body.modelId).toBe(101);
+      expect(res.body.fuelType).toBe('Petrol');
+      expect(res.body.transmission).toBe('Automatic');
+      expect(res.body.colorFirstPreference).toBe('Pearl White');
+      expect(res.body.intentRating).toBe('Hot');
+      expect(res.body.showroomVisits).toBe('2');
+      expect(res.body.quotedOnRoadPrice).toBe(560000);
+      expect(res.body.insurancePreference).toBe('Dealer In-house');
+      expect(res.body.financeApplicationStatus).toBe('Login Done');
+      expect(res.body.financier).toBe('HDFC Bank');
+      expect(res.body.exchangeEvaluationStatus).toBe('Completed');
+      expect(res.body.testDriveStatus).toBe('Scheduled');
+      expect(res.body.quotationSharedVia).toBe('WhatsApp');
+      expect(res.body.panCardVerified).toBe(true);
+      expect(res.body.addressProofVerified).toBe(true);
+      expect(res.body.incomeProofVerified).toBe(false);
+      expect(res.body.gstDetailsVerified).toBe(false);
+    });
+
+    it('AC4: a minimal payload (only the original 4 fields) is still accepted — every new field is optional', async () => {
+      const lead = await createOpenLead(dseAAgent);
+      const res = await dseAAgent.post(convertPath(lead.leadId)).send(validPayload());
+      expect(res.status).toBe(201);
+      expect(res.body.fuelType).toBeNull();
+      expect(res.body.panCardVerified).toBe(false);
+    });
+
+    const invalidEnumCases: { field: string; value: string }[] = [
+      { field: 'fuelType', value: 'Coal' },
+      { field: 'transmission', value: 'Semi-Auto' },
+      { field: 'contactVerified', value: 'Carrier Pigeon' },
+      { field: 'intentRating', value: 'Lukewarm' },
+      { field: 'showroomVisits', value: '5' },
+      { field: 'insurancePreference', value: 'Bogus' },
+      { field: 'extendedWarrantyInterest', value: 'Maybe' },
+      { field: 'financeApplicationStatus', value: 'Pending Review' },
+      { field: 'financier', value: 'Bank of Nowhere' },
+      { field: 'exchangeEvaluationStatus', value: 'In Progress' },
+      { field: 'testDriveStatus', value: 'Postponed' },
+      { field: 'quotationSharedVia', value: 'Carrier Pigeon' },
+    ];
+    for (const { field, value } of invalidEnumCases) {
+      it(`rejects an out-of-vocabulary ${field} -> 400 referencing the field`, async () => {
+        const lead = await createOpenLead(dseAAgent);
+        const res = await dseAAgent.post(convertPath(lead.leadId)).send(validPayload({ [field]: value }));
+        expect(res.status).toBe(400);
+        expect(JSON.stringify(res.body).toLowerCase()).toContain(field.toLowerCase());
+      });
+    }
+
+    it('EVAL-CC-01 (extended): client-supplied ownerId/dealerGroupId are still ignored even alongside new fields', async () => {
+      const dseA = ctx.seed.users['dseA'];
+      const lead = await createOpenLead(dseAAgent);
+      const res = await dseAAgent.post(convertPath(lead.leadId)).send(
+        validPayload({
+          intentRating: 'Warm',
+          ownerId: '00000000-0000-0000-0000-000000000000',
+        }),
+      );
+      expect(res.status).toBe(201);
+      expect(res.body.ownerId).toBe(dseA.userId);
+      expect(res.body.intentRating).toBe('Warm');
+    });
+  });
 });

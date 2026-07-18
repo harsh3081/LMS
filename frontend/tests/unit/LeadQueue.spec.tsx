@@ -1,8 +1,17 @@
 /**
  * RED->GREEN (Inside-Out, Presentation Layer) — Task 4.5.1 (issue #25).
  * The per-row "Convert to Enquiry" action renders only for non-Converted
- * rows and only when convertLeadEnabled; on success the row leaves the
- * displayed queue (AC1, AC5, CC-11).
+ * rows and only when convertLeadEnabled (AC1, CC-11).
+ *
+ * REDESIGNED (issue #124, AC1): "Convert to Enquiry" is no longer a button
+ * that inline-expands `ConvertLeadForm` below the table — it is now a
+ * `Link` navigating to the dedicated `/leads/:leadId/convert` route
+ * (`ConvertLeadPage`). This file's assertions were updated to match (link,
+ * not button; href assertion instead of exercising the old inline form).
+ * The "row leaves the queue on a successful conversion" behavior (AC5) now
+ * lives in useConvertLead's cache-update mechanism, already covered by
+ * useEnquiries.spec.tsx — ConvertLeadForm.spec.tsx covers the new form's own
+ * submission behavior directly.
  *
  * EXTENDED (issue #116, AC1/AC2/AC3): LeadQueue was redesigned into an
  * 8-column professional table (Name, Mobile, Model of Interest, Source,
@@ -10,11 +19,11 @@
  * columns (including the denormalized modelName/sourceName/ownerName), the
  * new "View" link into LeadDetailPage, and the new loading/empty states.
  * Wrapped in a MemoryRouter (mirrors EnquiryQueue.spec.tsx's convention)
- * since LeadQueue now renders a react-router `Link` for "View".
+ * since LeadQueue now renders react-router `Link`s for both "Convert to
+ * Enquiry" and "View".
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { LeadQueue } from '../../src/components/LeadQueue';
@@ -29,7 +38,6 @@ vi.mock('../../src/api/client', async (importOriginal) => {
       ...actual.api,
       getMyLeads: vi.fn(),
       getConfig: vi.fn(),
-      convertLead: vi.fn(),
     },
   };
 });
@@ -91,8 +99,8 @@ describe('LeadQueue — Convert to Enquiry action (Task 4.5.1)', () => {
     const openRow = (await screen.findByText('Asha Rao')).closest('tr')!;
     const convertedRow = screen.getByText('Rohan Iyer').closest('tr')!;
 
-    expect(within(openRow).getByRole('button', { name: /convert to enquiry/i })).toBeInTheDocument();
-    expect(within(convertedRow).queryByRole('button', { name: /convert to enquiry/i })).not.toBeInTheDocument();
+    expect(within(openRow).getByRole('link', { name: /convert to enquiry/i })).toBeInTheDocument();
+    expect(within(convertedRow).queryByRole('link', { name: /convert to enquiry/i })).not.toBeInTheDocument();
   });
 
   it('CC-11: hides the Convert to Enquiry action entirely when convertLeadEnabled is false', async () => {
@@ -103,56 +111,16 @@ describe('LeadQueue — Convert to Enquiry action (Task 4.5.1)', () => {
 
     await screen.findByText('Asha Rao');
     await waitFor(() => expect(mockedApi.getConfig).toHaveBeenCalled());
-    expect(screen.queryByRole('button', { name: /convert to enquiry/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /convert to enquiry/i })).not.toBeInTheDocument();
   });
 
-  it('EVAL-AC1-02: clicking the action reveals the inline ConvertLeadForm for that row', async () => {
+  it('issue #124 AC1: the Convert to Enquiry action navigates to /leads/:leadId/convert', async () => {
     mockedApi.getMyLeads.mockResolvedValue([openLead]);
     mockedApi.getConfig.mockResolvedValue({ newLeadEnabled: true, convertLeadEnabled: true, directEnquiryEnabled: true });
 
     renderQueue();
-    const user = userEvent.setup();
-    await user.click(await screen.findByRole('button', { name: /convert to enquiry/i }));
-
-    expect(screen.getByLabelText(/budget/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/variant/i)).toBeInTheDocument();
-  });
-
-  it('EVAL-AC5-03: on a successful conversion, the row leaves the displayed queue (no full reload)', async () => {
-    mockedApi.getMyLeads.mockResolvedValue([openLead]);
-    mockedApi.getConfig.mockResolvedValue({ newLeadEnabled: true, convertLeadEnabled: true, directEnquiryEnabled: true });
-    mockedApi.convertLead.mockResolvedValue({
-      enquiryId: 'enq-1',
-      leadId: 'lead-open',
-      entryType: 'CONVERTED',
-      customerName: null,
-      mobile: null,
-      sourceId: null,
-      modelId: null,
-      budget: 500000,
-      variant: 'VXi (O) CVT',
-      exchangeInterest: true,
-      financeInterest: false,
-      convertedBy: 'owner-1',
-      convertedAt: new Date().toISOString(),
-      status: 'New',
-      ownerId: 'owner-1',
-      locationId: 'loc-1',
-    });
-
-    renderQueue();
-    const user = userEvent.setup();
-    await user.click(await screen.findByRole('button', { name: /convert to enquiry/i }));
-
-    await user.type(screen.getByLabelText(/budget/i), '500000');
-    await user.type(screen.getByLabelText(/variant/i), 'VXi (O) CVT');
-    await user.selectOptions(screen.getByLabelText(/exchange interest/i), 'true');
-    await user.selectOptions(screen.getByLabelText(/finance interest/i), 'false');
-    const submitButtons = screen.getAllByRole('button', { name: /submit|convert|save/i });
-    await user.click(submitButtons[submitButtons.length - 1]);
-
-    await waitFor(() => expect(screen.queryByText('Asha Rao')).not.toBeInTheDocument());
-    expect(screen.queryByRole('button', { name: /convert to enquiry/i })).not.toBeInTheDocument();
+    const link = await screen.findByRole('link', { name: /convert to enquiry/i });
+    expect(link).toHaveAttribute('href', '/leads/lead-open/convert');
   });
 });
 

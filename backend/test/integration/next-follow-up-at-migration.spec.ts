@@ -77,9 +77,11 @@ describe('next-follow-up-at migration (issue #31 Task 1.1)', () => {
     dataSource = await createTestDataSource();
     // issue #32 added AddResultingStatusToFollowups1700000000012, issue #34
     // added CreateTestDrives1700000000013 / SeedDemoVehicles1700000000014,
-    // issue #36 added TestDriveConflictPrevention1700000000015, and issue
-    // #114 added AddLeadCustomerDetails1700000000016, after this one; undo
-    // those first, then undo this migration itself.
+    // issue #36 added TestDriveConflictPrevention1700000000015, issue #114
+    // added AddLeadCustomerDetails1700000000016, and issue #124 added
+    // AddEnquiryConversionDetails1700000000017, after this one; undo those
+    // first, then undo this migration itself.
+    await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();

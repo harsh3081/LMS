@@ -1,5 +1,45 @@
 import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn, UpdateDateColumn, ValueTransformer } from 'typeorm';
 import { jsonbTransformer } from '../../common/jsonb.transformer';
+import { FUEL_TYPES, TRANSMISSIONS } from '../../leads/entities/lead.entity';
+
+/** Re-exported so ConvertLeadDto / enquiries.mapper.ts can import the closed-
+ * set vocabulary from this module without also reaching into
+ * leads/entities/lead.entity.ts directly (issue #124 migration comment point
+ * 2 — this is a deliberate intra-backend cross-module reuse, not the
+ * frontend/backend duplication convention). */
+export { FUEL_TYPES, TRANSMISSIONS };
+
+/**
+ * Closed-set dropdown vocabularies NEW for issue #124 ("Rewrite Convert Lead
+ * to Enquiry as a sectioned form") — named exported constants, consumed by
+ * ConvertLeadDto's `@IsIn()` decorators AND by migration
+ * 1700000000017-AddEnquiryConversionDetails's defense-in-depth CHECK
+ * constraints, so the DTO and the DB schema cannot silently drift apart
+ * (mirrors lead.entity.ts's CUSTOMER_TYPES/etc. convention exactly). See
+ * .phoenix-os/project/specs/124/NOTES.md for the option-set source.
+ */
+export const CONTACT_VERIFIED_OPTIONS = ['Call Connected', 'OTP Verified', 'WhatsApp Confirmed', 'Not Verified'] as const;
+
+/** Distinct from ENQUIRY_ALL_LOGGABLE_STATUSES/ENQUIRY_STATUS_HOT/WARM/COLD
+ * below (issue #33) — see migration 1700000000017's class comment point 4
+ * for why these are NOT the same vocabulary despite the overlapping string
+ * values. */
+export const INTENT_RATINGS = ['Hot', 'Warm', 'Cold'] as const;
+
+export const SHOWROOM_VISIT_OPTIONS = ['0', '1', '2', '3+'] as const;
+export const INSURANCE_PREFERENCES = ['Dealer In-house', 'Own Arrangement', 'Undecided'] as const;
+export const WARRANTY_INTEREST_OPTIONS = ['Interested', 'Not Interested', 'Undecided'] as const;
+export const FINANCE_APPLICATION_STATUSES = [
+  'Not Started',
+  'Documents Collected',
+  'Login Done',
+  'Approved',
+  'Rejected',
+] as const;
+export const FINANCIER_OPTIONS = ['In-house', 'HDFC Bank', 'SBI', 'ICICI Bank'] as const;
+export const EXCHANGE_EVALUATION_STATUSES = ['Not Scheduled', 'Scheduled', 'Completed', 'No Exchange'] as const;
+export const TEST_DRIVE_STATUSES = ['Not Scheduled', 'Scheduled', 'Completed', 'Declined'] as const;
+export const QUOTATION_SHARED_VIA_OPTIONS = ['WhatsApp', 'Email', 'Printed', 'Not Shared'] as const;
 
 export const ENQUIRY_STATUS_NEW = 'New';
 
@@ -55,6 +95,15 @@ export const ENQUIRY_ENTRY_TYPE_CONVERTED = 'CONVERTED';
 const bigintTransformer: ValueTransformer = {
   to: (value: number) => value,
   from: (value: string | number): number => Number(value),
+};
+
+/** Nullable counterpart of `bigintTransformer` above, for issue #124's new
+ * optional INR bigint columns (`quotedOnRoadPrice`/`loanAmountSought`/
+ * `exchangeEvaluatedPrice`/`exchangeCustomerExpectation`) — mirrors
+ * lead.entity.ts's own nullable `bigintTransformer` exactly. */
+const nullableBigintTransformer: ValueTransformer = {
+  to: (value: number | null | undefined) => value,
+  from: (value: string | number | null): number | null => (value === null ? null : Number(value)),
 };
 
 /**
@@ -139,6 +188,153 @@ export class EnquiryEntity {
   /** Reserved for FR-04 configurable fields; provisioned, unused this Story. */
   @Column({ name: 'custom_fields', type: 'jsonb', default: () => "'{}'", transformer: jsonbTransformer })
   customFields!: Record<string, unknown>;
+
+  // ==========================================================================
+  // NEW (issue #124, migration 1700000000017-AddEnquiryConversionDetails):
+  // all columns below are nullable (every new field is optional, AC4) except
+  // the 4 Document Checklist booleans (NOT NULL DEFAULT false — see that
+  // migration's class comment point 1). Grouped to mirror the rewritten
+  // Convert-to-Enquiry form's 8 UI sections exactly. `modelId` above (already
+  // existed, added by DirectEnquiry1700000000005) is REUSED for Section 1's
+  // "Model of Interest" — not duplicated here.
+  // ==========================================================================
+
+  // ---- 1. Vehicle Information (model_id reused; variant/budget above are pre-existing) ----
+  /** Closed set — see FUEL_TYPES (imported/re-exported from lead.entity.ts). */
+  @Column({ name: 'fuel_type', type: 'varchar', nullable: true })
+  fuelType!: string | null;
+
+  /** Closed set — see TRANSMISSIONS (imported/re-exported from lead.entity.ts). */
+  @Column({ type: 'varchar', nullable: true })
+  transmission!: string | null;
+
+  @Column({ name: 'color_first_preference', type: 'text', nullable: true })
+  colorFirstPreference!: string | null;
+
+  @Column({ name: 'color_second_preference', type: 'text', nullable: true })
+  colorSecondPreference!: string | null;
+
+  @Column({ name: 'accessories_interest', type: 'text', nullable: true })
+  accessoriesInterest!: string | null;
+
+  @Column({ name: 'competitor_consideration', type: 'text', nullable: true })
+  competitorConsideration!: string | null;
+
+  // ---- 2. Qualification ----
+  /** Closed set — see CONTACT_VERIFIED_OPTIONS. */
+  @Column({ name: 'contact_verified', type: 'varchar', nullable: true })
+  contactVerified!: string | null;
+
+  /** Closed set — see INTENT_RATINGS. Distinct from `status` above — see
+   * migration 1700000000017's class comment point 4. */
+  @Column({ name: 'intent_rating', type: 'varchar', nullable: true })
+  intentRating!: string | null;
+
+  /** Calendar date, no time-of-day — distinct from `testDriveDateTime` below. */
+  @Column({ name: 'expected_closure_date', type: 'date', nullable: true })
+  expectedClosureDate!: string | null;
+
+  /** Closed set — see SHOWROOM_VISIT_OPTIONS. Deliberately `varchar` (not
+   * `int`) — '3+' is not representable as a plain integer. */
+  @Column({ name: 'showroom_visits', type: 'varchar', nullable: true })
+  showroomVisits!: string | null;
+
+  // ---- 3. Commercial ----
+  @Column({ name: 'quotation_number', type: 'text', nullable: true })
+  quotationNumber!: string | null;
+
+  /** INR whole rupees. */
+  @Column({ name: 'quoted_on_road_price', type: 'bigint', nullable: true, transformer: nullableBigintTransformer })
+  quotedOnRoadPrice!: number | null;
+
+  /** Free text — compound real-world values (e.g. "Rs 35,000 + corporate offer"). */
+  @Column({ name: 'discount_discussed', type: 'text', nullable: true })
+  discountDiscussed!: string | null;
+
+  /** Closed set — see INSURANCE_PREFERENCES. */
+  @Column({ name: 'insurance_preference', type: 'varchar', nullable: true })
+  insurancePreference!: string | null;
+
+  /** Closed set — see WARRANTY_INTEREST_OPTIONS. */
+  @Column({ name: 'extended_warranty_interest', type: 'varchar', nullable: true })
+  extendedWarrantyInterest!: string | null;
+
+  /** Free text — employer name if any. */
+  @Column({ name: 'corporate_discount_eligible', type: 'text', nullable: true })
+  corporateDiscountEligible!: string | null;
+
+  // ---- 4. Finance (extends the existing required financeInterest boolean) ----
+  /** Closed set — see FINANCE_APPLICATION_STATUSES. */
+  @Column({ name: 'finance_application_status', type: 'varchar', nullable: true })
+  financeApplicationStatus!: string | null;
+
+  /** Closed set — see FINANCIER_OPTIONS. */
+  @Column({ type: 'varchar', nullable: true })
+  financier!: string | null;
+
+  /** INR whole rupees. */
+  @Column({ name: 'loan_amount_sought', type: 'bigint', nullable: true, transformer: nullableBigintTransformer })
+  loanAmountSought!: number | null;
+
+  /** Free text — compound value (e.g. "60 months, Rs 33,500/mo"). */
+  @Column({ name: 'tenure_and_emi_discussed', type: 'text', nullable: true })
+  tenureAndEmiDiscussed!: string | null;
+
+  // ---- 5. Exchange Evaluation (extends the existing required exchangeInterest boolean) ----
+  /** Closed set — see EXCHANGE_EVALUATION_STATUSES. */
+  @Column({ name: 'exchange_evaluation_status', type: 'varchar', nullable: true })
+  exchangeEvaluationStatus!: string | null;
+
+  @Column({ name: 'exchange_evaluated_by', type: 'text', nullable: true })
+  exchangeEvaluatedBy!: string | null;
+
+  /** INR whole rupees. */
+  @Column({ name: 'exchange_evaluated_price', type: 'bigint', nullable: true, transformer: nullableBigintTransformer })
+  exchangeEvaluatedPrice!: number | null;
+
+  /** INR whole rupees. */
+  @Column({
+    name: 'exchange_customer_expectation',
+    type: 'bigint',
+    nullable: true,
+    transformer: nullableBigintTransformer,
+  })
+  exchangeCustomerExpectation!: number | null;
+
+  // ---- 6. Test Drive & Engagement ----
+  /** Closed set — see TEST_DRIVE_STATUSES. */
+  @Column({ name: 'test_drive_status', type: 'varchar', nullable: true })
+  testDriveStatus!: string | null;
+
+  /** Specific date+time slot — distinct from `expectedClosureDate` above. */
+  @Column({ name: 'test_drive_date_time', type: 'timestamptz', nullable: true })
+  testDriveDateTime!: Date | null;
+
+  /** Closed set — see QUOTATION_SHARED_VIA_OPTIONS. */
+  @Column({ name: 'quotation_shared_via', type: 'varchar', nullable: true })
+  quotationSharedVia!: string | null;
+
+  /** Nullable FK to `users(user_id)` — mirrors ownerId/convertedBy's FK
+   * precedent (CreateEnquiries1700000000003). Reuses the existing
+   * `useConsultants()` roster on the frontend (issue #114). */
+  @Column({ name: 'next_action_owner_id', type: 'uuid', nullable: true })
+  nextActionOwnerId!: string | null;
+
+  @Column({ name: 'test_drive_feedback', type: 'text', nullable: true })
+  testDriveFeedback!: string | null;
+
+  // ---- 7. Document Checklist (4 independent booleans, no gating logic) ----
+  @Column({ name: 'pan_card_verified', type: 'boolean', default: false })
+  panCardVerified!: boolean;
+
+  @Column({ name: 'address_proof_verified', type: 'boolean', default: false })
+  addressProofVerified!: boolean;
+
+  @Column({ name: 'income_proof_verified', type: 'boolean', default: false })
+  incomeProofVerified!: boolean;
+
+  @Column({ name: 'gst_details_verified', type: 'boolean', default: false })
+  gstDetailsVerified!: boolean;
 
   @CreateDateColumn({ name: 'converted_at', type: 'timestamptz' })
   convertedAt!: Date;

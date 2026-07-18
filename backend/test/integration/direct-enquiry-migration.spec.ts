@@ -122,9 +122,11 @@ describe('direct-enquiry migration (issue #26 Task 1.1)', () => {
     // (CreateFollowups), issue #31 added a sixth (AddNextFollowUpAt), issue
     // #32 added a seventh (AddResultingStatusToFollowups), issue #34 added
     // an eighth and ninth (CreateTestDrives/SeedDemoVehicles), issue #36
-    // added a tenth (TestDriveConflictPrevention), and issue #114 added an
-    // eleventh (AddLeadCustomerDetails); undo those first, in reverse order,
+    // added a tenth (TestDriveConflictPrevention), issue #114 added an
+    // eleventh (AddLeadCustomerDetails), and issue #124 added a twelfth
+    // (AddEnquiryConversionDetails); undo those first, in reverse order,
     // then undo this migration itself.
+    await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();

@@ -116,11 +116,13 @@ describe('leads migration (Task 1.2.1 / 1.2.2)', () => {
     // AddNextFollowUpAt1700000000011, issue #32 added
     // AddResultingStatusToFollowups1700000000012, issue #34 added
     // CreateTestDrives1700000000013 / SeedDemoVehicles1700000000014, issue
-    // #36 added TestDriveConflictPrevention1700000000015, and issue #114
-    // added AddLeadCustomerDetails1700000000016 — fourteen migrations after
+    // #36 added TestDriveConflictPrevention1700000000015, issue #114 added
+    // AddLeadCustomerDetails1700000000016, and issue #124 added
+    // AddEnquiryConversionDetails1700000000017 — fifteen migrations after
     // this one, so undoLastMigration() now reverts them first, in reverse
-    // order; undo fifteen times to reach and verify the leads migration's
+    // order; undo sixteen times to reach and verify the leads migration's
     // own reversibility.
+    await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
@@ -170,12 +172,15 @@ describe('enquiries migration (Task 1.1.1, issue #25)', () => {
     // UPDATED (issue #26): DirectEnquiry1700000000005 additively extends this
     // same table (entry_type + Lead-equivalent nullable columns); UPDATED
     // (issue #28): AddOwnerUpdatedAt1700000000009 additively extends it
-    // further (owner_updated_at) — this createTestDataSource() runs ALL
-    // migrations, so the column list here necessarily reflects the table's
-    // current full shape, not just what CreateEnquiries1700000000003 itself
-    // added. See direct-enquiry-migration.spec.ts / owner-updated-at-
-    // migration.spec.ts for those migrations' own dedicated
-    // column/nullability assertions.
+    // further (owner_updated_at); UPDATED (issue #124):
+    // AddEnquiryConversionDetails1700000000017 additively extends it further
+    // still (33 new columns across the rewritten Convert-to-Enquiry form's
+    // sections) — this createTestDataSource() runs ALL migrations, so the
+    // column list here necessarily reflects the table's current full shape,
+    // not just what CreateEnquiries1700000000003 itself added. See
+    // direct-enquiry-migration.spec.ts / owner-updated-at-migration.spec.ts /
+    // enquiry-conversion-details-migration.spec.ts for those migrations' own
+    // dedicated column/nullability assertions.
     expect(columnNames).toEqual(
       [
         'enquiry_id',
@@ -198,6 +203,39 @@ describe('enquiries migration (Task 1.1.1, issue #25)', () => {
         'mobile',
         'source_id',
         'model_id',
+        'fuel_type',
+        'transmission',
+        'color_first_preference',
+        'color_second_preference',
+        'accessories_interest',
+        'competitor_consideration',
+        'contact_verified',
+        'intent_rating',
+        'expected_closure_date',
+        'showroom_visits',
+        'quotation_number',
+        'quoted_on_road_price',
+        'discount_discussed',
+        'insurance_preference',
+        'extended_warranty_interest',
+        'corporate_discount_eligible',
+        'finance_application_status',
+        'financier',
+        'loan_amount_sought',
+        'tenure_and_emi_discussed',
+        'exchange_evaluation_status',
+        'exchange_evaluated_by',
+        'exchange_evaluated_price',
+        'exchange_customer_expectation',
+        'test_drive_status',
+        'test_drive_date_time',
+        'quotation_shared_via',
+        'next_action_owner_id',
+        'test_drive_feedback',
+        'pan_card_verified',
+        'address_proof_verified',
+        'income_proof_verified',
+        'gst_details_verified',
       ].sort(),
     );
   });
@@ -246,11 +284,13 @@ describe('enquiries migration (Task 1.1.1, issue #25)', () => {
     // AddNextFollowUpAt1700000000011 (issue #31),
     // AddResultingStatusToFollowups1700000000012 (issue #32),
     // CreateTestDrives1700000000013 / SeedDemoVehicles1700000000014 (issue
-    // #34), TestDriveConflictPrevention1700000000015 (issue #36), and
-    // AddLeadCustomerDetails1700000000016 (issue #114) were all added after
-    // this migration, so undoLastMigration() now reverts them first, in
-    // reverse order; undo fourteen times to reach and verify the enquiries
+    // #34), TestDriveConflictPrevention1700000000015 (issue #36),
+    // AddLeadCustomerDetails1700000000016 (issue #114), and
+    // AddEnquiryConversionDetails1700000000017 (issue #124) were all added
+    // after this migration, so undoLastMigration() now reverts them first, in
+    // reverse order; undo fifteen times to reach and verify the enquiries
     // migration's own reversibility (drop-table).
+    await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();

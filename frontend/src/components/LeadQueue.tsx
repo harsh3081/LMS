@@ -1,8 +1,6 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLeads } from '../hooks/useLeads';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
-import { ConvertLeadForm } from './ConvertLeadForm';
 import {
   Table,
   TableHead,
@@ -11,7 +9,6 @@ import {
   TableHeaderCell,
   TableCell,
   StatusPill,
-  Button,
   buttonStyles,
 } from './ui';
 
@@ -21,37 +18,35 @@ const SKELETON_ROW_COUNT = 5;
 
 /** DSE's own Lead list/queue (AC6) — newest first, reflects new creates
  * immediately via the useCreateLead cache update (no full page reload).
- * Extended (issue #25) with a flag-gated per-row "Convert to Enquiry"
- * action (AC1) that inline-expands ConvertLeadForm in a single panel below
- * the queue table (no new route, resolved Clarification) for whichever row
- * was selected — rendered once outside the table (rather than nested per-row)
- * so there is always at most one submit control on the page regardless of
- * queue size. The panel stays open (showing its success message) after a
- * successful conversion — it is not auto-collapsed — because the source
- * Lead's row disappears on its own once useConvertLead's onSuccess cache
- * update removes it from the queue (AC5); the two behaviors are
- * intentionally decoupled so the success confirmation remains visible.
+ * Extended (issue #25) with a flag-gated per-row "Convert to Enquiry" action
+ * (AC1).
  *
- * REDESIGNED (issue #116, AC1/AC3): now renders the full professional
- * 8-column table requested — Name, Mobile, Model of Interest, Source,
- * Assigned To, Status, Action, View — using the denormalized
- * modelName/sourceName/ownerName the backend now returns (LeadResponseDto,
- * issue #116) instead of raw ids. "Convert to Enquiry" keeps living under
- * Action, unchanged (AC4); "View" is a NEW per-row link into the new Lead
- * Detail page (`/leads/:leadId`, LeadDetailPage) — mirrors EnquiryQueue's
- * `Link` + `buttonStyles` convention for a per-row navigation action rather
- * than LeadQueue's own inline-expanding-panel pattern (a Lead detail page
- * is its own dedicated route, not an inline panel). Loading is now a
- * skeleton-row table (rather than a plain "Loading…" string, matching this
- * table's real shape so the layout doesn't jump once data arrives) and an
- * empty queue renders an explicit "no leads yet" row instead of a blank
- * table body — no loading/empty-state precedent existed elsewhere in this
- * codebase to reuse, so both are new, deliberately minimal implementations
- * (see NOTES.md "Visual/layout choices"). */
+ * REDESIGNED (issue #124, AC1): "Convert to Enquiry" no longer inline-
+ * expands the old 4-field `ConvertLeadForm` panel below the table — it is
+ * now a `Link` navigating to the dedicated `/leads/:leadId/convert` route
+ * (`ConvertLeadPage`), which hosts the rewritten 8-section sectioned form.
+ * See ConvertLeadPage.tsx for the SlideOver-vs-dedicated-route rationale.
+ * The row-leaves-the-queue-on-success behavior (AC5) is unaffected — it
+ * still comes from useConvertLead's onSuccess cache update, which fires
+ * once the DSE completes the conversion on that page and is routed back to
+ * this queue.
+ *
+ * REDESIGNED (issue #116, AC1/AC3): renders the full professional 8-column
+ * table — Name, Mobile, Model of Interest, Source, Assigned To, Status,
+ * Action, View — using the denormalized modelName/sourceName/ownerName the
+ * backend now returns (LeadResponseDto, issue #116) instead of raw ids.
+ * "View" is a per-row link into the Lead Detail page (`/leads/:leadId`,
+ * LeadDetailPage) — mirrors EnquiryQueue's `Link` + `buttonStyles`
+ * convention for a per-row navigation action. Loading is a skeleton-row
+ * table (rather than a plain "Loading…" string, matching this table's real
+ * shape so the layout doesn't jump once data arrives) and an empty queue
+ * renders an explicit "no leads yet" row instead of a blank table body — no
+ * loading/empty-state precedent existed elsewhere in this codebase to
+ * reuse, so both are new, deliberately minimal implementations (see
+ * NOTES.md "Visual/layout choices"). */
 export function LeadQueue() {
   const { data: leads, isLoading } = useLeads();
   const { data: config } = useFeatureFlags();
-  const [expandedLeadId, setExpandedLeadId] = useState<string | null>(null);
 
   const convertLeadEnabled = config?.convertLeadEnabled !== false;
   const rows = leads ?? [];
@@ -106,13 +101,13 @@ export function LeadQueue() {
                 </TableCell>
                 <TableCell>
                   {lead.status !== CONVERTED_STATUS && convertLeadEnabled && (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      onClick={() => setExpandedLeadId((current) => (current === lead.leadId ? null : lead.leadId))}
+                    <Link
+                      to={`/leads/${lead.leadId}/convert`}
+                      role="link"
+                      className={`${buttonStyles.base} ${buttonStyles.secondary}`}
                     >
                       Convert to Enquiry
-                    </Button>
+                    </Link>
                   )}
                 </TableCell>
                 <TableCell>
@@ -129,11 +124,6 @@ export function LeadQueue() {
           )}
         </TableBody>
       </Table>
-      {expandedLeadId && (
-        <div className="mt-4">
-          <ConvertLeadForm leadId={expandedLeadId} />
-        </div>
-      )}
     </>
   );
 }

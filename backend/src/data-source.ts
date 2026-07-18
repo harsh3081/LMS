@@ -28,6 +28,7 @@ import { CreateTestDrives1700000000013 } from './migrations/1700000000013-Create
 import { SeedDemoVehicles1700000000014 } from './migrations/1700000000014-SeedDemoVehicles';
 import { TestDriveConflictPrevention1700000000015 } from './migrations/1700000000015-TestDriveConflictPrevention';
 import { AddLeadCustomerDetails1700000000016 } from './migrations/1700000000016-AddLeadCustomerDetails';
+import { AddEnquiryConversionDetails1700000000017 } from './migrations/1700000000017-AddEnquiryConversionDetails';
 
 /**
  * Real PostgreSQL 16 DataSource (tech-design.md: TypeORM, resolved) — used by
@@ -71,6 +72,7 @@ export const migrations = [
   SeedDemoVehicles1700000000014,
   TestDriveConflictPrevention1700000000015,
   AddLeadCustomerDetails1700000000016,
+  AddEnquiryConversionDetails1700000000017,
 ];
 
 export const dataSourceOptions: DataSourceOptions = {
