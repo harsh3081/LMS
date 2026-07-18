@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useLeadSources } from '../hooks/useLeadSources';
 import { useVehicleModels } from '../hooks/useVehicleModels';
@@ -8,6 +8,16 @@ import { useDuplicateCheck } from '../hooks/useDuplicateCheck';
 import { ApiError, CreateDirectEnquiryInput, DuplicateMatch } from '../api/client';
 import { Button, FormField, Select, TextInput } from './ui';
 import { DuplicateWarning } from './DuplicateWarning';
+import { SUCCESS_AUTO_CLOSE_MS } from './NewLeadForm';
+
+/** issue #130: re-exported so callers (e.g. the Enquiry Management
+ * slide-over panel and this file's own spec) can import the auto-close
+ * delay from NewEnquiryForm directly, without reaching into NewLeadForm's
+ * module. The constant itself is NOT duplicated — see the import above and
+ * NOTES.md ("NewEnquiryForm onSuccess mechanism") for why reusing
+ * NewLeadForm's single exported value was judged cleaner than defining a
+ * second, identically-valued constant here. */
+export { SUCCESS_AUTO_CLOSE_MS };
 
 /** Mirrors NewLeadForm's INDIA_MOBILE_REGEX exactly (AC3, server rule:
  * backend/src/common/mobile.util.ts). */
@@ -37,8 +47,20 @@ type FormValues = {
  * server-side CreateDirectEnquiryDto validation exactly.
  * MODIFIED (issue #29): mobile-duplicate check on blur, mirrors NewLeadForm
  * exactly — see that file's comments for the full design rationale.
+ * MODIFIED (issue #130): optional `onSuccess` prop, mirroring NewLeadForm's
+ * exact issue #118 auto-close mechanism (timeout ref + cleanup-on-unmount),
+ * so this form can be used inside a slide-over panel (the new Enquiry
+ * Management page) that closes itself shortly after a successful creation.
  */
-export function NewEnquiryForm() {
+export interface NewEnquiryFormProps {
+  /** Optional — called ~1.5s (SUCCESS_AUTO_CLOSE_MS) after a successful
+   * Enquiry creation (once the success message has been shown), letting a
+   * parent (e.g. the New Enquiry slide-over panel) close itself. Mirrors
+   * NewLeadForm's `onSuccess` prop exactly (issue #118). */
+  onSuccess?: () => void;
+}
+
+export function NewEnquiryForm({ onSuccess }: NewEnquiryFormProps = {}) {
   const { data: sources } = useLeadSources();
   const { data: models } = useVehicleModels();
   const { data: fieldConfig } = useFieldConfig();
@@ -48,6 +70,19 @@ export function NewEnquiryForm() {
   const [formError, setFormError] = useState<string | null>(null);
   const [duplicateMatches, setDuplicateMatches] = useState<DuplicateMatch[]>([]);
   const [duplicateAcknowledged, setDuplicateAcknowledged] = useState(false);
+  // issue #130 (mirrors NewLeadForm's issue #118 AC4): tracks the pending
+  // auto-close timer so it can be cleared on unmount (e.g. the panel is
+  // closed/re-opened before the timer fires) — avoids calling onSuccess or
+  // touching state after unmount.
+  const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (successTimeoutRef.current) {
+        clearTimeout(successTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // AC3: mandatory-ness for the Lead-equivalent fields is config-driven
   // (issue #27, FR-04, mirrors NewLeadForm exactly). The qualifying-details
@@ -119,6 +154,11 @@ export function NewEnquiryForm() {
       setDuplicateMatches([]);
       setDuplicateAcknowledged(false);
       reset();
+      if (onSuccess) {
+        successTimeoutRef.current = setTimeout(() => {
+          onSuccess();
+        }, SUCCESS_AUTO_CLOSE_MS);
+      }
     } catch (err) {
       if (err instanceof ApiError && err.fieldErrors) {
         for (const fieldError of err.fieldErrors) {

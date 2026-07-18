@@ -84,8 +84,13 @@ describe('LeadManagementPage entry point / feature toggle (CC-10)', () => {
     mockedApi.checkDuplicates.mockResolvedValue([]);
   });
 
-  // ---- issue #126 AC4: header link row trimmed to the 2 quick actions ----
-  it('AC4: no longer renders "My Upcoming Follow-ups", "My Upcoming Test Drives", "Book a Test Drive", "Test Drive Scheduler", or "Field Configuration" as part of its own content (now Sidebar-only nav)', async () => {
+  // ---- issue #126 AC4 (updated by issue #130): header link row trimmed to
+  // the quick actions; "Field Configuration" moved to the Sidebar's new
+  // Admin group. This page never rendered its own "My Upcoming Follow-ups"
+  // link (that was always only an Enquiry Management Sidebar sub-item, still
+  // present there post-#130 — see Sidebar.spec.tsx), so there's no
+  // corresponding assertion to retarget here.
+  it('AC4: no longer renders "My Upcoming Test Drives", "Book a Test Drive", "Test Drive Scheduler", or "Field Configuration" as part of its own content (now Sidebar-only nav)', async () => {
     mockedApi.getConfig.mockResolvedValue({ newLeadEnabled: true, convertLeadEnabled: true, directEnquiryEnabled: true });
     renderLeadManagement();
     const main = await screen.findByRole('main');
@@ -93,16 +98,14 @@ describe('LeadManagementPage entry point / feature toggle (CC-10)', () => {
     // Scoped to the page's own <main> — the Sidebar (rendered by AppShell
     // alongside <main>, not inside it) still renders equivalent links, so
     // an unscoped query would find those instead and mask a regression.
-    expect(within(main).queryByRole('link', { name: /my upcoming follow-ups/i })).not.toBeInTheDocument();
     expect(within(main).queryByRole('link', { name: /my upcoming test drives/i })).not.toBeInTheDocument();
     expect(within(main).queryByRole('link', { name: /book a test drive/i })).not.toBeInTheDocument();
     expect(within(main).queryByRole('link', { name: /test drive scheduler/i })).not.toBeInTheDocument();
     expect(within(main).queryByRole('link', { name: /field configuration/i })).not.toBeInTheDocument();
 
-    // The routes themselves are still reachable — just via the Sidebar now,
-    // not a page-level regression (these are the Sidebar's own links,
-    // outside <main>, verified in depth by Sidebar.spec.tsx).
-    expect(screen.getByRole('link', { name: /my upcoming follow-ups/i })).toHaveAttribute('href', '/follow-ups/upcoming');
+    // The route is still reachable — just via the Sidebar's new Admin group
+    // now, not a page-level regression (verified in depth by
+    // Sidebar.spec.tsx).
     expect(screen.getByRole('link', { name: /field configuration/i })).toHaveAttribute('href', '/admin/field-config');
   });
 
@@ -231,19 +234,20 @@ describe('LeadManagementPage entry point / feature toggle (CC-10)', () => {
 
   // -----------------------------------------------------------------
   // ADDED (issue #26) — New Enquiry entry point + its own feature toggle.
-  // UPDATED (issue #126): the Sidebar renders its own "New Enquiry" link
-  // to the same /enquiries/new route, with the same accessible name — so
-  // an unscoped `getByRole('link', { name: /new enquiry/i })` would now
-  // match BOTH the page's own quick action and the Sidebar's copy
-  // ("Found multiple elements"). Scoped to `within(main)` so these assert
-  // against this page's own quick action specifically.
+  // UPDATED (issue #126): the Sidebar renders its own "Enquiry Management"
+  // link, with a different accessible name than this page's own "New
+  // Enquiry" quick action, so no collision — but still scoped to
+  // `within(main)` for clarity/consistency with the rest of this file.
+  // UPDATED (issue #130): this page's own "New Enquiry" link now points at
+  // `/enquiries` (the new Enquiry Management page, which itself hosts the
+  // creation slide-over) instead of the removed `/enquiries/new` route.
   // -----------------------------------------------------------------
   it('shows the New Enquiry entry point when directEnquiryEnabled is true', async () => {
     mockedApi.getConfig.mockResolvedValue({ newLeadEnabled: true, convertLeadEnabled: true, directEnquiryEnabled: true });
     renderLeadManagement();
     const main = await screen.findByRole('main');
     const entry = await within(main).findByRole('link', { name: /new enquiry/i });
-    expect(entry).toHaveAttribute('href', '/enquiries/new');
+    expect(entry).toHaveAttribute('href', '/enquiries');
   });
 
   it('hides the New Enquiry entry point when directEnquiryEnabled is false', async () => {
@@ -253,9 +257,9 @@ describe('LeadManagementPage entry point / feature toggle (CC-10)', () => {
     await waitFor(() => expect(mockedApi.getConfig).toHaveBeenCalled());
     await waitFor(() => expect(within(main).queryByRole('link', { name: /new enquiry/i })).not.toBeInTheDocument());
     // The route stays reachable via the Sidebar's own, unconditional
-    // "New Enquiry" link — the feature toggle only ever gated this page's
-    // own quick-action copy, not the Sidebar (issue #126's minimal-shell
-    // scope: the Sidebar is not toggle-aware).
-    expect(screen.getByRole('link', { name: /new enquiry/i })).toHaveAttribute('href', '/enquiries/new');
+    // "Enquiry Management" link — the feature toggle only ever gated this
+    // page's own quick-action copy, not the Sidebar (the Sidebar is not
+    // toggle-aware).
+    expect(screen.getByRole('link', { name: /enquiry management/i })).toHaveAttribute('href', '/enquiries');
   });
 });

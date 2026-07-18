@@ -5,10 +5,10 @@
  * conventions (the real HTTP path is proven by the backend Supertest suite).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { NewEnquiryForm } from '../../src/components/NewEnquiryForm';
+import { NewEnquiryForm, SUCCESS_AUTO_CLOSE_MS } from '../../src/components/NewEnquiryForm';
 import { api, ApiError, DuplicateMatch } from '../../src/api/client';
 
 vi.mock('../../src/api/client', async (importOriginal) => {
@@ -315,6 +315,123 @@ describe('NewEnquiryForm', () => {
 
       expect(screen.queryByTestId('duplicate-warning')).not.toBeInTheDocument();
       expect(mockedApi.createDirectEnquiry).not.toHaveBeenCalled();
+    });
+  });
+
+  /**
+   * RED->GREEN — issue #130 (mirrors NewLeadForm.spec.tsx's "onSuccess
+   * auto-close" block, issue #118, exactly): optional `onSuccess` prop, used
+   * by the new Enquiry Management slide-over panel to auto-close itself
+   * shortly after a successful creation. Same targeted `window.setTimeout`
+   * spy approach as NewLeadForm.spec.tsx — deterministic control over the
+   * SUCCESS_AUTO_CLOSE_MS auto-close timer, no real wall-clock wait.
+   */
+  describe('onSuccess auto-close (issue #130)', () => {
+    function spyOnSuccessAutoCloseTimer() {
+      const originalSetTimeout = window.setTimeout;
+      let capturedCallback: (() => void) | null = null;
+      const spy = vi
+        .spyOn(window, 'setTimeout')
+        .mockImplementation(((fn: TimerHandler, delay?: number, ...args: unknown[]) => {
+          if (delay === SUCCESS_AUTO_CLOSE_MS) {
+            capturedCallback = fn as () => void;
+            return 0 as unknown as ReturnType<typeof setTimeout>;
+          }
+          return originalSetTimeout(fn as TimerHandler, delay, ...args);
+        }) as typeof setTimeout);
+      return {
+        spy,
+        getCapturedCallback: () => capturedCallback,
+      };
+    }
+
+    async function fillValidForm(user: ReturnType<typeof userEvent.setup>, customerName: string) {
+      await waitFor(() => expect(screen.getByRole('option', { name: 'Walk-in' })).toBeInTheDocument());
+      await user.type(screen.getByLabelText(/customer name/i), customerName);
+      await user.type(screen.getByLabelText(/mobile/i), '9876543210');
+      await user.selectOptions(screen.getByLabelText(/source/i), '1');
+      await user.selectOptions(screen.getByLabelText(/model/i), '101');
+      await user.type(screen.getByLabelText(/budget/i), '300000');
+      await user.type(screen.getByLabelText(/variant/i), 'LX');
+      await user.selectOptions(screen.getByLabelText(/exchange interest/i), 'false');
+      await user.selectOptions(screen.getByLabelText(/finance interest/i), 'true');
+    }
+
+    it('calls onSuccess ~1.5s after a successful creation, once the success message has shown', async () => {
+      mockedApi.createDirectEnquiry.mockResolvedValue({
+        enquiryId: 'enq-panel-1',
+        leadId: null,
+        entryType: 'DIRECT',
+        customerName: 'Panel Test',
+        mobile: '9876543210',
+        sourceId: 1,
+        modelId: 101,
+        budget: 300000,
+        variant: 'LX',
+        exchangeInterest: false,
+        financeInterest: true,
+        convertedBy: 'owner-1',
+        convertedAt: new Date().toISOString(),
+        status: 'New',
+        ownerId: 'owner-1',
+        locationId: 'loc-1',
+      });
+      const onSuccess = vi.fn();
+      const { spy, getCapturedCallback } = spyOnSuccessAutoCloseTimer();
+      const user = userEvent.setup();
+      const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      render(
+        <QueryClientProvider client={queryClient}>
+          <NewEnquiryForm onSuccess={onSuccess} />
+        </QueryClientProvider>,
+      );
+
+      await fillValidForm(user, 'Panel Test');
+      await user.click(screen.getByRole('button', { name: /submit|create|save/i }));
+
+      expect(await screen.findByText(/enquiry created/i)).toBeInTheDocument();
+      expect(onSuccess).not.toHaveBeenCalled();
+
+      const capturedCallback = getCapturedCallback();
+      expect(capturedCallback).not.toBeNull();
+      await act(async () => capturedCallback!());
+      expect(onSuccess).toHaveBeenCalledTimes(1);
+
+      spy.mockRestore();
+    });
+
+    it('does not call onSuccess when the prop is omitted (standalone usage unchanged)', async () => {
+      mockedApi.createDirectEnquiry.mockResolvedValue({
+        enquiryId: 'enq-standalone-1',
+        leadId: null,
+        entryType: 'DIRECT',
+        customerName: 'No Panel',
+        mobile: '9876543210',
+        sourceId: 1,
+        modelId: 101,
+        budget: 300000,
+        variant: 'LX',
+        exchangeInterest: false,
+        financeInterest: true,
+        convertedBy: 'owner-1',
+        convertedAt: new Date().toISOString(),
+        status: 'New',
+        ownerId: 'owner-1',
+        locationId: 'loc-1',
+      });
+      const { spy, getCapturedCallback } = spyOnSuccessAutoCloseTimer();
+      const user = userEvent.setup();
+      renderForm();
+
+      await fillValidForm(user, 'No Panel');
+      await user.click(screen.getByRole('button', { name: /submit|create|save/i }));
+
+      expect(await screen.findByText(/enquiry created/i)).toBeInTheDocument();
+      // No onSuccess prop was passed, so NewEnquiryForm never schedules the
+      // SUCCESS_AUTO_CLOSE_MS timer at all — nothing was captured.
+      expect(getCapturedCallback()).toBeNull();
+
+      spy.mockRestore();
     });
   });
 });

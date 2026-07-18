@@ -1,10 +1,9 @@
 import { Route, Routes } from 'react-router-dom';
 import { DashboardPage } from './pages/DashboardPage';
 import { LeadManagementPage } from './pages/LeadManagementPage';
-import { NewLeadPage } from './pages/NewLeadPage';
 import { LeadDetailPage } from './pages/LeadDetailPage';
 import { ConvertLeadPage } from './pages/ConvertLeadPage';
-import { NewEnquiryPage } from './pages/NewEnquiryPage';
+import { EnquiryManagementPage } from './pages/EnquiryManagementPage';
 import { LoginPage } from './pages/LoginPage';
 import { FieldConfigPage } from './pages/FieldConfigPage';
 import { LogFollowupPage } from './pages/LogFollowupPage';
@@ -19,10 +18,9 @@ export function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/" element={<DashboardPage />} />
       <Route path="/leads" element={<LeadManagementPage />} />
-      <Route path="/leads/new" element={<NewLeadPage />} />
       <Route path="/leads/:leadId" element={<LeadDetailPage />} />
       <Route path="/leads/:leadId/convert" element={<ConvertLeadPage />} />
-      <Route path="/enquiries/new" element={<NewEnquiryPage />} />
+      <Route path="/enquiries" element={<EnquiryManagementPage />} />
       <Route path="/enquiries/:enquiryId/follow-up" element={<LogFollowupPage />} />
       <Route path="/follow-ups/upcoming" element={<UpcomingFollowupsPage />} />
       <Route path="/test-drives/new" element={<BookTestDrivePage />} />
