@@ -193,11 +193,16 @@ describe('POST /api/v1/enquiries (Task 2.5, issue #26)', () => {
   });
 
   it('regression: POST /api/v1/leads still succeeds unaffected by the Direct-Enquiry slice', async () => {
+    // NEW (issue #114, AC2): communicationConsentVerified is a hard,
+    // always-required compliance gate on CreateLeadDto — added here so this
+    // regression check keeps proving what it always proved (Lead creation
+    // still works), unrelated to the Direct-Enquiry slice this file covers.
     const res = await dseAAgent.post('/api/v1/leads').send({
       customerName: 'Regression Check',
       mobile: '9876543299',
       sourceId: 1,
       modelId: 101,
+      communicationConsentVerified: true,
     });
     expect(res.status).toBe(201);
   });

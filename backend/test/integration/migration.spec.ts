@@ -25,10 +25,14 @@ describe('leads migration (Task 1.2.1 / 1.2.2)', () => {
     const columnNames = columns.map((c) => c.column_name).sort();
 
     // UPDATED (issue #28): AddOwnerUpdatedAt1700000000009 additively extends
-    // this same table (owner_updated_at) — createTestDataSource() runs ALL
-    // migrations, so this list reflects the table's current full shape, not
-    // just what CreateLeads1700000000002 itself added (mirrors the enquiries
-    // column-list test below).
+    // this same table (owner_updated_at). UPDATED (issue #114):
+    // AddLeadCustomerDetails1700000000016 additively extends it further (22
+    // new nullable columns + communication_consent_verified) —
+    // createTestDataSource() runs ALL migrations, so this list reflects the
+    // table's current full shape, not just what CreateLeads1700000000002
+    // itself added (mirrors the enquiries column-list test below). See
+    // lead-customer-details-migration.spec.ts for that migration's own
+    // dedicated column/CHECK-constraint assertions.
     expect(columnNames).toEqual(
       [
         'lead_id',
@@ -45,6 +49,29 @@ describe('leads migration (Task 1.2.1 / 1.2.2)', () => {
         'created_by',
         'created_at',
         'updated_at',
+        'email',
+        'customer_type',
+        'city',
+        'pin_code',
+        'preferred_language',
+        'variant',
+        'fuel_type',
+        'transmission',
+        'budget_min',
+        'budget_max',
+        'buying_timeline',
+        'exchange_interest',
+        'current_vehicle',
+        'kms_driven',
+        'registration_number',
+        'expected_value',
+        'payment_mode',
+        'preferred_financer',
+        'down_payment_capacity',
+        'referrer_name',
+        'first_follow_up_at',
+        'remarks',
+        'communication_consent_verified',
       ].sort(),
     );
   });
@@ -88,11 +115,13 @@ describe('leads migration (Task 1.2.1 / 1.2.2)', () => {
     // CreateFollowups1700000000010, issue #31 added
     // AddNextFollowUpAt1700000000011, issue #32 added
     // AddResultingStatusToFollowups1700000000012, issue #34 added
-    // CreateTestDrives1700000000013 / SeedDemoVehicles1700000000014, and
-    // issue #36 added TestDriveConflictPrevention1700000000015 — thirteen
-    // migrations after this one, so undoLastMigration() now reverts them
-    // first, in reverse order; undo fourteen times to reach and verify the
-    // leads migration's own reversibility.
+    // CreateTestDrives1700000000013 / SeedDemoVehicles1700000000014, issue
+    // #36 added TestDriveConflictPrevention1700000000015, and issue #114
+    // added AddLeadCustomerDetails1700000000016 — fourteen migrations after
+    // this one, so undoLastMigration() now reverts them first, in reverse
+    // order; undo fifteen times to reach and verify the leads migration's
+    // own reversibility.
+    await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
@@ -217,10 +246,12 @@ describe('enquiries migration (Task 1.1.1, issue #25)', () => {
     // AddNextFollowUpAt1700000000011 (issue #31),
     // AddResultingStatusToFollowups1700000000012 (issue #32),
     // CreateTestDrives1700000000013 / SeedDemoVehicles1700000000014 (issue
-    // #34), and TestDriveConflictPrevention1700000000015 (issue #36) were
-    // all added after this migration, so undoLastMigration() now reverts
-    // them first, in reverse order; undo thirteen times to reach and verify
-    // the enquiries migration's own reversibility (drop-table).
+    // #34), TestDriveConflictPrevention1700000000015 (issue #36), and
+    // AddLeadCustomerDetails1700000000016 (issue #114) were all added after
+    // this migration, so undoLastMigration() now reverts them first, in
+    // reverse order; undo fourteen times to reach and verify the enquiries
+    // migration's own reversibility (drop-table).
+    await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();

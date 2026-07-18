@@ -102,9 +102,11 @@ describe('followups migration (issue #30 Task 1.1)', () => {
     dataSource = await createTestDataSource();
     // issue #31 added AddNextFollowUpAt1700000000011, issue #32 added
     // AddResultingStatusToFollowups1700000000012, issue #34 added
-    // CreateTestDrives1700000000013 / SeedDemoVehicles1700000000014, and
-    // issue #36 added TestDriveConflictPrevention1700000000015, all after
-    // this migration; undo those first, then undo this migration itself.
+    // CreateTestDrives1700000000013 / SeedDemoVehicles1700000000014, issue
+    // #36 added TestDriveConflictPrevention1700000000015, and issue #114
+    // added AddLeadCustomerDetails1700000000016, all after this migration;
+    // undo those first, then undo this migration itself.
+    await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
@@ -208,9 +210,11 @@ describe('followups migration: resulting_status column (issue #32, AC2)', () => 
   it('down-migration reverses cleanly: drops the resulting_status column only', async () => {
     dataSource = await createTestDataSource();
     // issue #34 added CreateTestDrives1700000000013 /
-    // SeedDemoVehicles1700000000014, and issue #36 added
-    // TestDriveConflictPrevention1700000000015, after this migration; undo
-    // those first, then undo this migration itself.
+    // SeedDemoVehicles1700000000014, issue #36 added
+    // TestDriveConflictPrevention1700000000015, and issue #114 added
+    // AddLeadCustomerDetails1700000000016, after this migration; undo those
+    // first, then undo this migration itself.
+    await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();

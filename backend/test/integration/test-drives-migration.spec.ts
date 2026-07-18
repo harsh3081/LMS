@@ -191,7 +191,8 @@ describe('test-drives migrations (issue #34 Task 1.1)', () => {
 
   it('down-migration reverses cleanly: SeedDemoVehicles1700000000014 removes only its own seeded rows', async () => {
     dataSource = await createTestDataSource();
-    await dataSource.undoLastMigration(); // TestDriveConflictPrevention1700000000015 (now the last migration)
+    await dataSource.undoLastMigration(); // AddLeadCustomerDetails1700000000016 (issue #114, now the last migration)
+    await dataSource.undoLastMigration(); // TestDriveConflictPrevention1700000000015
     await dataSource.undoLastMigration();
 
     const rows: { vehicle_id: string }[] = await dataSource.query(
@@ -208,6 +209,7 @@ describe('test-drives migrations (issue #34 Task 1.1)', () => {
 
   it('down-migration reverses cleanly: drops test_drives and demo_vehicles (CreateTestDrives1700000000013)', async () => {
     dataSource = await createTestDataSource();
+    await dataSource.undoLastMigration(); // AddLeadCustomerDetails1700000000016 (issue #114)
     await dataSource.undoLastMigration(); // TestDriveConflictPrevention1700000000015
     await dataSource.undoLastMigration(); // SeedDemoVehicles1700000000014
     await dataSource.undoLastMigration(); // CreateTestDrives1700000000013
@@ -222,6 +224,7 @@ describe('test-drives migrations (issue #34 Task 1.1)', () => {
     dataSource = await createTestDataSource();
     const { locationId, dealerGroupId, userId, enquiryId, vehicleId } = await seedParents();
 
+    await dataSource.undoLastMigration(); // AddLeadCustomerDetails1700000000016 (issue #114)
     await dataSource.undoLastMigration(); // TestDriveConflictPrevention1700000000015
 
     // The widened CHECK is reverted — only 'Booked' is legal again.

@@ -31,6 +31,7 @@ import { TestDrivesController } from './test-drives/test-drives.controller';
 import { UpcomingTestDrivesController } from './test-drives/upcoming-test-drives.controller';
 import { TestDrivesService } from './test-drives/test-drives.service';
 import { TestDrivesRepository } from './test-drives/test-drives.repository';
+import { ConsultantsController } from './users/consultants.controller';
 
 /**
  * Built via `forRoot(dataSource)` rather than `TypeOrmModule.forRootAsync`
@@ -60,6 +61,7 @@ export class AppModule {
         DemoVehiclesController,
         TestDrivesController,
         UpcomingTestDrivesController,
+        ConsultantsController,
       ],
       providers: [
         { provide: DataSource, useValue: dataSource },

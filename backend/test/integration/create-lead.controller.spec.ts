@@ -17,6 +17,10 @@ describe('POST /api/v1/leads (Task 2.5)', () => {
   let dseAAgent: ReturnType<typeof request.agent>;
   let noCapAgent: ReturnType<typeof request.agent>;
 
+  // NEW (issue #114, AC2): communicationConsentVerified is a hard,
+  // always-required compliance gate — added here so this shared payload
+  // helper keeps producing a 201-eligible request; unrelated to this file's
+  // own #24 create-Lead assertions.
   const validPayload = () => ({
     customerName: `Asha Rao ${Date.now()}-${Math.random()}`,
     mobile: (() => {
@@ -26,6 +30,7 @@ describe('POST /api/v1/leads (Task 2.5)', () => {
     })(),
     sourceId: 1,
     modelId: 101,
+    communicationConsentVerified: true,
   });
 
   beforeAll(async () => {

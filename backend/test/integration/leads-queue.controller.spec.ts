@@ -15,6 +15,10 @@ describe('GET /api/v1/leads — owner-scoped queue (Task 3.3)', () => {
   let dseBAgent: ReturnType<typeof request.agent>;
   let dseCAgent: ReturnType<typeof request.agent>;
 
+  // NEW (issue #114, AC2): communicationConsentVerified is a hard,
+  // always-required compliance gate — added here so this shared payload
+  // helper keeps producing a 201-eligible request; not otherwise related to
+  // this file's own owner-scoped-queue assertions.
   const payload = () => ({
     customerName: `Queue Test ${Date.now()}-${Math.random()}`,
     mobile: (() => {
@@ -24,6 +28,7 @@ describe('GET /api/v1/leads — owner-scoped queue (Task 3.3)', () => {
     })(),
     sourceId: 1,
     modelId: 101,
+    communicationConsentVerified: true,
   });
 
   beforeAll(async () => {

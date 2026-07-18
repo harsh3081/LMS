@@ -47,6 +47,7 @@ describe('GET /api/v1/duplicates (Task 1.5, issue #29)', () => {
       mobile,
       sourceId: 1,
       modelId: 101,
+      communicationConsentVerified: true,
     });
     expect(created.status).toBe(201);
 
@@ -64,6 +65,7 @@ describe('GET /api/v1/duplicates (Task 1.5, issue #29)', () => {
       mobile,
       sourceId: 1,
       modelId: 101,
+      communicationConsentVerified: true,
     });
     expect(created.status).toBe(201);
 

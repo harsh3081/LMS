@@ -6,8 +6,9 @@ import { CreateLeadDto } from './dto/create-lead.dto';
 import { LeadEntity, LEAD_STATUS_NEW } from './entities/lead.entity';
 import { LeadSourceEntity } from '../lead-sources/entities/lead-source.entity';
 import { VehicleModelEntity } from '../vehicle-models/entities/vehicle-model.entity';
+import { UserEntity } from '../users/entities/user.entity';
 import { ReferentialValidationError, LeadReassignTargetNotFoundError } from './leads.errors';
-import { Principal } from '../common/principal';
+import { Principal, ROLE_DSE } from '../common/principal';
 import { FieldConfigService } from '../field-config/field-config.service';
 import { DuplicatesService } from '../duplicates/duplicates.service';
 
@@ -51,6 +52,12 @@ export class LeadsService {
     if (dto.sourceId !== undefined) await this.assertSourceExists(dto.sourceId);
     if (dto.modelId !== undefined) await this.assertModelExists(dto.modelId);
 
+    // NEW (issue #114, AC5): "Assign to Consultant" — resolves to
+    // actor.userId (today's exact self-assignment default, issue #28)
+    // unless dto.assignedOwnerId names a different, valid DSE at the
+    // caller's own location/dealer group.
+    const ownerId = await this.resolveOwnerId(dto.assignedOwnerId, actor);
+
     const duplicateMatches = dto.mobile
       ? await this.duplicatesService.findMatches(dto.mobile, actor.locationId)
       : [];
@@ -62,8 +69,34 @@ export class LeadsService {
           mobile: dto.mobile ?? null,
           sourceId: dto.sourceId ?? null,
           modelId: dto.modelId ?? null,
+
+          // ---- issue #114: new fields (all pass through as supplied, all optional) ----
+          email: dto.email ?? null,
+          customerType: dto.customerType ?? null,
+          city: dto.city ?? null,
+          pinCode: dto.pinCode ?? null,
+          preferredLanguage: dto.preferredLanguage ?? null,
+          variant: dto.variant ?? null,
+          fuelType: dto.fuelType ?? null,
+          transmission: dto.transmission ?? null,
+          budgetMin: dto.budgetMin ?? null,
+          budgetMax: dto.budgetMax ?? null,
+          buyingTimeline: dto.buyingTimeline ?? null,
+          exchangeInterest: dto.exchangeInterest ?? null,
+          currentVehicle: dto.currentVehicle ?? null,
+          kmsDriven: dto.kmsDriven ?? null,
+          registrationNumber: dto.registrationNumber ?? null,
+          expectedValue: dto.expectedValue ?? null,
+          paymentMode: dto.paymentMode ?? null,
+          preferredFinancer: dto.preferredFinancer ?? null,
+          downPaymentCapacity: dto.downPaymentCapacity ?? null,
+          referrerName: dto.referrerName ?? null,
+          firstFollowUpAt: dto.firstFollowUpAt ? new Date(dto.firstFollowUpAt) : null,
+          remarks: dto.remarks ?? null,
+          communicationConsentVerified: dto.communicationConsentVerified,
+
           // ---- server-derived, never from the client DTO ----
-          ownerId: actor.userId,
+          ownerId,
           createdBy: actor.userId,
           locationId: actor.locationId,
           dealerGroupId: actor.dealerGroupId,
@@ -154,6 +187,42 @@ export class LeadsService {
 
       return updated;
     });
+  }
+
+  /**
+   * NEW (issue #114, AC5): "Assign to Consultant". Returns `actor.userId`
+   * unchanged (today's exact self-assignment default, issue #28) when
+   * `assignedOwnerId` is omitted. When supplied, the target user MUST exist,
+   * carry role `ROLE_DSE`, and share the caller's own `locationId` AND
+   * `dealerGroupId` — otherwise a 400 (ReferentialValidationError, reused
+   * exactly as assertSourceExists/assertModelExists do below — this is
+   * itself a referential-validity check on a client-supplied id) is thrown
+   * rather than silently falling back to self-assignment. `createdBy` is
+   * NEVER affected by this — it always remains `actor.userId` (see `create`).
+   */
+  private async resolveOwnerId(assignedOwnerId: string | undefined, actor: Principal): Promise<string> {
+    if (assignedOwnerId === undefined) return actor.userId;
+
+    const target = await this.dataSource.getRepository(UserEntity).findOne({ where: { userId: assignedOwnerId } });
+    if (!target) {
+      throw new ReferentialValidationError([
+        { field: 'assignedOwnerId', message: `assignedOwnerId ${assignedOwnerId} not found` },
+      ]);
+    }
+    if (target.role !== ROLE_DSE) {
+      throw new ReferentialValidationError([
+        { field: 'assignedOwnerId', message: `assignedOwnerId ${assignedOwnerId} is not a DSE` },
+      ]);
+    }
+    if (target.locationId !== actor.locationId || target.dealerGroupId !== actor.dealerGroupId) {
+      throw new ReferentialValidationError([
+        {
+          field: 'assignedOwnerId',
+          message: `assignedOwnerId ${assignedOwnerId} is not at the caller's own location/dealer group`,
+        },
+      ]);
+    }
+    return target.userId;
   }
 
   private async assertSourceExists(sourceId: number): Promise<void> {

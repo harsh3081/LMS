@@ -19,6 +19,10 @@ describe('POST /api/v1/leads/:leadId/convert (Task 2.5)', () => {
   let dseCAgent: ReturnType<typeof request.agent>;
   let noCapAgent: ReturnType<typeof request.agent>;
 
+  // NEW (issue #114, AC2): communicationConsentVerified is a hard,
+  // always-required compliance gate — added here so this shared payload
+  // helper keeps producing a 201-eligible Lead to convert; unrelated to this
+  // file's own convert-Lead assertions.
   const leadPayload = () => ({
     customerName: `Convert Test ${Date.now()}-${Math.random()}`,
     mobile: (() => {
@@ -28,6 +32,7 @@ describe('POST /api/v1/leads/:leadId/convert (Task 2.5)', () => {
     })(),
     sourceId: 1,
     modelId: 101,
+    communicationConsentVerified: true,
   });
 
   const validPayload = (overrides: Record<string, unknown> = {}) => ({
