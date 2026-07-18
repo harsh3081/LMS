@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { DataSource, EntityManager, QueryFailedError } from 'typeorm';
 import { TestDrivesRepository } from './test-drives.repository';
 import { EnquiriesRepository } from '../enquiries/enquiries.repository';
 import { AuditLogRepository } from '../audit-log/audit-log.repository';
@@ -7,10 +7,25 @@ import { DemoVehicleEntity } from '../demo-vehicles/entities/demo-vehicle.entity
 import { CreateTestDriveDto } from './dto/create-test-drive.dto';
 import { SchedulerQueryDto } from './dto/scheduler-query.dto';
 import { TestDriveEntity, TEST_DRIVE_STATUS_BOOKED } from './entities/test-drive.entity';
-import { TestDriveEnquiryNotFoundError, OperatingHoursViolationError, FieldError } from './test-drives.errors';
+import {
+  TestDriveEnquiryNotFoundError,
+  OperatingHoursViolationError,
+  TestDriveSlotConflictError,
+  FieldError,
+} from './test-drives.errors';
+import { computeNearestOpenSlots } from './nearest-open-slots';
 import { ReferentialValidationError } from '../leads/leads.errors';
 import { EnquiryEntity } from '../enquiries/entities/enquiry.entity';
 import { Principal } from '../common/principal';
+
+/** Postgres SQLSTATE for `unique_violation` — set identically by TypeORM's
+ * `QueryFailedError.code` against both real Postgres and pg-mem (the driver
+ * surfaces the actual Postgres error code, not a driver-specific one;
+ * confirmed via a throwaway sandbox test — see NOTES.md). Used by
+ * TestDrivesService.book to detect the migration-1700000000015 partial
+ * UNIQUE index's backstop rejection and translate it into the same
+ * TestDriveSlotConflictError the app-level pre-check throws. */
+const POSTGRES_UNIQUE_VIOLATION = '23505';
 
 /** AC2 simplification: no configurable dealership-operating-hours
  * feature/config exists anywhere in this codebase (verified), so a simple
@@ -51,12 +66,21 @@ function isWithinOperatingHours(date: Date): boolean {
  * `status`/`bookedBy`/`locationId`/`dealerGroupId` fully server-derived from
  * the `Principal` — never from the client DTO (ADR-003/009).
  *
- * DELIBERATELY NOT DONE HERE (see NOTES.md "Deliberate scope boundary with
- * #36"): no double-booking/overlap conflict detection. Bookings are accepted
- * naively — issue #36 ("Prevent Double-Booking of Demo Vehicles") is the
- * dedicated Story for that entire concern and needs a working, naive booking
- * flow to layer onto, mirroring how issue #29 deliberately deferred
- * duplicate detection out of #24/#25's initial create flows.
+ * MODIFIED (issue #36, "Prevent Double-Booking of Demo Vehicles" —
+ * AC1/AC3/AC4/AC5): `book()` now rejects a request whose [slotStart,
+ * slotEnd) range overlaps an existing BOOKED Test Drive for the same
+ * vehicle. Two layers, both documented in detail on `assertNoConflict` and
+ * the catch block inside the transaction below (see NOTES.md "Concurrency
+ * mechanism" for the full investigation this design rests on):
+ *   1. An APP-LEVEL pre-check (`assertNoConflict`), run INSIDE the same
+ *      transaction as the insert (ADR-002), covers general range overlap
+ *      (AC4) — the PRIMARY correctness mechanism.
+ *   2. A DB-level partial UNIQUE index (migration 1700000000015) is the
+ *      defense-in-depth BACKSTOP: if two requests still race past the
+ *      app-level check (a real risk this Story's own investigation proved
+ *      `SELECT ... FOR UPDATE` cannot reliably prevent in this sandbox), the
+ *      second INSERT itself fails with a Postgres unique_violation, caught
+ *      below and translated into the same 409.
  */
 @Injectable()
 export class TestDrivesService {
@@ -73,20 +97,41 @@ export class TestDrivesService {
     await this.assertVehicleExists(dto.vehicleId);
 
     return this.dataSource.transaction(async (manager) => {
-      const testDrive = await this.testDrivesRepository.insert(
-        {
-          enquiryId: dto.enquiryId,
-          vehicleId: dto.vehicleId,
-          slotStart: new Date(dto.slotStart),
-          slotEnd: new Date(dto.slotEnd),
-          // ---- server-derived, never from the client DTO ----
-          status: TEST_DRIVE_STATUS_BOOKED,
-          bookedBy: actor.userId,
-          locationId: actor.locationId,
-          dealerGroupId: actor.dealerGroupId,
-        },
-        manager,
-      );
+      // issue #36 AC1/AC4: app-level overlap pre-check, run INSIDE this same
+      // transaction (ADR-002) so the check and the insert observe a
+      // consistent snapshot as far as this sandbox's pg-mem substitute is
+      // able to guarantee — see assertNoConflict's own comment for why this
+      // is the PRIMARY mechanism, not row-locking.
+      await this.assertNoConflict(dto, actor, manager);
+
+      let testDrive: TestDriveEntity;
+      try {
+        testDrive = await this.testDrivesRepository.insert(
+          {
+            enquiryId: dto.enquiryId,
+            vehicleId: dto.vehicleId,
+            slotStart: new Date(dto.slotStart),
+            slotEnd: new Date(dto.slotEnd),
+            // ---- server-derived, never from the client DTO ----
+            status: TEST_DRIVE_STATUS_BOOKED,
+            bookedBy: actor.userId,
+            locationId: actor.locationId,
+            dealerGroupId: actor.dealerGroupId,
+          },
+          manager,
+        );
+      } catch (err) {
+        // issue #36 AC3: DB-level backstop. If the app-level pre-check above
+        // missed a race (two requests both passed it before either
+        // committed), the partial UNIQUE index added by migration
+        // 1700000000015 rejects the second INSERT with a Postgres
+        // unique_violation — caught here and translated into the same 409
+        // shape the pre-check throws, rather than leaking a raw 500.
+        if (err instanceof QueryFailedError && (err as unknown as { code?: string }).code === POSTGRES_UNIQUE_VIOLATION) {
+          throw await this.buildConflictError(dto, actor, manager);
+        }
+        throw err;
+      }
 
       await this.auditLogRepository.record(
         {
@@ -194,5 +239,94 @@ export class TestDrivesService {
         { field: 'vehicleId', message: `vehicleId ${vehicleId} not found in the active demo_vehicles fleet` },
       ]);
     }
+  }
+
+  /**
+   * issue #36 AC1/AC4/AC5: the PRIMARY conflict-detection mechanism —
+   * rejects a booking whose [slotStart, slotEnd) range overlaps an existing
+   * BOOKED Test Drive for the same vehicle, tenant-scoped. REUSES
+   * TestDrivesRepository.findBookedInRange (the exact overlap-range query
+   * issue #35 already built for the scheduler grid, per this Story's own
+   * brief: "REUSE this pattern (or the method itself)") — passed the SAME
+   * transactional `manager` this call is running inside, so the
+   * conflict-check and the insert that follows observe one consistent
+   * transaction (ADR-002). `findBookedInRange` already filters
+   * `status = TEST_DRIVE_STATUS_BOOKED`, which is exactly what makes AC5
+   * ("cancelled/rescheduled bookings free up the slot immediately") true —
+   * a row whose status has been changed away from 'Booked' (by a future #39
+   * outcome-logging action) is automatically excluded here with zero
+   * conflict-check-specific code.
+   *
+   * WHY THIS IS THE PRIMARY MECHANISM, NOT `SELECT ... FOR UPDATE` ROW
+   * LOCKING (ADR-002 mentions both as options): a throwaway sandbox
+   * investigation proved pg-mem (this backend test harness's in-memory
+   * Postgres-wire-compatible substitute, see test/support/test-data-source.ts)
+   * ACCEPTS `SELECT ... FOR UPDATE` syntactically but provides NO real
+   * row-level blocking — two "concurrent" transactions racing a
+   * check-then-insert both read 0 conflicting rows before either committed,
+   * and BOTH inserted, i.e. FOR UPDATE gave zero actual protection in this
+   * sandbox. A bare UNIQUE constraint, by contrast, correctly rejected the
+   * second of two identically-raced inserts in the same throwaway harness.
+   * This is why the design instead pairs this app-level pre-check with a
+   * DB-level UNIQUE-index backstop (see the `catch` block in `book()` above
+   * and migration 1700000000015) — mirroring this codebase's own established
+   * precedent for an equivalent problem (EnquiriesService.convert's
+   * app-level 409 pre-check + `UNIQUE(lead_id)` DB backstop, migration
+   * 1700000000003). See NOTES.md for the full investigation writeup.
+   */
+  private async assertNoConflict(dto: CreateTestDriveDto, actor: Principal, manager: EntityManager): Promise<void> {
+    const conflicts = await this.testDrivesRepository.findBookedInRange(
+      dto.vehicleId,
+      new Date(dto.slotStart),
+      new Date(dto.slotEnd),
+      actor,
+      manager,
+    );
+    if (conflicts.length > 0) {
+      throw await this.buildConflictError(dto, actor, manager);
+    }
+  }
+
+  /** AC2: builds the 409 error, including the nearest open slots for the
+   * SAME vehicle+date (best-effort — a failure computing suggestions must
+   * never suppress the 409 itself, so any error from this secondary lookup
+   * is swallowed and simply yields an empty suggestion list). Reused by both
+   * the app-level pre-check (assertNoConflict) and the DB-level
+   * unique-violation catch in `book()`, so both paths return an identically
+   * shaped, equally helpful response. */
+  private async buildConflictError(
+    dto: CreateTestDriveDto,
+    actor: Principal,
+    manager: EntityManager,
+  ): Promise<TestDriveSlotConflictError> {
+    const requestedStart = new Date(dto.slotStart);
+    let suggestedSlots: { slotStart: string; slotEnd: string }[] = [];
+    try {
+      const dayStart = new Date(`${requestedStart.toISOString().slice(0, 10)}T00:00:00.000Z`);
+      const dayEnd = new Date(`${requestedStart.toISOString().slice(0, 10)}T23:59:59.999Z`);
+      const dayBookings = await this.testDrivesRepository.findBookedInRange(
+        dto.vehicleId,
+        dayStart,
+        dayEnd,
+        actor,
+        manager,
+      );
+      suggestedSlots = computeNearestOpenSlots(
+        requestedStart,
+        dayBookings.map((b) => ({ slotStart: b.slotStart, slotEnd: b.slotEnd })),
+      );
+    } catch {
+      // Best-effort — see this method's comment.
+    }
+
+    return new TestDriveSlotConflictError(
+      [
+        {
+          field: 'slotStart',
+          message: 'The selected vehicle is already booked for an overlapping time slot',
+        },
+      ],
+      suggestedSlots,
+    );
   }
 }

@@ -139,6 +139,83 @@ describe('NewTestDriveForm', () => {
     expect(await screen.findByText(/operating hours/i)).toBeInTheDocument();
   });
 
+  it('issue #36 AC1/AC2: a 409 conflict shows a form-level message and the suggested nearest open slots', async () => {
+    mockedApi.bookTestDrive.mockRejectedValue(
+      new ApiError(
+        409,
+        [{ field: 'slotStart', message: 'The selected vehicle is already booked for an overlapping time slot' }],
+        'Conflict',
+        [
+          { slotStart: '2026-08-01T10:30:00.000Z', slotEnd: '2026-08-01T11:00:00.000Z' },
+          { slotStart: '2026-08-01T11:00:00.000Z', slotEnd: '2026-08-01T11:30:00.000Z' },
+        ],
+      ),
+    );
+
+    renderForm();
+    await waitFor(() => expect(screen.getByRole('option', { name: /walk-in customer/i })).toBeInTheDocument());
+    const user = userEvent.setup();
+
+    await user.selectOptions(screen.getByLabelText(/customer.*enquiry/i), 'enq-1');
+    await user.selectOptions(screen.getByLabelText(/demo vehicle/i), 'v1');
+    await user.type(screen.getByLabelText(/^date$/i), '2026-08-01');
+    await user.type(screen.getByLabelText(/start time/i), '10:00');
+    await user.click(screen.getByRole('button', { name: /book test drive/i }));
+
+    expect(await screen.findByText(/already booked for an overlapping time slot/i)).toBeInTheDocument();
+    expect(screen.getByText(/try one of the nearest open slots/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /2026-08-01 10:30/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /2026-08-01 11:00/i })).toBeInTheDocument();
+  });
+
+  it('issue #36 AC2: clicking a suggested slot re-fills date/time and clears the conflict message', async () => {
+    mockedApi.bookTestDrive.mockRejectedValueOnce(
+      new ApiError(
+        409,
+        [{ field: 'slotStart', message: 'The selected vehicle is already booked for an overlapping time slot' }],
+        'Conflict',
+        [{ slotStart: '2026-08-01T10:30:00.000Z', slotEnd: '2026-08-01T11:00:00.000Z' }],
+      ),
+    );
+
+    renderForm();
+    await waitFor(() => expect(screen.getByRole('option', { name: /walk-in customer/i })).toBeInTheDocument());
+    const user = userEvent.setup();
+
+    await user.selectOptions(screen.getByLabelText(/customer.*enquiry/i), 'enq-1');
+    await user.selectOptions(screen.getByLabelText(/demo vehicle/i), 'v1');
+    await user.type(screen.getByLabelText(/^date$/i), '2026-08-01');
+    await user.type(screen.getByLabelText(/start time/i), '10:00');
+    await user.click(screen.getByRole('button', { name: /book test drive/i }));
+    await screen.findByText(/already booked for an overlapping time slot/i);
+
+    await user.click(screen.getByRole('button', { name: /2026-08-01 10:30/i }));
+
+    expect(screen.getByLabelText(/^date$/i)).toHaveValue('2026-08-01');
+    expect(screen.getByLabelText(/start time/i)).toHaveValue('10:30');
+    expect(screen.queryByText(/already booked for an overlapping time slot/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/try one of the nearest open slots/i)).not.toBeInTheDocument();
+  });
+
+  it('issue #36: a 409 with no suggestedSlots shows only the conflict message, no suggestion list', async () => {
+    mockedApi.bookTestDrive.mockRejectedValue(
+      new ApiError(409, [{ field: 'slotStart', message: 'Slot conflict' }], 'Conflict', []),
+    );
+
+    renderForm();
+    await waitFor(() => expect(screen.getByRole('option', { name: /walk-in customer/i })).toBeInTheDocument());
+    const user = userEvent.setup();
+
+    await user.selectOptions(screen.getByLabelText(/customer.*enquiry/i), 'enq-1');
+    await user.selectOptions(screen.getByLabelText(/demo vehicle/i), 'v1');
+    await user.type(screen.getByLabelText(/^date$/i), '2026-08-01');
+    await user.type(screen.getByLabelText(/start time/i), '10:00');
+    await user.click(screen.getByRole('button', { name: /book test drive/i }));
+
+    expect(await screen.findByText(/slot conflict/i)).toBeInTheDocument();
+    expect(screen.queryByText(/try one of the nearest open slots/i)).not.toBeInTheDocument();
+  });
+
   it('issue #35 AC4: pre-fills vehicle/date/time from initialValues, leaving enquiryId blank', async () => {
     renderForm({ vehicleId: 'v1', date: '2026-08-01', time: '10:00' });
     await waitFor(() => expect(screen.getByRole('option', { name: /walk-in customer/i })).toBeInTheDocument());

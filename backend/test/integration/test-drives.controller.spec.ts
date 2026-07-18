@@ -44,12 +44,23 @@ describe('POST /api/v1/test-drives (issue #34)', () => {
     financeInterest: true,
   });
 
-  const validBookingPayload = () => ({
-    enquiryId,
-    vehicleId,
-    slotStart: '2026-08-01T10:00:00.000Z',
-    slotEnd: '2026-08-01T10:30:00.000Z',
-  });
+  // MODIFIED (issue #36): each call now gets its own distinct, non-
+  // colliding day so the many tests in this describe block (which all reuse
+  // this same vehicleId) don't spuriously conflict with each other now that
+  // double-booking is rejected — see test-drives.service.spec.ts's identical
+  // comment on validBookingDto for the full rationale.
+  let bookingDayCounter = 0;
+  const validBookingPayload = () => {
+    bookingDayCounter += 1;
+    const start = new Date(Date.UTC(2027, 7, 1, 10, 0, 0) + bookingDayCounter * 24 * 60 * 60 * 1000);
+    const end = new Date(start.getTime() + 30 * 60000);
+    return {
+      enquiryId,
+      vehicleId,
+      slotStart: start.toISOString(),
+      slotEnd: end.toISOString(),
+    };
+  };
 
   beforeAll(async () => {
     ctx = await createTestApp();
@@ -168,6 +179,94 @@ describe('POST /api/v1/test-drives (issue #34)', () => {
 
   it('regression: POST /api/v1/enquiries still succeeds unaffected by the Test Drive slice', async () => {
     const res = await dseAAgent.post(ENQUIRIES_PATH).send(validEnquiryPayload());
+    expect(res.status).toBe(201);
+  });
+});
+
+describe('POST /api/v1/test-drives — issue #36 double-booking conflict (AC1-AC4)', () => {
+  let ctx: TestAppContext;
+  let dseAAgent: ReturnType<typeof request.agent>;
+  let vehicleId: string;
+
+  const validEnquiryPayload = () => ({
+    customerName: `Walk-in Customer ${Date.now()}-${Math.random()}`,
+    mobile: (() => {
+      const leading = ['6', '7', '8', '9'][Math.floor(Math.random() * 4)];
+      const rest = Array.from({ length: 9 }, () => Math.floor(Math.random() * 10)).join('');
+      return `${leading}${rest}`;
+    })(),
+    sourceId: 1,
+    modelId: 101,
+    budget: 300000,
+    variant: 'LX',
+    exchangeInterest: false,
+    financeInterest: true,
+  });
+
+  const bookingPayload = (enquiryId: string, slotStart: string, slotEnd: string) => ({
+    enquiryId,
+    vehicleId,
+    slotStart,
+    slotEnd,
+  });
+
+  beforeAll(async () => {
+    ctx = await createTestApp();
+    const dseA = ctx.seed.users['dseA'];
+    dseAAgent = await loginAgent(ctx.app, dseA.email, dseA.password);
+    vehicleId = ctx.seed.demoVehicleIdsByLocation[Object.keys(ctx.seed.locationIds)[0]][0];
+  });
+
+  afterAll(async () => {
+    await closeTestApp(ctx);
+  });
+
+  it('AC1/AC2: an overlapping booking for the same vehicle -> 409 with a reason and suggestedSlots', async () => {
+    const enquiry1 = await dseAAgent.post(ENQUIRIES_PATH).send(validEnquiryPayload());
+    const first = await dseAAgent
+      .post(TEST_DRIVES_PATH)
+      .send(bookingPayload(enquiry1.body.enquiryId, '2029-02-01T10:00:00.000Z', '2029-02-01T10:30:00.000Z'));
+    expect(first.status).toBe(201);
+
+    const enquiry2 = await dseAAgent.post(ENQUIRIES_PATH).send(validEnquiryPayload());
+    const res = await dseAAgent
+      .post(TEST_DRIVES_PATH)
+      .send(bookingPayload(enquiry2.body.enquiryId, '2029-02-01T10:00:00.000Z', '2029-02-01T10:30:00.000Z'));
+
+    expect(res.status).toBe(409);
+    expect(Array.isArray(res.body.errors)).toBe(true);
+    expect(res.body.errors.length).toBeGreaterThan(0);
+    expect(Array.isArray(res.body.suggestedSlots)).toBe(true);
+    expect(res.body.suggestedSlots).toEqual(
+      expect.arrayContaining([{ slotStart: '2029-02-01T10:30:00.000Z', slotEnd: '2029-02-01T11:00:00.000Z' }]),
+    );
+  });
+
+  it('AC4: a partially-overlapping (not exact-match) slot for the same vehicle -> 409', async () => {
+    const enquiry1 = await dseAAgent.post(ENQUIRIES_PATH).send(validEnquiryPayload());
+    const first = await dseAAgent
+      .post(TEST_DRIVES_PATH)
+      .send(bookingPayload(enquiry1.body.enquiryId, '2029-02-02T10:00:00.000Z', '2029-02-02T10:30:00.000Z'));
+    expect(first.status).toBe(201);
+
+    const enquiry2 = await dseAAgent.post(ENQUIRIES_PATH).send(validEnquiryPayload());
+    const res = await dseAAgent
+      .post(TEST_DRIVES_PATH)
+      .send(bookingPayload(enquiry2.body.enquiryId, '2029-02-02T10:15:00.000Z', '2029-02-02T10:45:00.000Z'));
+    expect(res.status).toBe(409);
+  });
+
+  it('an adjacent, non-overlapping slot for the same vehicle -> 201 (not a conflict)', async () => {
+    const enquiry1 = await dseAAgent.post(ENQUIRIES_PATH).send(validEnquiryPayload());
+    const first = await dseAAgent
+      .post(TEST_DRIVES_PATH)
+      .send(bookingPayload(enquiry1.body.enquiryId, '2029-02-03T10:30:00.000Z', '2029-02-03T11:00:00.000Z'));
+    expect(first.status).toBe(201);
+
+    const enquiry2 = await dseAAgent.post(ENQUIRIES_PATH).send(validEnquiryPayload());
+    const res = await dseAAgent
+      .post(TEST_DRIVES_PATH)
+      .send(bookingPayload(enquiry2.body.enquiryId, '2029-02-03T10:00:00.000Z', '2029-02-03T10:30:00.000Z'));
     expect(res.status).toBe(201);
   });
 });

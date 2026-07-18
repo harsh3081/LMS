@@ -324,6 +324,51 @@ describe('api client', () => {
     ).rejects.toMatchObject({ status: 404 });
   });
 
+  // -----------------------------------------------------------------
+  // issue #36 — 409 double-booking conflict, { errors, suggestedSlots } shape
+  // -----------------------------------------------------------------
+
+  it('bookTestDrive surfaces a 409 conflict as ApiError with fieldErrors AND suggestedSlots parsed from the { errors, suggestedSlots } body', async () => {
+    mockFetchOnce(409, {
+      errors: [{ field: 'slotStart', message: 'The selected vehicle is already booked for an overlapping time slot' }],
+      suggestedSlots: [
+        { slotStart: '2026-08-01T10:30:00.000Z', slotEnd: '2026-08-01T11:00:00.000Z' },
+        { slotStart: '2026-08-01T11:00:00.000Z', slotEnd: '2026-08-01T11:30:00.000Z' },
+      ],
+    });
+
+    try {
+      await api.bookTestDrive({
+        enquiryId: 'enq-1',
+        vehicleId: 'v1',
+        slotStart: '2026-08-01T10:00:00.000Z',
+        slotEnd: '2026-08-01T10:30:00.000Z',
+      });
+      throw new Error('expected bookTestDrive to reject');
+    } catch (err) {
+      expect(err).toBeInstanceOf(ApiError);
+      const apiError = err as ApiError;
+      expect(apiError.status).toBe(409);
+      expect(apiError.fieldErrors).toEqual([
+        { field: 'slotStart', message: 'The selected vehicle is already booked for an overlapping time slot' },
+      ]);
+      expect(apiError.suggestedSlots).toEqual([
+        { slotStart: '2026-08-01T10:30:00.000Z', slotEnd: '2026-08-01T11:00:00.000Z' },
+        { slotStart: '2026-08-01T11:00:00.000Z', slotEnd: '2026-08-01T11:30:00.000Z' },
+      ]);
+    }
+  });
+
+  it('a plain FieldError[] 400 body still yields a null suggestedSlots (backward-compatible parsing)', async () => {
+    mockFetchOnce(400, [{ field: 'enquiryId', message: 'enquiryId is required' }]);
+    try {
+      await api.bookTestDrive({ enquiryId: '', vehicleId: 'v1', slotStart: '2026-08-01T10:00:00.000Z', slotEnd: '2026-08-01T10:30:00.000Z' });
+      throw new Error('expected bookTestDrive to reject');
+    } catch (err) {
+      expect((err as ApiError).suggestedSlots).toBeNull();
+    }
+  });
+
   it('getUpcomingTestDrives fetches /api/v1/test-drives/upcoming', async () => {
     mockFetchOnce(200, [{ testDriveId: 'td-1', enquiryId: 'enq-1', slotStart: '2026-08-01T10:00:00.000Z' }]);
     const result = await api.getUpcomingTestDrives();

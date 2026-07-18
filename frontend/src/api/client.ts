@@ -216,6 +216,14 @@ export class ApiError extends Error {
     public readonly status: number,
     public readonly fieldErrors: FieldError[] | null,
     message: string,
+    /** NEW (issue #36, AC2) — populated only for the 409 double-booking
+     * conflict response (`POST /api/v1/test-drives`), whose body shape is
+     * `{ errors, suggestedSlots }` rather than the plain `FieldError[]`
+     * array every other error in this codebase uses (see
+     * backend/src/test-drives/test-drives.errors.ts's
+     * TestDriveSlotConflictError comment for why). `null` for every other
+     * error shape. */
+    public readonly suggestedSlots: SchedulerSlot[] | null = null,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -231,12 +239,18 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!response.ok) {
     let fieldErrors: FieldError[] | null = null;
+    let suggestedSlots: SchedulerSlot[] | null = null;
     let message = `Request to ${path} failed with status ${response.status}`;
     try {
       const body = await response.json();
       if (Array.isArray(body)) {
         fieldErrors = body;
         message = body.map((e: FieldError) => e.message).join('; ') || message;
+      } else if (Array.isArray(body?.errors)) {
+        // issue #36 AC2 — the 409 conflict shape: { errors, suggestedSlots }.
+        fieldErrors = body.errors;
+        suggestedSlots = Array.isArray(body.suggestedSlots) ? body.suggestedSlots : null;
+        message = body.errors.map((e: FieldError) => e.message).join('; ') || message;
       } else if (body?.message) {
         message = Array.isArray(body.message) ? body.message.join('; ') : String(body.message);
       }
@@ -251,7 +265,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     if (response.status === 401 && path !== '/api/v1/auth/login' && window.location.pathname !== '/login') {
       window.location.href = '/login';
     }
-    throw new ApiError(response.status, fieldErrors, message);
+    throw new ApiError(response.status, fieldErrors, message, suggestedSlots);
   }
 
   if (response.status === 204) return undefined as T;
