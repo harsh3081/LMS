@@ -407,7 +407,7 @@ describe('NewLeadForm', () => {
       );
     });
 
-    it('AC1: renders every new field from the 6 sections', () => {
+    it('AC1: renders every new field from the 6 sections', async () => {
       renderForm();
       expect(screen.getByLabelText(/^email$/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/customer type/i)).toBeInTheDocument();
@@ -422,7 +422,16 @@ describe('NewLeadForm', () => {
       expect(screen.getByLabelText(/budget max/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/buying timeline/i)).toBeInTheDocument();
 
+      // Exchange Vehicle detail fields are gated behind the "has a vehicle
+      // to exchange" checkbox — not present until it's checked.
       expect(screen.getByLabelText(/customer has a vehicle to exchange/i)).toBeInTheDocument();
+      expect(screen.queryByLabelText(/current vehicle/i)).not.toBeInTheDocument();
+      expect(screen.queryByLabelText(/kms driven/i)).not.toBeInTheDocument();
+      expect(screen.queryByLabelText(/registration number/i)).not.toBeInTheDocument();
+      expect(screen.queryByLabelText(/expected value/i)).not.toBeInTheDocument();
+
+      const user = userEvent.setup();
+      await user.click(screen.getByLabelText(/customer has a vehicle to exchange/i));
       expect(screen.getByLabelText(/current vehicle/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/kms driven/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/registration number/i)).toBeInTheDocument();
