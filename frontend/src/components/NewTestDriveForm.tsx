@@ -4,7 +4,8 @@ import { useEnquiries } from '../hooks/useEnquiries';
 import { useDemoVehicles } from '../hooks/useDemoVehicles';
 import { useVehicleModels } from '../hooks/useVehicleModels';
 import { useBookTestDrive } from '../hooks/useTestDrives';
-import { ApiError, CreateTestDriveInput } from '../api/client';
+import { ApiError, CreateTestDriveInput, SchedulerSlot } from '../api/client';
+import { isoDatePart, isoTimePart } from '../utils/schedulerGrid';
 import { Button, FormField, Select, TextInput } from './ui';
 
 /** issue #34 design decision: the booking form captures a single start
@@ -72,6 +73,9 @@ export function NewTestDriveForm({ initialValues }: NewTestDriveFormProps = {}) 
   const bookTestDrive = useBookTestDrive();
   const [confirmation, setConfirmation] = useState<{ testDriveId: string } | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  // issue #36 AC2: the nearest open slots suggested alongside a 409
+  // double-booking conflict — null when there is no active conflict.
+  const [suggestedSlots, setSuggestedSlots] = useState<SchedulerSlot[] | null>(null);
 
   const {
     register,
@@ -107,6 +111,7 @@ export function NewTestDriveForm({ initialValues }: NewTestDriveFormProps = {}) 
   const onSubmit = handleSubmit(async (values) => {
     setConfirmation(null);
     setFormError(null);
+    setSuggestedSlots(null);
     const input: CreateTestDriveInput = {
       enquiryId: values.enquiryId,
       vehicleId: values.vehicleId,
@@ -118,7 +123,14 @@ export function NewTestDriveForm({ initialValues }: NewTestDriveFormProps = {}) 
       setConfirmation({ testDriveId: created.testDriveId });
       reset();
     } catch (err) {
-      if (err instanceof ApiError && err.fieldErrors) {
+      if (err instanceof ApiError && err.status === 409) {
+        // issue #36 AC1/AC2: double-booking conflict — surfaced as a
+        // form-level message (not tied to one field, since the conflict is
+        // a cross-field/vehicle+slot business rule, not a single bad
+        // input) plus the server's suggested nearest open slots, if any.
+        setFormError(err.fieldErrors?.[0]?.message ?? err.message);
+        setSuggestedSlots(err.suggestedSlots ?? null);
+      } else if (err instanceof ApiError && err.fieldErrors) {
         for (const fieldError of err.fieldErrors) {
           if (fieldError.field === 'enquiryId' || fieldError.field === 'vehicleId') {
             setError(fieldError.field, { type: 'server', message: fieldError.message });
@@ -136,6 +148,21 @@ export function NewTestDriveForm({ initialValues }: NewTestDriveFormProps = {}) 
       }
     }
   });
+
+  /** issue #36 AC2: clicking a suggested slot re-fills the date/time
+   * controls with that slot (via react-hook-form's setValue, mirroring
+   * NewTestDriveForm's own AC4 pre-fill re-application pattern above) and
+   * clears the conflict message — the DSE reviews the now-filled form and
+   * submits again, rather than the click silently auto-booking on their
+   * behalf. Kept as a simple in-form re-fill (not a query-param
+   * navigation, unlike #35's cross-page pre-fill) since the DSE is already
+   * on this form. */
+  function applySuggestedSlot(slot: SchedulerSlot) {
+    setValue('date', isoDatePart(slot.slotStart));
+    setValue('time', isoTimePart(slot.slotStart));
+    setFormError(null);
+    setSuggestedSlots(null);
+  }
 
   return (
     <form onSubmit={onSubmit} noValidate aria-label="Book a Test Drive" className="space-y-1">
@@ -172,6 +199,24 @@ export function NewTestDriveForm({ initialValues }: NewTestDriveFormProps = {}) 
       {formError && (
         <div role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
           {formError}
+        </div>
+      )}
+      {suggestedSlots && suggestedSlots.length > 0 && (
+        <div className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          <p>Try one of the nearest open slots instead:</p>
+          <ul className="mt-1 flex flex-wrap gap-2">
+            {suggestedSlots.map((slot) => (
+              <li key={slot.slotStart}>
+                <button
+                  type="button"
+                  className="rounded-md border border-amber-300 bg-white px-2 py-1 text-xs font-medium text-amber-800 hover:bg-amber-100"
+                  onClick={() => applySuggestedSlot(slot)}
+                >
+                  {isoDatePart(slot.slotStart)} {isoTimePart(slot.slotStart)}
+                </button>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
       {confirmation && (

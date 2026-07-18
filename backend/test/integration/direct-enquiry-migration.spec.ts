@@ -120,9 +120,11 @@ describe('direct-enquiry migration (issue #26 Task 1.1)', () => {
     // (CreateFieldConfig/MakeLeadFieldsNullable/SeedAdminUser), issue #28
     // added a fourth (AddOwnerUpdatedAt), issue #30 added a fifth
     // (CreateFollowups), issue #31 added a sixth (AddNextFollowUpAt), issue
-    // #32 added a seventh (AddResultingStatusToFollowups), and issue #34
-    // added an eighth and ninth (CreateTestDrives/SeedDemoVehicles); undo
-    // those first, in reverse order, then undo this migration itself.
+    // #32 added a seventh (AddResultingStatusToFollowups), issue #34 added
+    // an eighth and ninth (CreateTestDrives/SeedDemoVehicles), and issue #36
+    // added a tenth (TestDriveConflictPrevention); undo those first, in
+    // reverse order, then undo this migration itself.
+    await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();

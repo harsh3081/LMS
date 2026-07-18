@@ -16,7 +16,11 @@ import { FieldConfigService } from '../../src/field-config/field-config.service'
 import { FieldConfigRepository } from '../../src/field-config/field-config.repository';
 import { DuplicatesService } from '../../src/duplicates/duplicates.service';
 import { DuplicatesRepository } from '../../src/duplicates/duplicates.repository';
-import { TestDriveEnquiryNotFoundError, OperatingHoursViolationError } from '../../src/test-drives/test-drives.errors';
+import {
+  TestDriveEnquiryNotFoundError,
+  OperatingHoursViolationError,
+  TestDriveSlotConflictError,
+} from '../../src/test-drives/test-drives.errors';
 import { ReferentialValidationError } from '../../src/leads/leads.errors';
 import { TEST_DRIVE_STATUS_BOOKED } from '../../src/test-drives/entities/test-drive.entity';
 import { Principal } from '../../src/common/principal';
@@ -86,12 +90,27 @@ describe('TestDrivesService.book (issue #34)', () => {
     financeInterest: true,
   });
 
-  const validBookingDto = (enquiryId: string, vehicleId: string) => ({
-    enquiryId,
-    vehicleId,
-    slotStart: '2026-08-01T10:00:00.000Z',
-    slotEnd: '2026-08-01T10:30:00.000Z',
-  });
+  // MODIFIED (issue #36): a fixed hardcoded slot here meant every call to
+  // validBookingDto() booked the exact same vehicle+slot — harmless before
+  // #36 (bookings were accepted naively), but now correctly rejected as a
+  // conflict by every call after the first. Each call now gets its own
+  // distinct, non-overlapping day so pre-existing tests that don't care
+  // about the specific slot value keep passing unaffected by the new
+  // conflict-detection behavior; tests that DO care about a specific
+  // date/time (operating-hours boundaries, the #36 conflict matrix) set
+  // slotStart/slotEnd explicitly instead of calling this helper.
+  let bookingDayCounter = 0;
+  const validBookingDto = (enquiryId: string, vehicleId: string) => {
+    bookingDayCounter += 1;
+    const start = new Date(Date.UTC(2027, 5, 1, 10, 0, 0) + bookingDayCounter * 24 * 60 * 60 * 1000);
+    const end = new Date(start.getTime() + 30 * 60000);
+    return {
+      enquiryId,
+      vehicleId,
+      slotStart: start.toISOString(),
+      slotEnd: end.toISOString(),
+    };
+  };
 
   it('AC1: books a Test Drive against an owned Enquiry', async () => {
     const enquiry = await enquiriesService.createDirect(validEnquiryDto(), actorA);
@@ -201,12 +220,16 @@ describe('TestDrivesService.book (issue #34)', () => {
 
     it(`accepts a slot exactly at the operating-window boundaries (${OPERATING_HOURS_START_HOUR}:00-${OPERATING_HOURS_END_HOUR}:00)`, async () => {
       const enquiry = await enquiriesService.createDirect(validEnquiryDto(), actorA);
+      // A dedicated, otherwise-untouched date (MODIFIED, issue #36): this
+      // slot spans the ENTIRE operating window, so it would (correctly)
+      // conflict with any other booking made against vehicleIdLoc1 on the
+      // same day — isolated onto its own date to avoid that.
       const testDrive = await service.book(
         {
           enquiryId: enquiry.enquiryId,
           vehicleId: vehicleIdLoc1,
-          slotStart: `2026-08-01T${String(OPERATING_HOURS_START_HOUR).padStart(2, '0')}:00:00.000Z`,
-          slotEnd: `2026-08-01T${String(OPERATING_HOURS_END_HOUR).padStart(2, '0')}:00:00.000Z`,
+          slotStart: `2027-03-15T${String(OPERATING_HOURS_START_HOUR).padStart(2, '0')}:00:00.000Z`,
+          slotEnd: `2027-03-15T${String(OPERATING_HOURS_END_HOUR).padStart(2, '0')}:00:00.000Z`,
         },
         actorA,
       );
@@ -231,15 +254,168 @@ describe('TestDrivesService.book (issue #34)', () => {
     });
   });
 
-  describe('deliberate scope boundary with issue #36: no double-booking/overlap check', () => {
-    it('accepts two overlapping bookings for the same vehicle naively (no conflict rejection in this Story)', async () => {
-      const enquiry1 = await enquiriesService.createDirect(validEnquiryDto(), actorA);
+  describe('issue #36: prevent double-booking of demo vehicles (AC1/AC3/AC4/AC5)', () => {
+    async function bookOnce(vehicleId: string, slotStart: string, slotEnd: string, actor = actorA) {
+      const enquiry = await enquiriesService.createDirect(validEnquiryDto(), actor);
+      return service.book({ enquiryId: enquiry.enquiryId, vehicleId, slotStart, slotEnd }, actor);
+    }
+
+    it('AC1: rejects a second booking for the exact same vehicle+slot with TestDriveSlotConflictError', async () => {
+      await bookOnce(vehicleIdLoc1, '2028-01-05T10:00:00.000Z', '2028-01-05T10:30:00.000Z');
+
       const enquiry2 = await enquiriesService.createDirect(validEnquiryDto(), actorA);
-      const first = await service.book(validBookingDto(enquiry1.enquiryId, vehicleIdLoc1), actorA);
-      const second = await service.book(validBookingDto(enquiry2.enquiryId, vehicleIdLoc1), actorA);
-      expect(first.testDriveId).not.toBe(second.testDriveId);
-      expect(first.vehicleId).toBe(second.vehicleId);
-      expect(first.slotStart).toEqual(second.slotStart);
+      await expect(
+        service.book(
+          { enquiryId: enquiry2.enquiryId, vehicleId: vehicleIdLoc1, slotStart: '2028-01-05T10:00:00.000Z', slotEnd: '2028-01-05T10:30:00.000Z' },
+          actorA,
+        ),
+      ).rejects.toBeInstanceOf(TestDriveSlotConflictError);
+    });
+
+    it('does not persist a second Test Drive when a conflict is rejected (fail fast within the transaction)', async () => {
+      const first = await bookOnce(vehicleIdLoc1, '2028-01-06T10:00:00.000Z', '2028-01-06T10:30:00.000Z');
+      const enquiry2 = await enquiriesService.createDirect(validEnquiryDto(), actorA);
+      const before = await dataSource.query('SELECT COUNT(*)::int AS count FROM test_drives');
+
+      await expect(
+        service.book(
+          { enquiryId: enquiry2.enquiryId, vehicleId: vehicleIdLoc1, slotStart: '2028-01-06T10:00:00.000Z', slotEnd: '2028-01-06T10:30:00.000Z' },
+          actorA,
+        ),
+      ).rejects.toBeInstanceOf(TestDriveSlotConflictError);
+
+      const after = await dataSource.query('SELECT COUNT(*)::int AS count FROM test_drives');
+      expect(after[0].count).toBe(before[0].count);
+      expect(first.status).toBe(TEST_DRIVE_STATUS_BOOKED);
+    });
+
+    it('AC4: rejects a PARTIAL overlap where the new slot starts before and ends inside the existing booking', async () => {
+      await bookOnce(vehicleIdLoc1, '2028-01-07T10:00:00.000Z', '2028-01-07T10:30:00.000Z');
+      const enquiry2 = await enquiriesService.createDirect(validEnquiryDto(), actorA);
+      await expect(
+        service.book(
+          { enquiryId: enquiry2.enquiryId, vehicleId: vehicleIdLoc1, slotStart: '2028-01-07T09:45:00.000Z', slotEnd: '2028-01-07T10:15:00.000Z' },
+          actorA,
+        ),
+      ).rejects.toBeInstanceOf(TestDriveSlotConflictError);
+    });
+
+    it('AC4: rejects a PARTIAL overlap where the new slot starts inside and ends after the existing booking', async () => {
+      await bookOnce(vehicleIdLoc1, '2028-01-08T10:00:00.000Z', '2028-01-08T10:30:00.000Z');
+      const enquiry2 = await enquiriesService.createDirect(validEnquiryDto(), actorA);
+      await expect(
+        service.book(
+          { enquiryId: enquiry2.enquiryId, vehicleId: vehicleIdLoc1, slotStart: '2028-01-08T10:15:00.000Z', slotEnd: '2028-01-08T10:45:00.000Z' },
+          actorA,
+        ),
+      ).rejects.toBeInstanceOf(TestDriveSlotConflictError);
+    });
+
+    it('AC4: rejects a new slot that fully CONTAINS an existing booking', async () => {
+      await bookOnce(vehicleIdLoc1, '2028-01-09T10:15:00.000Z', '2028-01-09T10:30:00.000Z');
+      const enquiry2 = await enquiriesService.createDirect(validEnquiryDto(), actorA);
+      await expect(
+        service.book(
+          { enquiryId: enquiry2.enquiryId, vehicleId: vehicleIdLoc1, slotStart: '2028-01-09T10:00:00.000Z', slotEnd: '2028-01-09T11:00:00.000Z' },
+          actorA,
+        ),
+      ).rejects.toBeInstanceOf(TestDriveSlotConflictError);
+    });
+
+    it('AC4: an ADJACENT, non-overlapping slot (ends exactly when the existing one starts) does NOT conflict', async () => {
+      await bookOnce(vehicleIdLoc1, '2028-01-10T10:30:00.000Z', '2028-01-10T11:00:00.000Z');
+      const enquiry2 = await enquiriesService.createDirect(validEnquiryDto(), actorA);
+      const second = await service.book(
+        { enquiryId: enquiry2.enquiryId, vehicleId: vehicleIdLoc1, slotStart: '2028-01-10T10:00:00.000Z', slotEnd: '2028-01-10T10:30:00.000Z' },
+        actorA,
+      );
+      expect(second.status).toBe(TEST_DRIVE_STATUS_BOOKED);
+    });
+
+    it('a booking for a DIFFERENT vehicle at the same slot does NOT conflict', async () => {
+      await bookOnce(vehicleIdLoc1, '2028-01-11T10:00:00.000Z', '2028-01-11T10:30:00.000Z');
+      const enquiry2 = await enquiriesService.createDirect(validEnquiryDto(), actorA);
+      const otherVehicle = seed.demoVehicleIdsByLocation[actorA.locationId][1];
+      const second = await service.book(
+        { enquiryId: enquiry2.enquiryId, vehicleId: otherVehicle, slotStart: '2028-01-11T10:00:00.000Z', slotEnd: '2028-01-11T10:30:00.000Z' },
+        actorA,
+      );
+      expect(second.status).toBe(TEST_DRIVE_STATUS_BOOKED);
+    });
+
+    it('the SAME vehicle+slot at a DIFFERENT tenant/location does NOT conflict (tenant-scoped)', async () => {
+      await bookOnce(vehicleIdLoc1, '2028-01-12T10:00:00.000Z', '2028-01-12T10:30:00.000Z', actorA);
+      const enquiryC = await enquiriesService.createDirect(validEnquiryDto(), actorC);
+      const second = await service.book(
+        { enquiryId: enquiryC.enquiryId, vehicleId: vehicleIdLoc2, slotStart: '2028-01-12T10:00:00.000Z', slotEnd: '2028-01-12T10:30:00.000Z' },
+        actorC,
+      );
+      expect(second.status).toBe(TEST_DRIVE_STATUS_BOOKED);
+    });
+
+    it('AC2: the conflict error includes a reason and the nearest open slots for the same vehicle/day', async () => {
+      await bookOnce(vehicleIdLoc1, '2028-01-13T10:00:00.000Z', '2028-01-13T10:30:00.000Z');
+      const enquiry2 = await enquiriesService.createDirect(validEnquiryDto(), actorA);
+
+      try {
+        await service.book(
+          { enquiryId: enquiry2.enquiryId, vehicleId: vehicleIdLoc1, slotStart: '2028-01-13T10:00:00.000Z', slotEnd: '2028-01-13T10:30:00.000Z' },
+          actorA,
+        );
+        throw new Error('expected book() to reject');
+      } catch (err) {
+        expect(err).toBeInstanceOf(TestDriveSlotConflictError);
+        const conflictError = err as TestDriveSlotConflictError;
+        expect(conflictError.errors.length).toBeGreaterThan(0);
+        expect(conflictError.errors[0].message).toMatch(/booked|overlap/i);
+        expect(conflictError.suggestedSlots).toEqual(
+          expect.arrayContaining([{ slotStart: '2028-01-13T10:30:00.000Z', slotEnd: '2028-01-13T11:00:00.000Z' }]),
+        );
+      }
+    });
+
+    it('AC5: a booking whose status has been directly set to a TERMINAL value no longer blocks a new overlapping booking', async () => {
+      const cancelled = await bookOnce(vehicleIdLoc1, '2028-01-14T10:00:00.000Z', '2028-01-14T10:30:00.000Z');
+
+      // Directly manipulate the row's status via raw SQL (bypassing the
+      // not-yet-built #39 cancel/reschedule endpoint) — proves the
+      // conflict-check query's status=BOOKED filter, not any #39 feature.
+      await dataSource.query(`UPDATE test_drives SET status = 'Cancelled' WHERE test_drive_id = $1`, [
+        cancelled.testDriveId,
+      ]);
+
+      const enquiry2 = await enquiriesService.createDirect(validEnquiryDto(), actorA);
+      const second = await service.book(
+        { enquiryId: enquiry2.enquiryId, vehicleId: vehicleIdLoc1, slotStart: '2028-01-14T10:00:00.000Z', slotEnd: '2028-01-14T10:30:00.000Z' },
+        actorA,
+      );
+      expect(second.status).toBe(TEST_DRIVE_STATUS_BOOKED);
+    });
+
+    it('AC3: of two concurrently-fired overlapping booking attempts for the same vehicle/slot, exactly one succeeds and one is rejected with TestDriveSlotConflictError', async () => {
+      const [enquiry1, enquiry2] = await Promise.all([
+        enquiriesService.createDirect(validEnquiryDto(), actorA),
+        enquiriesService.createDirect(validEnquiryDto(), actorA),
+      ]);
+
+      const slotStart = '2028-01-15T10:00:00.000Z';
+      const slotEnd = '2028-01-15T10:30:00.000Z';
+      const results = await Promise.allSettled([
+        service.book({ enquiryId: enquiry1.enquiryId, vehicleId: vehicleIdLoc1, slotStart, slotEnd }, actorA),
+        service.book({ enquiryId: enquiry2.enquiryId, vehicleId: vehicleIdLoc1, slotStart, slotEnd }, actorA),
+      ]);
+
+      const fulfilled = results.filter((r) => r.status === 'fulfilled');
+      const rejected = results.filter((r) => r.status === 'rejected');
+      expect(fulfilled).toHaveLength(1);
+      expect(rejected).toHaveLength(1);
+      expect((rejected[0] as PromiseRejectedResult).reason).toBeInstanceOf(TestDriveSlotConflictError);
+
+      const rows = await dataSource.query(
+        `SELECT COUNT(*)::int AS count FROM test_drives WHERE vehicle_id = $1 AND slot_start = $2 AND status = 'Booked'`,
+        [vehicleIdLoc1, slotStart],
+      );
+      expect(rows[0].count).toBe(1);
     });
   });
 

@@ -77,10 +77,12 @@ describe('owner-updated-at migration (issue #28 Task 1.1)', () => {
     dataSource = await createTestDataSource();
     // issue #30 added CreateFollowups1700000000010, issue #31 added
     // AddNextFollowUpAt1700000000011, issue #32 added
-    // AddResultingStatusToFollowups1700000000012, and issue #34 added
-    // CreateTestDrives1700000000013 / SeedDemoVehicles1700000000014, after
-    // this one; undo those first, in reverse order, then undo this
-    // migration itself.
+    // AddResultingStatusToFollowups1700000000012, issue #34 added
+    // CreateTestDrives1700000000013 / SeedDemoVehicles1700000000014, and
+    // issue #36 added TestDriveConflictPrevention1700000000015, after this
+    // one; undo those first, in reverse order, then undo this migration
+    // itself.
+    await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();

@@ -10,7 +10,11 @@ import { ReferentialValidationExceptionFilter } from './common/referential-valid
 import { EnquiryEligibilityExceptionFilter } from './common/enquiry-eligibility.filter';
 import { MandatoryFieldValidationExceptionFilter, UnknownFieldConfigExceptionFilter } from './field-config/field-config.filters';
 import { FollowupEnquiryNotFoundExceptionFilter, NextFollowUpRequiredExceptionFilter } from './followups/followups.filters';
-import { TestDriveEnquiryNotFoundExceptionFilter, OperatingHoursViolationExceptionFilter } from './test-drives/test-drives.filters';
+import {
+  TestDriveEnquiryNotFoundExceptionFilter,
+  OperatingHoursViolationExceptionFilter,
+  TestDriveSlotConflictExceptionFilter,
+} from './test-drives/test-drives.filters';
 
 /**
  * Builds a fully configured Nest application from an already-initialized
@@ -50,6 +54,7 @@ export async function createApp(dataSource: DataSource): Promise<INestApplicatio
     new NextFollowUpRequiredExceptionFilter(),
     new TestDriveEnquiryNotFoundExceptionFilter(),
     new OperatingHoursViolationExceptionFilter(),
+    new TestDriveSlotConflictExceptionFilter(),
   );
 
   const config = new DocumentBuilder()

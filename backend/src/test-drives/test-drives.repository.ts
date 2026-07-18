@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource, DeepPartial, EntityManager, LessThan, MoreThan, MoreThanOrEqual } from 'typeorm';
-import { TestDriveEntity } from './entities/test-drive.entity';
+import { TestDriveEntity, TEST_DRIVE_STATUS_BOOKED } from './entities/test-drive.entity';
 import { Principal } from '../common/principal';
 
 /**
@@ -50,7 +50,23 @@ export class TestDrivesRepository {
    * resource, not per-DSE). No SM/GM cross-location widening (unlike
    * FollowupsRepository.findByEnquiry's SM/GM branch) — GET /demo-vehicles
    * itself has no role-based branching either, so this mirrors that
-   * simpler, single-location-scoped precedent. Ascending by slotStart. */
+   * simpler, single-location-scoped precedent. Ascending by slotStart.
+   *
+   * MODIFIED (issue #36, AC1/AC3/AC4/AC5): now explicitly filters
+   * `status = TEST_DRIVE_STATUS_BOOKED` (previously implicit — until
+   * migration 1700000000015 widened the `status` CHECK constraint, this
+   * table could not contain any other status, so the filter was a no-op;
+   * now that Completed/No-show/Cancelled are legal values, this explicit
+   * filter is what makes AC5 ("cancelled/rescheduled bookings free up the
+   * slot immediately") true both here (issue #35's scheduler grid correctly
+   * stops showing a cancelled slot as booked) AND in
+   * TestDrivesService.assertNoConflict, which REUSES this exact method as
+   * its overlap-conflict query (issue #36's brief: "REUSE this pattern (or
+   * the method itself)") — a terminal-status row is therefore automatically
+   * and correctly excluded from blocking a new booking, with zero
+   * conflict-check-specific code needed for AC5. Accepts an optional
+   * `manager` (already did) so TestDrivesService can call this WITHIN the
+   * same transaction as its conflict-check-then-insert (ADR-002). */
   async findBookedInRange(
     vehicleId: string,
     from: Date,
@@ -64,6 +80,7 @@ export class TestDrivesRepository {
         vehicleId,
         locationId: actor.locationId,
         dealerGroupId: actor.dealerGroupId,
+        status: TEST_DRIVE_STATUS_BOOKED,
         slotStart: LessThan(to),
         slotEnd: MoreThan(from),
       },

@@ -91,17 +91,68 @@ describe('test-drives migrations (issue #34 Task 1.1)', () => {
     expect(result[0].status).toBe('Booked');
   });
 
-  it('CHECK constraint rejects an out-of-set status value (only "Booked" is legal until issue #39 widens it)', async () => {
+  it('CHECK constraint rejects a status value outside the full vocabulary', async () => {
     dataSource = await createTestDataSource();
     const { locationId, dealerGroupId, userId, enquiryId, vehicleId } = await seedParents();
 
     await expect(
       dataSource.query(
         `INSERT INTO test_drives (enquiry_id, vehicle_id, slot_start, slot_end, status, booked_by, location_id, dealer_group_id)
-         VALUES ($1, $2, '2026-08-01T10:00:00Z', '2026-08-01T10:30:00Z', 'Completed', $3, $4, $5)`,
+         VALUES ($1, $2, '2026-08-01T10:00:00Z', '2026-08-01T10:30:00Z', 'Bogus', $3, $4, $5)`,
         [enquiryId, vehicleId, userId, locationId, dealerGroupId],
       ),
     ).rejects.toBeTruthy();
+  });
+
+  it('MODIFIED (issue #36, migration 1700000000015): CHECK constraint now accepts Completed/No-show/Cancelled (widened early — see that migration\'s comment; only the schema capability is unlocked, no #39 endpoint exists yet)', async () => {
+    dataSource = await createTestDataSource();
+    const { locationId, dealerGroupId, userId, enquiryId, vehicleId } = await seedParents();
+
+    for (const status of ['Completed', 'No-show', 'Cancelled']) {
+      const result = await dataSource.query(
+        `INSERT INTO test_drives (enquiry_id, vehicle_id, slot_start, slot_end, status, booked_by, location_id, dealer_group_id)
+         VALUES ($1, $2, now(), now(), $6, $3, $4, $5) RETURNING status`,
+        [enquiryId, vehicleId, userId, locationId, dealerGroupId, status],
+      );
+      expect(result[0].status).toBe(status);
+    }
+  });
+
+  describe('issue #36 migration 1700000000015: partial UNIQUE index on (vehicle_id, slot_start, slot_end) WHERE status = Booked', () => {
+    it('rejects a second BOOKED row with the exact same vehicle_id/slot_start/slot_end', async () => {
+      dataSource = await createTestDataSource();
+      const { locationId, dealerGroupId, userId, enquiryId, vehicleId } = await seedParents();
+      const insertBooked = () =>
+        dataSource.query(
+          `INSERT INTO test_drives (enquiry_id, vehicle_id, slot_start, slot_end, status, booked_by, location_id, dealer_group_id)
+           VALUES ($1, $2, '2026-08-01T10:00:00Z', '2026-08-01T10:30:00Z', 'Booked', $3, $4, $5)`,
+          [enquiryId, vehicleId, userId, locationId, dealerGroupId],
+        );
+
+      await insertBooked();
+      await expect(insertBooked()).rejects.toBeTruthy();
+    });
+
+    it('AC5: does NOT block a new BOOKED row for the same vehicle/slot once the prior row is no longer Booked', async () => {
+      dataSource = await createTestDataSource();
+      const { locationId, dealerGroupId, userId, enquiryId, vehicleId } = await seedParents();
+      const inserted = await dataSource.query(
+        `INSERT INTO test_drives (enquiry_id, vehicle_id, slot_start, slot_end, status, booked_by, location_id, dealer_group_id)
+         VALUES ($1, $2, '2026-08-01T10:00:00Z', '2026-08-01T10:30:00Z', 'Booked', $3, $4, $5) RETURNING test_drive_id`,
+        [enquiryId, vehicleId, userId, locationId, dealerGroupId],
+      );
+      await dataSource.query(`UPDATE test_drives SET status = 'Cancelled' WHERE test_drive_id = $1`, [
+        inserted[0].test_drive_id,
+      ]);
+
+      await expect(
+        dataSource.query(
+          `INSERT INTO test_drives (enquiry_id, vehicle_id, slot_start, slot_end, status, booked_by, location_id, dealer_group_id)
+           VALUES ($1, $2, '2026-08-01T10:00:00Z', '2026-08-01T10:30:00Z', 'Booked', $3, $4, $5)`,
+          [enquiryId, vehicleId, userId, locationId, dealerGroupId],
+        ),
+      ).resolves.toBeTruthy();
+    });
   });
 
   it('FK constraint rejects a non-existent vehicle_id', async () => {
@@ -140,6 +191,7 @@ describe('test-drives migrations (issue #34 Task 1.1)', () => {
 
   it('down-migration reverses cleanly: SeedDemoVehicles1700000000014 removes only its own seeded rows', async () => {
     dataSource = await createTestDataSource();
+    await dataSource.undoLastMigration(); // TestDriveConflictPrevention1700000000015 (now the last migration)
     await dataSource.undoLastMigration();
 
     const rows: { vehicle_id: string }[] = await dataSource.query(
@@ -156,6 +208,7 @@ describe('test-drives migrations (issue #34 Task 1.1)', () => {
 
   it('down-migration reverses cleanly: drops test_drives and demo_vehicles (CreateTestDrives1700000000013)', async () => {
     dataSource = await createTestDataSource();
+    await dataSource.undoLastMigration(); // TestDriveConflictPrevention1700000000015
     await dataSource.undoLastMigration(); // SeedDemoVehicles1700000000014
     await dataSource.undoLastMigration(); // CreateTestDrives1700000000013
 
@@ -163,5 +216,31 @@ describe('test-drives migrations (issue #34 Task 1.1)', () => {
       `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('test_drives', 'demo_vehicles')`,
     );
     expect(tables).toEqual([]);
+  });
+
+  it('down-migration reverses cleanly: TestDriveConflictPrevention1700000000015 reverts the CHECK constraint and drops the partial unique index', async () => {
+    dataSource = await createTestDataSource();
+    const { locationId, dealerGroupId, userId, enquiryId, vehicleId } = await seedParents();
+
+    await dataSource.undoLastMigration(); // TestDriveConflictPrevention1700000000015
+
+    // The widened CHECK is reverted — only 'Booked' is legal again.
+    await expect(
+      dataSource.query(
+        `INSERT INTO test_drives (enquiry_id, vehicle_id, slot_start, slot_end, status, booked_by, location_id, dealer_group_id)
+         VALUES ($1, $2, now(), now(), 'Cancelled', $3, $4, $5)`,
+        [enquiryId, vehicleId, userId, locationId, dealerGroupId],
+      ),
+    ).rejects.toBeTruthy();
+
+    // The partial unique index is gone — an exact-duplicate slot no longer conflicts at the DB layer.
+    const insertBooked = () =>
+      dataSource.query(
+        `INSERT INTO test_drives (enquiry_id, vehicle_id, slot_start, slot_end, status, booked_by, location_id, dealer_group_id)
+         VALUES ($1, $2, '2026-08-01T10:00:00Z', '2026-08-01T10:30:00Z', 'Booked', $3, $4, $5)`,
+        [enquiryId, vehicleId, userId, locationId, dealerGroupId],
+      );
+    await insertBooked();
+    await expect(insertBooked()).resolves.toBeTruthy();
   });
 });

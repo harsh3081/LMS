@@ -26,6 +26,7 @@ import { AddNextFollowUpAt1700000000011 } from './migrations/1700000000011-AddNe
 import { AddResultingStatusToFollowups1700000000012 } from './migrations/1700000000012-AddResultingStatusToFollowups';
 import { CreateTestDrives1700000000013 } from './migrations/1700000000013-CreateTestDrives';
 import { SeedDemoVehicles1700000000014 } from './migrations/1700000000014-SeedDemoVehicles';
+import { TestDriveConflictPrevention1700000000015 } from './migrations/1700000000015-TestDriveConflictPrevention';
 
 /**
  * Real PostgreSQL 16 DataSource (tech-design.md: TypeORM, resolved) — used by
@@ -67,6 +68,7 @@ export const migrations = [
   AddResultingStatusToFollowups1700000000012,
   CreateTestDrives1700000000013,
   SeedDemoVehicles1700000000014,
+  TestDriveConflictPrevention1700000000015,
 ];
 
 export const dataSourceOptions: DataSourceOptions = {
