@@ -1,4 +1,12 @@
 /**
+ * RENAMED (issue #128) from LandingPage.spec.tsx — LeadManagementPage is a
+ * straight rename/relocation of the former LandingPage/"Dashboard": the
+ * page's own heading changed from "Dashboard" to "Lead Management" and it
+ * now mounts at `/leads` instead of `/`. No other behavior changed; every
+ * assertion below mirrors the original file, just retargeted at the new
+ * component/heading text. See DashboardPage.spec.tsx for the new
+ * placeholder that now lives at `/`.
+ *
  * RED->GREEN — Task 5.5: entry point + feature toggle (CC-10). UPDATED
  * (issue #118): "New Lead" is now a button that opens a slide-over panel
  * (SlideOver + NewLeadForm) instead of a `<Link>` navigating to /leads/new.
@@ -7,12 +15,12 @@
  * quick-action controls ("New Enquiry" link, "New Lead" button) — "My
  * Upcoming Follow-ups", "My Upcoming Test Drives", "Book a Test Drive", and
  * "Test Drive Scheduler" (along with their badge-count reads) are removed
- * from LandingPage itself, since they're now covered by the persistent
+ * from this page itself, since they're now covered by the persistent
  * Sidebar rendered by AppShell (see Sidebar.spec.tsx for that coverage).
  * Because AppShell now always renders the Sidebar too, and the Sidebar
  * happens to render some of the SAME link text/hrefs (e.g. "New Enquiry")
  * as this page's own quick actions, several queries below are scoped with
- * `within(main)` to assert against LandingPage's own content specifically
+ * `within(main)` to assert against this page's own content specifically
  * — a plain `getByRole('link', ...)` would otherwise match twice (once in
  * the page, once in the Sidebar) or silently match the Sidebar's copy after
  * a link was removed from the page.
@@ -22,7 +30,7 @@ import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
-import { LandingPage } from '../../src/pages/LandingPage';
+import { LeadManagementPage } from '../../src/pages/LeadManagementPage';
 import { SUCCESS_AUTO_CLOSE_MS } from '../../src/components/NewLeadForm';
 import { api } from '../../src/api/client';
 
@@ -54,18 +62,18 @@ const ALL_MANDATORY_FIELD_CONFIG = [
   { fieldName: 'modelId', label: 'Model of Interest', mandatory: true, updatedBy: null, updatedAt: null },
 ];
 
-function renderLanding() {
+function renderLeadManagement() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
-        <LandingPage />
+        <LeadManagementPage />
       </MemoryRouter>
     </QueryClientProvider>,
   );
 }
 
-describe('LandingPage entry point / feature toggle (CC-10)', () => {
+describe('LeadManagementPage entry point / feature toggle (CC-10)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockedApi.getMyLeads.mockResolvedValue([]);
@@ -79,7 +87,7 @@ describe('LandingPage entry point / feature toggle (CC-10)', () => {
   // ---- issue #126 AC4: header link row trimmed to the 2 quick actions ----
   it('AC4: no longer renders "My Upcoming Follow-ups", "My Upcoming Test Drives", "Book a Test Drive", "Test Drive Scheduler", or "Field Configuration" as part of its own content (now Sidebar-only nav)', async () => {
     mockedApi.getConfig.mockResolvedValue({ newLeadEnabled: true, convertLeadEnabled: true, directEnquiryEnabled: true });
-    renderLanding();
+    renderLeadManagement();
     const main = await screen.findByRole('main');
 
     // Scoped to the page's own <main> — the Sidebar (rendered by AppShell
@@ -100,7 +108,7 @@ describe('LandingPage entry point / feature toggle (CC-10)', () => {
 
   it('EVAL-CC-10: shows the New Lead entry point when the toggle is enabled', async () => {
     mockedApi.getConfig.mockResolvedValue({ newLeadEnabled: true, convertLeadEnabled: true, directEnquiryEnabled: true });
-    renderLanding();
+    renderLeadManagement();
     // issue #118 (AC1): the entry point is now a <button> that opens a
     // slide-over panel, not a <Link> that navigates to /leads/new.
     const entry = await screen.findByRole('button', { name: /new lead/i });
@@ -109,7 +117,7 @@ describe('LandingPage entry point / feature toggle (CC-10)', () => {
 
   it('hides the New Lead entry point when the toggle is disabled', async () => {
     mockedApi.getConfig.mockResolvedValue({ newLeadEnabled: false, convertLeadEnabled: true, directEnquiryEnabled: true });
-    renderLanding();
+    renderLeadManagement();
     await waitFor(() => expect(mockedApi.getConfig).toHaveBeenCalled());
     await waitFor(() => expect(screen.queryByRole('button', { name: /new lead/i })).not.toBeInTheDocument());
   });
@@ -122,12 +130,12 @@ describe('LandingPage entry point / feature toggle (CC-10)', () => {
       mockedApi.getConfig.mockResolvedValue({ newLeadEnabled: true, convertLeadEnabled: true, directEnquiryEnabled: true });
     });
 
-    it('AC1/AC2: clicking "New Lead" opens the panel without navigating away — the Dashboard stays mounted underneath', async () => {
-      renderLanding();
+    it('AC1/AC2: clicking "New Lead" opens the panel without navigating away — the page stays mounted underneath', async () => {
+      renderLeadManagement();
       const user = userEvent.setup();
 
-      // Dashboard content is present before opening the panel.
-      expect(await screen.findByRole('heading', { name: /dashboard/i })).toBeInTheDocument();
+      // Page content is present before opening the panel.
+      expect(await screen.findByRole('heading', { name: /lead management/i })).toBeInTheDocument();
       expect(await screen.findByRole('table', { name: /my leads/i })).toBeInTheDocument();
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 
@@ -136,10 +144,10 @@ describe('LandingPage entry point / feature toggle (CC-10)', () => {
       // The panel is now open (AC1: docked slide-over, not a page navigation)...
       const dialog = await screen.findByRole('dialog', { name: /new lead/i });
       expect(dialog).toBeInTheDocument();
-      // ...and the Dashboard heading/table are still in the document, proving
-      // this is an overlay on top of the still-mounted Dashboard, not a
+      // ...and the page heading/table are still in the document, proving
+      // this is an overlay on top of the still-mounted page, not a
       // replacement of it (AC1: "does NOT navigate to a separate page").
-      expect(screen.getByRole('heading', { name: /dashboard/i })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /lead management/i })).toBeInTheDocument();
       expect(screen.getByRole('table', { name: /my leads/i })).toBeInTheDocument();
 
       // AC2: the panel contains the New Lead form.
@@ -147,8 +155,8 @@ describe('LandingPage entry point / feature toggle (CC-10)', () => {
       expect(screen.getByLabelText(/customer name/i)).toBeInTheDocument();
     });
 
-    it('AC3: closing via the close button removes the panel and leaves the Dashboard intact', async () => {
-      renderLanding();
+    it('AC3: closing via the close button removes the panel and leaves the page intact', async () => {
+      renderLeadManagement();
       const user = userEvent.setup();
       await user.click(screen.getByRole('button', { name: /new lead/i }));
       await screen.findByRole('dialog', { name: /new lead/i });
@@ -156,10 +164,10 @@ describe('LandingPage entry point / feature toggle (CC-10)', () => {
       await user.click(screen.getByRole('button', { name: /close/i }));
 
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-      expect(screen.getByRole('heading', { name: /dashboard/i })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /lead management/i })).toBeInTheDocument();
     });
 
-    it('AC2/AC4: the form inside the panel works end-to-end through to a successful creation, and the Dashboard queue reflects it without a full page reload', async () => {
+    it('AC2/AC4: the form inside the panel works end-to-end through to a successful creation, and the page queue reflects it without a full page reload', async () => {
       mockedApi.createLead.mockResolvedValue({
         leadId: 'lead-panel-e2e',
         customerName: 'Panel E2E',
@@ -189,7 +197,7 @@ describe('LandingPage entry point / feature toggle (CC-10)', () => {
           return originalSetTimeout(fn as TimerHandler, delay, ...args);
         }) as typeof setTimeout);
 
-      renderLanding();
+      renderLeadManagement();
       const user = userEvent.setup();
       await user.click(screen.getByRole('button', { name: /new lead/i }));
       await screen.findByRole('dialog', { name: /new lead/i });
@@ -208,7 +216,7 @@ describe('LandingPage entry point / feature toggle (CC-10)', () => {
       // AC4: the already-visible "My Leads" table reflects the new Lead —
       // this is proven by useCreateLead's existing cache write (AC6 of
       // issue #24/#116), not by a second network read: getMyLeads was only
-      // ever called once, on the initial Dashboard mount.
+      // ever called once, on the initial page mount.
       expect(await screen.findByText('Panel E2E')).toBeInTheDocument();
       expect(mockedApi.getMyLeads).toHaveBeenCalledTimes(1);
 
@@ -228,11 +236,11 @@ describe('LandingPage entry point / feature toggle (CC-10)', () => {
   // an unscoped `getByRole('link', { name: /new enquiry/i })` would now
   // match BOTH the page's own quick action and the Sidebar's copy
   // ("Found multiple elements"). Scoped to `within(main)` so these assert
-  // against LandingPage's own quick action specifically.
+  // against this page's own quick action specifically.
   // -----------------------------------------------------------------
   it('shows the New Enquiry entry point when directEnquiryEnabled is true', async () => {
     mockedApi.getConfig.mockResolvedValue({ newLeadEnabled: true, convertLeadEnabled: true, directEnquiryEnabled: true });
-    renderLanding();
+    renderLeadManagement();
     const main = await screen.findByRole('main');
     const entry = await within(main).findByRole('link', { name: /new enquiry/i });
     expect(entry).toHaveAttribute('href', '/enquiries/new');
@@ -240,12 +248,12 @@ describe('LandingPage entry point / feature toggle (CC-10)', () => {
 
   it('hides the New Enquiry entry point when directEnquiryEnabled is false', async () => {
     mockedApi.getConfig.mockResolvedValue({ newLeadEnabled: true, convertLeadEnabled: true, directEnquiryEnabled: false });
-    renderLanding();
+    renderLeadManagement();
     const main = await screen.findByRole('main');
     await waitFor(() => expect(mockedApi.getConfig).toHaveBeenCalled());
     await waitFor(() => expect(within(main).queryByRole('link', { name: /new enquiry/i })).not.toBeInTheDocument());
     // The route stays reachable via the Sidebar's own, unconditional
-    // "New Enquiry" link — the feature toggle only ever gated LandingPage's
+    // "New Enquiry" link — the feature toggle only ever gated this page's
     // own quick-action copy, not the Sidebar (issue #126's minimal-shell
     // scope: the Sidebar is not toggle-aware).
     expect(screen.getByRole('link', { name: /new enquiry/i })).toHaveAttribute('href', '/enquiries/new');

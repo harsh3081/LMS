@@ -1,5 +1,6 @@
 import { Route, Routes } from 'react-router-dom';
-import { LandingPage } from './pages/LandingPage';
+import { DashboardPage } from './pages/DashboardPage';
+import { LeadManagementPage } from './pages/LeadManagementPage';
 import { NewLeadPage } from './pages/NewLeadPage';
 import { LeadDetailPage } from './pages/LeadDetailPage';
 import { ConvertLeadPage } from './pages/ConvertLeadPage';
@@ -16,7 +17,8 @@ export function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/" element={<LandingPage />} />
+      <Route path="/" element={<DashboardPage />} />
+      <Route path="/leads" element={<LeadManagementPage />} />
       <Route path="/leads/new" element={<NewLeadPage />} />
       <Route path="/leads/:leadId" element={<LeadDetailPage />} />
       <Route path="/leads/:leadId/convert" element={<ConvertLeadPage />} />
