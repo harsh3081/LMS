@@ -1,10 +1,12 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { useUpcomingFollowups } from '../hooks/useFollowups';
 import { useUpcomingTestDrives } from '../hooks/useTestDrives';
 import { LeadQueue } from '../components/LeadQueue';
+import { NewLeadForm } from '../components/NewLeadForm';
 import { AppShell } from '../components/layout/AppShell';
-import { buttonStyles } from '../components/ui';
+import { buttonStyles, SlideOver } from '../components/ui';
 
 /** DSE landing page (CC-10 entry point host). MODIFIED (issue #31, AC4): a
  * "My Upcoming Follow-ups" link, badged with the current count, is the
@@ -13,11 +15,21 @@ import { buttonStyles } from '../components/ui';
  * "My Upcoming Test Drives" link (badged with count) and a "Book a Test
  * Drive" entry point, mirroring the Follow-up entry points exactly.
  * MODIFIED (issue #35): a "Test Drive Scheduler" entry point into
- * TestDriveSchedulerPage (AC1-AC5). */
+ * TestDriveSchedulerPage (AC1-AC5). MODIFIED (issue #118, AC1/AC2/AC3/AC4):
+ * "New Lead" is no longer a `<Link>` navigating to /leads/new — it's a
+ * `<button>` that opens the New Lead form in a right-docked SlideOver panel
+ * over this same Dashboard (the Dashboard stays mounted underneath; nothing
+ * here unmounts). On a successful creation, NewLeadForm's `onSuccess` prop
+ * (issue #118, AC4) closes the panel automatically after its brief success
+ * message; the already-visible "My Leads" table below picks up the new Lead
+ * on its own via useCreateLead's existing cache write (src/hooks/useLeads.ts)
+ * — no extra wiring needed here. The `/leads/new` route (NewLeadPage) still
+ * exists unchanged for direct navigation/bookmarking (AC5). */
 export function LandingPage() {
   const { data: config } = useFeatureFlags();
   const { data: upcomingFollowups } = useUpcomingFollowups();
   const { data: upcomingTestDrives } = useUpcomingTestDrives();
+  const [isNewLeadOpen, setIsNewLeadOpen] = useState(false);
 
   return (
     <AppShell>
@@ -60,19 +72,23 @@ export function LandingPage() {
               </Link>
             )}
             {config?.newLeadEnabled !== false && (
-              <Link
-                to="/leads/new"
-                role="link"
+              <button
+                type="button"
+                onClick={() => setIsNewLeadOpen(true)}
                 className={`${buttonStyles.base} ${buttonStyles.primary}`}
               >
                 New Lead
-              </Link>
+              </button>
             )}
           </div>
         </div>
         <h2 className="mb-4 text-lg font-semibold text-slate-700">My Leads</h2>
         <LeadQueue />
       </main>
+
+      <SlideOver open={isNewLeadOpen} onClose={() => setIsNewLeadOpen(false)} title="New Lead">
+        <NewLeadForm onSuccess={() => setIsNewLeadOpen(false)} />
+      </SlideOver>
     </AppShell>
   );
 }

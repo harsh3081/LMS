@@ -9,3 +9,5 @@ export { Card } from './Card';
 export { StatusPill } from './StatusPill';
 export { Table, TableHead, TableBody, TableRow, TableHeaderCell, TableCell } from './Table';
 export { DetailField } from './DetailField';
+export { SlideOver } from './SlideOver';
+export type { SlideOverProps } from './SlideOver';
