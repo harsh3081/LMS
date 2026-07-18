@@ -202,6 +202,12 @@ export function NewLeadForm({ onSuccess }: NewLeadFormProps = {}) {
   const referralSourceId = (sources ?? []).find((s) => s.name === REFERRAL_SOURCE_NAME)?.sourceId;
   const showReferrerName = referralSourceId !== undefined && String(referralSourceId) === selectedSourceId;
 
+  // Exchange Vehicle detail fields are only shown once the DSE checks
+  // "Customer has a vehicle to exchange" — client-side only, mirrors
+  // showReferrerName's conditional-display pattern exactly. The fields stay
+  // independently optional server-side either way.
+  const showExchangeDetails = watch('exchangeInterest');
+
   /** AC1/AC5: real-time, synchronous check as the DSE finishes entering the
    * mobile number (on blur) — not a batch job, no page reload. A
    * network/API failure here is swallowed deliberately: the duplicate check
@@ -475,27 +481,29 @@ export function NewLeadForm({ onSuccess }: NewLeadFormProps = {}) {
             </label>
           </div>
 
-          <div className="grid grid-cols-1 gap-x-4 gap-y-1 md:grid-cols-2">
-            <FormField label="Current Vehicle" htmlFor="currentVehicle" error={errors.currentVehicle?.message}>
-              <TextInput id="currentVehicle" {...register('currentVehicle')} />
-            </FormField>
+          {showExchangeDetails && (
+            <div className="grid grid-cols-1 gap-x-4 gap-y-1 md:grid-cols-2">
+              <FormField label="Current Vehicle" htmlFor="currentVehicle" error={errors.currentVehicle?.message}>
+                <TextInput id="currentVehicle" {...register('currentVehicle')} />
+              </FormField>
 
-            <FormField label="KMs Driven" htmlFor="kmsDriven" error={errors.kmsDriven?.message}>
-              <TextInput id="kmsDriven" type="number" min={0} {...register('kmsDriven')} />
-            </FormField>
+              <FormField label="KMs Driven" htmlFor="kmsDriven" error={errors.kmsDriven?.message}>
+                <TextInput id="kmsDriven" type="number" min={0} {...register('kmsDriven')} />
+              </FormField>
 
-            <FormField
-              label="Registration Number"
-              htmlFor="registrationNumber"
-              error={errors.registrationNumber?.message}
-            >
-              <TextInput id="registrationNumber" {...register('registrationNumber')} />
-            </FormField>
+              <FormField
+                label="Registration Number"
+                htmlFor="registrationNumber"
+                error={errors.registrationNumber?.message}
+              >
+                <TextInput id="registrationNumber" {...register('registrationNumber')} />
+              </FormField>
 
-            <FormField label="Expected Value (INR)" htmlFor="expectedValue" error={errors.expectedValue?.message}>
-              <TextInput id="expectedValue" type="number" min={0} {...register('expectedValue')} />
-            </FormField>
-          </div>
+              <FormField label="Expected Value (INR)" htmlFor="expectedValue" error={errors.expectedValue?.message}>
+                <TextInput id="expectedValue" type="number" min={0} {...register('expectedValue')} />
+              </FormField>
+            </div>
+          )}
         </section>
 
         <section id="section-finance" className="space-y-3">
