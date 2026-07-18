@@ -8,3 +8,4 @@ export { FormField } from './FormField';
 export { Card } from './Card';
 export { StatusPill } from './StatusPill';
 export { Table, TableHead, TableBody, TableRow, TableHeaderCell, TableCell } from './Table';
+export { DetailField } from './DetailField';

@@ -1,23 +1,34 @@
-import { Body, Controller, Get, HttpCode, Post, UseGuards } from '@nestjs/common';
-import { ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, HttpCode, Param, Post, UseGuards } from '@nestjs/common';
+import { ApiCreatedResponse, ApiOkResponse, ApiParam, ApiTags } from '@nestjs/swagger';
 import { SessionAuthGuard } from '../auth/session-auth.guard';
 import { RequireCapability } from '../auth/require-capability.decorator';
 import { CurrentPrincipal } from '../auth/principal.decorator';
 import { Principal } from '../common/principal';
-import { LeadsService } from './leads.service';
+import { LeadsService, EnrichedLead } from './leads.service';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import { LeadResponseDto } from './dto/lead-response.dto';
 import { LeadEntity } from './entities/lead.entity';
 
-function toResponse(lead: LeadEntity): LeadResponseDto {
+/** MODIFIED (issue #116): accepts either a plain `LeadEntity` (the `create`
+ * path — deliberately NOT enriched, mirrors #34/#114's "keep the flat CREATE
+ * response minimal since the client already has what it just submitted")
+ * or an `EnrichedLead` (the list/detail paths, which always attach
+ * denormalized names) — `sourceName`/`modelName`/`ownerName` come through as
+ * `undefined` for the former, a string-or-null for the latter, matching
+ * LeadResponseDto's `?:` typing on those three fields exactly. */
+function toResponse(lead: LeadEntity | EnrichedLead): LeadResponseDto {
+  const names = lead as Partial<EnrichedLead>;
   return {
     leadId: lead.leadId,
     customerName: lead.customerName,
     mobile: lead.mobile,
     sourceId: lead.sourceId,
+    sourceName: names.sourceName,
     modelId: lead.modelId,
+    modelName: names.modelName,
     status: lead.status,
     ownerId: lead.ownerId,
+    ownerName: names.ownerName,
     ownerUpdatedAt:
       lead.ownerUpdatedAt instanceof Date ? lead.ownerUpdatedAt.toISOString() : lead.ownerUpdatedAt,
     locationId: lead.locationId,
@@ -77,5 +88,23 @@ export class LeadsController {
   async findOwnQueue(@CurrentPrincipal() actor: Principal): Promise<LeadResponseDto[]> {
     const leads = await this.leadsService.findOwnQueue(actor);
     return leads.map(toResponse);
+  }
+
+  /**
+   * NEW (issue #116, AC2) — single-Lead detail read, backing the new Lead
+   * Detail page. Registered AFTER `findOwnQueue` (Nest matches routes in
+   * declaration order; a bare `GET /api/v1/leads` must not fall through to
+   * this `:leadId` route, though in practice Express only treats this as a
+   * conflict for overlapping path shapes, which these are not). Owner-scoped
+   * — a 404 (never a 403) for any Lead the caller does not own, mirroring
+   * EnquiriesController's LeadNotFoundError handling for the exact same
+   * "not found, or out of scope — indistinguishable from non-existent" reason.
+   */
+  @Get(':leadId')
+  @ApiParam({ name: 'leadId', description: 'The Lead to view' })
+  @ApiOkResponse({ type: LeadResponseDto })
+  async findOne(@Param('leadId') leadId: string, @CurrentPrincipal() actor: Principal): Promise<LeadResponseDto> {
+    const lead = await this.leadsService.findOwnedById(leadId, actor);
+    return toResponse(lead);
   }
 }

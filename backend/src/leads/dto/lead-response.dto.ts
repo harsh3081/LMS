@@ -11,15 +11,29 @@ import { ApiProperty } from '@nestjs/swagger';
  * (migration 1700000000016-AddLeadCustomerDetails), so every new field is
  * "visible wherever Lead details are already surfaced" — this is currently
  * the only surface (POST/GET /api/v1/leads share this one response shape).
+ *
+ * MODIFIED (issue #116, AC1/AC2): `sourceName`/`modelName`/`ownerName` are
+ * NEW, denormalized read-only fields (LeadsService.attachNames) — the raw
+ * sourceId/modelId/ownerId stay on the DTO unchanged. Populated (never
+ * undefined) on the LIST (GET /api/v1/leads) and DETAIL
+ * (GET /api/v1/leads/:leadId) surfaces, where a human reads the response —
+ * deliberately left `undefined`/absent on the POST create response, which
+ * #34/#114 intentionally kept minimal since the client already has what it
+ * just submitted (see LeadsController.toResponse's comment). `ownerName` is
+ * null only if the owning user row was since deleted (no FK cascade exists)
+ * — cannot happen for a Lead's own self-assigned owner in practice.
  */
 export class LeadResponseDto {
   @ApiProperty() leadId!: string;
   @ApiProperty({ nullable: true, type: String }) customerName!: string | null;
   @ApiProperty({ nullable: true, type: String }) mobile!: string | null;
   @ApiProperty({ nullable: true, type: Number }) sourceId!: number | null;
+  @ApiProperty({ nullable: true, type: String, required: false }) sourceName?: string | null;
   @ApiProperty({ nullable: true, type: Number }) modelId!: number | null;
+  @ApiProperty({ nullable: true, type: String, required: false }) modelName?: string | null;
   @ApiProperty() status!: string;
   @ApiProperty() ownerId!: string;
+  @ApiProperty({ nullable: true, type: String, required: false }) ownerName?: string | null;
   @ApiProperty({ nullable: true, type: String }) ownerUpdatedAt!: string | null;
   @ApiProperty() locationId!: string;
   @ApiProperty() createdBy!: string;
