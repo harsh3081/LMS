@@ -153,4 +153,112 @@ describe('EnquiriesService (Task 2.4)', () => {
     const after = await dataSource.query('SELECT COUNT(*)::int AS count FROM enquiries');
     expect(after[0].count).toBe(before[0].count);
   });
+
+  // ---- issue #124: "Rewrite Convert Lead to Enquiry as a sectioned form" ----
+  describe('issue #124 — new sectioned-form fields', () => {
+    it('persists every new field across all 6 non-checklist sections when supplied', async () => {
+      const lead = await createLead();
+      const enquiry = await service.convert(
+        lead.leadId,
+        {
+          ...validDto(),
+          modelId: seed.modelIds[0],
+          fuelType: 'Petrol',
+          transmission: 'Automatic',
+          colorFirstPreference: 'Pearl White',
+          colorSecondPreference: 'Metallic Grey',
+          accessoriesInterest: 'Roof rails, seat covers',
+          competitorConsideration: 'Rival Model X',
+          contactVerified: 'OTP Verified',
+          intentRating: 'Hot',
+          expectedClosureDate: '2026-08-01',
+          showroomVisits: '2',
+          quotationNumber: 'QT-1001',
+          quotedOnRoadPrice: 560000,
+          discountDiscussed: 'Rs 35,000 + corporate offer',
+          insurancePreference: 'Dealer In-house',
+          extendedWarrantyInterest: 'Interested',
+          corporateDiscountEligible: 'Acme Corp',
+          financeApplicationStatus: 'Login Done',
+          financier: 'HDFC Bank',
+          loanAmountSought: 400000,
+          tenureAndEmiDiscussed: '60 months, Rs 8,500/mo',
+          exchangeEvaluationStatus: 'Completed',
+          exchangeEvaluatedBy: 'Yard Inspector A',
+          exchangeEvaluatedPrice: 250000,
+          exchangeCustomerExpectation: 280000,
+          testDriveStatus: 'Scheduled',
+          testDriveDateTime: '2026-08-02T10:30:00.000Z',
+          quotationSharedVia: 'WhatsApp',
+          nextActionOwnerId: actor.userId,
+          testDriveFeedback: 'Customer liked the ride quality',
+          panCardVerified: true,
+          addressProofVerified: true,
+          incomeProofVerified: false,
+          gstDetailsVerified: false,
+        },
+        actor,
+      );
+
+      expect(enquiry.modelId).toBe(seed.modelIds[0]);
+      expect(enquiry.fuelType).toBe('Petrol');
+      expect(enquiry.transmission).toBe('Automatic');
+      expect(enquiry.colorFirstPreference).toBe('Pearl White');
+      expect(enquiry.colorSecondPreference).toBe('Metallic Grey');
+      expect(enquiry.accessoriesInterest).toBe('Roof rails, seat covers');
+      expect(enquiry.competitorConsideration).toBe('Rival Model X');
+      expect(enquiry.contactVerified).toBe('OTP Verified');
+      expect(enquiry.intentRating).toBe('Hot');
+      expect(enquiry.showroomVisits).toBe('2');
+      expect(enquiry.quotationNumber).toBe('QT-1001');
+      expect(enquiry.quotedOnRoadPrice).toBe(560000);
+      expect(enquiry.discountDiscussed).toBe('Rs 35,000 + corporate offer');
+      expect(enquiry.insurancePreference).toBe('Dealer In-house');
+      expect(enquiry.extendedWarrantyInterest).toBe('Interested');
+      expect(enquiry.corporateDiscountEligible).toBe('Acme Corp');
+      expect(enquiry.financeApplicationStatus).toBe('Login Done');
+      expect(enquiry.financier).toBe('HDFC Bank');
+      expect(enquiry.loanAmountSought).toBe(400000);
+      expect(enquiry.tenureAndEmiDiscussed).toBe('60 months, Rs 8,500/mo');
+      expect(enquiry.exchangeEvaluationStatus).toBe('Completed');
+      expect(enquiry.exchangeEvaluatedBy).toBe('Yard Inspector A');
+      expect(enquiry.exchangeEvaluatedPrice).toBe(250000);
+      expect(enquiry.exchangeCustomerExpectation).toBe(280000);
+      expect(enquiry.testDriveStatus).toBe('Scheduled');
+      expect(enquiry.testDriveDateTime).toBeInstanceOf(Date);
+      expect(enquiry.quotationSharedVia).toBe('WhatsApp');
+      expect(enquiry.nextActionOwnerId).toBe(actor.userId);
+      expect(enquiry.testDriveFeedback).toBe('Customer liked the ride quality');
+      expect(enquiry.panCardVerified).toBe(true);
+      expect(enquiry.addressProofVerified).toBe(true);
+      expect(enquiry.incomeProofVerified).toBe(false);
+      expect(enquiry.gstDetailsVerified).toBe(false);
+    });
+
+    it('every new field defaults to null (booleans to false) when entirely omitted', async () => {
+      const lead = await createLead();
+      const enquiry = await service.convert(lead.leadId, validDto(), actor);
+
+      expect(enquiry.fuelType).toBeNull();
+      expect(enquiry.intentRating).toBeNull();
+      expect(enquiry.quotedOnRoadPrice).toBeNull();
+      expect(enquiry.financier).toBeNull();
+      expect(enquiry.exchangeEvaluationStatus).toBeNull();
+      expect(enquiry.testDriveDateTime).toBeNull();
+      expect(enquiry.nextActionOwnerId).toBeNull();
+      expect(enquiry.panCardVerified).toBe(false);
+      expect(enquiry.addressProofVerified).toBe(false);
+      expect(enquiry.incomeProofVerified).toBe(false);
+      expect(enquiry.gstDetailsVerified).toBe(false);
+    });
+
+    it('the original 4 required fields persist unchanged alongside the new optional ones', async () => {
+      const lead = await createLead();
+      const enquiry = await service.convert(lead.leadId, validDto(), actor);
+      expect(enquiry.budget).toBe(500000);
+      expect(enquiry.variant).toBe('VXi (O) CVT');
+      expect(enquiry.exchangeInterest).toBe(true);
+      expect(enquiry.financeInterest).toBe(false);
+    });
+  });
 });

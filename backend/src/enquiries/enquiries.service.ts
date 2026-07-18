@@ -49,6 +49,55 @@ export class EnquiriesService {
           variant: dto.variant,
           exchangeInterest: dto.exchangeInterest,
           financeInterest: dto.financeInterest,
+
+          // ---- issue #124: Section 1 Vehicle Information (editable defaults) ----
+          modelId: dto.modelId ?? null,
+          fuelType: dto.fuelType ?? null,
+          transmission: dto.transmission ?? null,
+          colorFirstPreference: dto.colorFirstPreference ?? null,
+          colorSecondPreference: dto.colorSecondPreference ?? null,
+          accessoriesInterest: dto.accessoriesInterest ?? null,
+          competitorConsideration: dto.competitorConsideration ?? null,
+
+          // ---- Section 2 Qualification ----
+          contactVerified: dto.contactVerified ?? null,
+          intentRating: dto.intentRating ?? null,
+          expectedClosureDate: dto.expectedClosureDate ?? null,
+          showroomVisits: dto.showroomVisits ?? null,
+
+          // ---- Section 3 Commercial ----
+          quotationNumber: dto.quotationNumber ?? null,
+          quotedOnRoadPrice: dto.quotedOnRoadPrice ?? null,
+          discountDiscussed: dto.discountDiscussed ?? null,
+          insurancePreference: dto.insurancePreference ?? null,
+          extendedWarrantyInterest: dto.extendedWarrantyInterest ?? null,
+          corporateDiscountEligible: dto.corporateDiscountEligible ?? null,
+
+          // ---- Section 4 Finance ----
+          financeApplicationStatus: dto.financeApplicationStatus ?? null,
+          financier: dto.financier ?? null,
+          loanAmountSought: dto.loanAmountSought ?? null,
+          tenureAndEmiDiscussed: dto.tenureAndEmiDiscussed ?? null,
+
+          // ---- Section 5 Exchange Evaluation ----
+          exchangeEvaluationStatus: dto.exchangeEvaluationStatus ?? null,
+          exchangeEvaluatedBy: dto.exchangeEvaluatedBy ?? null,
+          exchangeEvaluatedPrice: dto.exchangeEvaluatedPrice ?? null,
+          exchangeCustomerExpectation: dto.exchangeCustomerExpectation ?? null,
+
+          // ---- Section 6 Test Drive & Engagement ----
+          testDriveStatus: dto.testDriveStatus ?? null,
+          testDriveDateTime: dto.testDriveDateTime ? new Date(dto.testDriveDateTime) : null,
+          quotationSharedVia: dto.quotationSharedVia ?? null,
+          nextActionOwnerId: dto.nextActionOwnerId ?? null,
+          testDriveFeedback: dto.testDriveFeedback ?? null,
+
+          // ---- Section 7 Document Checklist ----
+          panCardVerified: dto.panCardVerified ?? false,
+          addressProofVerified: dto.addressProofVerified ?? false,
+          incomeProofVerified: dto.incomeProofVerified ?? false,
+          gstDetailsVerified: dto.gstDetailsVerified ?? false,
+
           // ---- server-derived, never from the client DTO ----
           convertedBy: actor.userId,
           ownerId: actor.userId,

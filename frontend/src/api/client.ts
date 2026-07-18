@@ -37,6 +37,28 @@ export const TRANSMISSIONS = ['Manual', 'Automatic'] as const;
 export const BUYING_TIMELINES = ['Immediate', 'Within 1 Month', '1-3 Months', '3-6 Months', '6+ Months'] as const;
 export const PAYMENT_MODES = ['Cash', 'Loan', 'Lease'] as const;
 
+/** Closed-set dropdown vocabularies NEW for issue #124 ("Rewrite Convert
+ * Lead to Enquiry as a sectioned form") — mirror
+ * backend/src/enquiries/entities/enquiry.entity.ts's exported constants
+ * exactly (same duplication convention as the issue #114 constants above:
+ * two independent app packages, not shared code). */
+export const CONTACT_VERIFIED_OPTIONS = ['Call Connected', 'OTP Verified', 'WhatsApp Confirmed', 'Not Verified'] as const;
+export const INTENT_RATINGS = ['Hot', 'Warm', 'Cold'] as const;
+export const SHOWROOM_VISIT_OPTIONS = ['0', '1', '2', '3+'] as const;
+export const INSURANCE_PREFERENCES = ['Dealer In-house', 'Own Arrangement', 'Undecided'] as const;
+export const WARRANTY_INTEREST_OPTIONS = ['Interested', 'Not Interested', 'Undecided'] as const;
+export const FINANCE_APPLICATION_STATUSES = [
+  'Not Started',
+  'Documents Collected',
+  'Login Done',
+  'Approved',
+  'Rejected',
+] as const;
+export const FINANCIER_OPTIONS = ['In-house', 'HDFC Bank', 'SBI', 'ICICI Bank'] as const;
+export const EXCHANGE_EVALUATION_STATUSES = ['Not Scheduled', 'Scheduled', 'Completed', 'No Exchange'] as const;
+export const TEST_DRIVE_STATUSES = ['Not Scheduled', 'Scheduled', 'Completed', 'Declined'] as const;
+export const QUOTATION_SHARED_VIA_OPTIONS = ['WhatsApp', 'Email', 'Printed', 'Not Shared'] as const;
+
 /** MODIFIED (issue #27, FR-04): the four Lead-equivalent fields are now
  * optional here — whether they are actually required at submission time is
  * config-driven (see useFieldConfig/FieldConfigEntry below), enforced both
@@ -173,18 +195,73 @@ export interface UpdateFieldConfigInput {
   fields: { fieldName: string; mandatory: boolean }[];
 }
 
-/** ConvertLeadDto qualifying fields (issue #25, tech-design.md Component 6). */
+/** ConvertLeadDto qualifying fields (issue #25, tech-design.md Component 6).
+ * MODIFIED (issue #124, AC3/AC4): the original 4 fields below keep their
+ * exact required-ness unchanged; every field added below mirrors
+ * ConvertLeadDto's new optional fields exactly, grouped by the rewritten
+ * Convert-to-Enquiry form's 8 UI sections. Section 0 (Customer Information)
+ * is read-only/not submitted — see NOTES.md. */
 export interface ConvertLeadInput {
   budget: number;
   variant: string;
   exchangeInterest: boolean;
   financeInterest: boolean;
+
+  // ---- 1. Vehicle Information (pre-filled from the Lead, editable) ----
+  modelId?: number;
+  fuelType?: (typeof FUEL_TYPES)[number];
+  transmission?: (typeof TRANSMISSIONS)[number];
+  colorFirstPreference?: string;
+  colorSecondPreference?: string;
+  accessoriesInterest?: string;
+  competitorConsideration?: string;
+
+  // ---- 2. Qualification ----
+  contactVerified?: (typeof CONTACT_VERIFIED_OPTIONS)[number];
+  intentRating?: (typeof INTENT_RATINGS)[number];
+  expectedClosureDate?: string;
+  showroomVisits?: (typeof SHOWROOM_VISIT_OPTIONS)[number];
+
+  // ---- 3. Commercial ----
+  quotationNumber?: string;
+  quotedOnRoadPrice?: number;
+  discountDiscussed?: string;
+  insurancePreference?: (typeof INSURANCE_PREFERENCES)[number];
+  extendedWarrantyInterest?: (typeof WARRANTY_INTEREST_OPTIONS)[number];
+  corporateDiscountEligible?: string;
+
+  // ---- 4. Finance ----
+  financeApplicationStatus?: (typeof FINANCE_APPLICATION_STATUSES)[number];
+  financier?: (typeof FINANCIER_OPTIONS)[number];
+  loanAmountSought?: number;
+  tenureAndEmiDiscussed?: string;
+
+  // ---- 5. Exchange Evaluation ----
+  exchangeEvaluationStatus?: (typeof EXCHANGE_EVALUATION_STATUSES)[number];
+  exchangeEvaluatedBy?: string;
+  exchangeEvaluatedPrice?: number;
+  exchangeCustomerExpectation?: number;
+
+  // ---- 6. Test Drive & Engagement ----
+  testDriveStatus?: (typeof TEST_DRIVE_STATUSES)[number];
+  testDriveDateTime?: string;
+  quotationSharedVia?: (typeof QUOTATION_SHARED_VIA_OPTIONS)[number];
+  nextActionOwnerId?: string;
+  testDriveFeedback?: string;
+
+  // ---- 7. Document Checklist ----
+  panCardVerified?: boolean;
+  addressProofVerified?: boolean;
+  incomeProofVerified?: boolean;
+  gstDetailsVerified?: boolean;
 }
 
 /** Mirrors EnquiryResponseDto (dealerGroupId intentionally excluded).
  * MODIFIED (issue #26): `leadId` is nullable (null for a Direct Enquiry);
  * `entryType` and the Lead-equivalent fields were added (populated only for
- * Direct Enquiries, null for ones converted from a Lead). */
+ * Direct Enquiries, null for ones converted from a Lead).
+ * MODIFIED (issue #124, AC5): 30 new fields added, one per new Enquiry
+ * column — mirrors EnquiryResponseDto exactly. */
 export interface Enquiry {
   enquiryId: string;
   leadId: string | null;
@@ -202,6 +279,46 @@ export interface Enquiry {
   status: string;
   ownerId: string;
   locationId: string;
+
+  fuelType?: string | null;
+  transmission?: string | null;
+  colorFirstPreference?: string | null;
+  colorSecondPreference?: string | null;
+  accessoriesInterest?: string | null;
+  competitorConsideration?: string | null;
+
+  contactVerified?: string | null;
+  intentRating?: string | null;
+  expectedClosureDate?: string | null;
+  showroomVisits?: string | null;
+
+  quotationNumber?: string | null;
+  quotedOnRoadPrice?: number | null;
+  discountDiscussed?: string | null;
+  insurancePreference?: string | null;
+  extendedWarrantyInterest?: string | null;
+  corporateDiscountEligible?: string | null;
+
+  financeApplicationStatus?: string | null;
+  financier?: string | null;
+  loanAmountSought?: number | null;
+  tenureAndEmiDiscussed?: string | null;
+
+  exchangeEvaluationStatus?: string | null;
+  exchangeEvaluatedBy?: string | null;
+  exchangeEvaluatedPrice?: number | null;
+  exchangeCustomerExpectation?: number | null;
+
+  testDriveStatus?: string | null;
+  testDriveDateTime?: string | null;
+  quotationSharedVia?: string | null;
+  nextActionOwnerId?: string | null;
+  testDriveFeedback?: string | null;
+
+  panCardVerified?: boolean;
+  addressProofVerified?: boolean;
+  incomeProofVerified?: boolean;
+  gstDetailsVerified?: boolean;
 }
 
 /** CreateDirectEnquiryDto fields (issue #26) — the Lead-equivalent
