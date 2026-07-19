@@ -4,19 +4,23 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Primary accent — a deep, professional blue appropriate for a
-        // B2B/CRM dealership sales tool.
+        // Primary accent — violet, matching the reference design used for
+        // the Login page (issue #136) and the Sidebar/Lead Management
+        // redesign (issue #138). Applied app-wide (not just those two
+        // pages) so every primary button/active-state/focus-ring stays
+        // visually consistent rather than a two-tone mix of the old blue
+        // and the new violet. Values are Tailwind's stock `violet` scale.
         brand: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#3b82f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
-          800: '#1e40af',
-          900: '#1e3a8a',
+          50: '#f5f3ff',
+          100: '#ede9fe',
+          200: '#ddd6fe',
+          300: '#c4b5fd',
+          400: '#a78bfa',
+          500: '#8b5cf6',
+          600: '#7c3aed',
+          700: '#6d28d9',
+          800: '#5b21b6',
+          900: '#4c1d95',
         },
       },
       fontFamily: {
