@@ -141,6 +141,120 @@ describe('EnquiriesService.createDirect (Task 2.4, issue #26)', () => {
   });
 
   // -------------------------------------------------------------------
+  // issue #134 — every new Customer Details + Section 1-7 field persists on
+  // the created Enquiry, mirroring convert()'s equivalent coverage.
+  // -------------------------------------------------------------------
+  describe('issue #134: extended field set', () => {
+    it('persists the 5 new Customer Details fields (Section 0)', async () => {
+      const dto = {
+        ...validDto(),
+        email: 'asha.rao@example.com',
+        customerType: 'Individual' as const,
+        city: 'Pune',
+        pinCode: '411001',
+        preferredLanguage: 'Hindi' as const,
+      };
+      const enquiry = await service.createDirect(dto, actor);
+
+      expect(enquiry.email).toBe(dto.email);
+      expect(enquiry.customerType).toBe(dto.customerType);
+      expect(enquiry.city).toBe(dto.city);
+      expect(enquiry.pinCode).toBe(dto.pinCode);
+      expect(enquiry.preferredLanguage).toBe(dto.preferredLanguage);
+    });
+
+    it('defaults the 5 new Customer Details fields to null when omitted', async () => {
+      const enquiry = await service.createDirect(validDto(), actor);
+
+      expect(enquiry.email).toBeNull();
+      expect(enquiry.customerType).toBeNull();
+      expect(enquiry.city).toBeNull();
+      expect(enquiry.pinCode).toBeNull();
+      expect(enquiry.preferredLanguage).toBeNull();
+    });
+
+    it('persists Sections 1-7 fields (mirrors ConvertLeadDto field set)', async () => {
+      const dto = {
+        ...validDto(),
+        fuelType: 'Petrol' as const,
+        transmission: 'Manual' as const,
+        colorFirstPreference: 'White',
+        colorSecondPreference: 'Silver',
+        accessoriesInterest: 'Sunroof',
+        competitorConsideration: 'Rival X',
+        contactVerified: 'OTP Verified' as const,
+        intentRating: 'Hot' as const,
+        expectedClosureDate: '2026-08-01',
+        showroomVisits: '1' as const,
+        quotationNumber: 'Q-1001',
+        quotedOnRoadPrice: 550000,
+        discountDiscussed: 'Rs 20,000',
+        insurancePreference: 'Dealer In-house' as const,
+        extendedWarrantyInterest: 'Interested' as const,
+        corporateDiscountEligible: 'Acme Corp',
+        financeApplicationStatus: 'Login Done' as const,
+        financier: 'HDFC Bank' as const,
+        loanAmountSought: 400000,
+        tenureAndEmiDiscussed: '60 months',
+        exchangeEvaluationStatus: 'Completed' as const,
+        exchangeEvaluatedBy: 'DSE A',
+        exchangeEvaluatedPrice: 250000,
+        exchangeCustomerExpectation: 280000,
+        testDriveStatus: 'Completed' as const,
+        testDriveDateTime: '2026-08-02T10:30:00.000Z',
+        quotationSharedVia: 'WhatsApp' as const,
+        testDriveFeedback: 'Positive',
+        panCardVerified: true,
+        addressProofVerified: true,
+        incomeProofVerified: true,
+        gstDetailsVerified: true,
+      };
+      const enquiry = await service.createDirect(dto, actor);
+
+      expect(enquiry.fuelType).toBe(dto.fuelType);
+      expect(enquiry.transmission).toBe(dto.transmission);
+      expect(enquiry.colorFirstPreference).toBe(dto.colorFirstPreference);
+      expect(enquiry.colorSecondPreference).toBe(dto.colorSecondPreference);
+      expect(enquiry.accessoriesInterest).toBe(dto.accessoriesInterest);
+      expect(enquiry.competitorConsideration).toBe(dto.competitorConsideration);
+      expect(enquiry.contactVerified).toBe(dto.contactVerified);
+      expect(enquiry.intentRating).toBe(dto.intentRating);
+      expect(enquiry.expectedClosureDate).toBe(dto.expectedClosureDate);
+      expect(enquiry.showroomVisits).toBe(dto.showroomVisits);
+      expect(enquiry.quotationNumber).toBe(dto.quotationNumber);
+      expect(enquiry.quotedOnRoadPrice).toBe(dto.quotedOnRoadPrice);
+      expect(enquiry.discountDiscussed).toBe(dto.discountDiscussed);
+      expect(enquiry.insurancePreference).toBe(dto.insurancePreference);
+      expect(enquiry.extendedWarrantyInterest).toBe(dto.extendedWarrantyInterest);
+      expect(enquiry.corporateDiscountEligible).toBe(dto.corporateDiscountEligible);
+      expect(enquiry.financeApplicationStatus).toBe(dto.financeApplicationStatus);
+      expect(enquiry.financier).toBe(dto.financier);
+      expect(enquiry.loanAmountSought).toBe(dto.loanAmountSought);
+      expect(enquiry.tenureAndEmiDiscussed).toBe(dto.tenureAndEmiDiscussed);
+      expect(enquiry.exchangeEvaluationStatus).toBe(dto.exchangeEvaluationStatus);
+      expect(enquiry.exchangeEvaluatedBy).toBe(dto.exchangeEvaluatedBy);
+      expect(enquiry.exchangeEvaluatedPrice).toBe(dto.exchangeEvaluatedPrice);
+      expect(enquiry.exchangeCustomerExpectation).toBe(dto.exchangeCustomerExpectation);
+      expect(enquiry.testDriveStatus).toBe(dto.testDriveStatus);
+      expect(enquiry.testDriveDateTime?.toISOString()).toBe(dto.testDriveDateTime);
+      expect(enquiry.quotationSharedVia).toBe(dto.quotationSharedVia);
+      expect(enquiry.testDriveFeedback).toBe(dto.testDriveFeedback);
+      expect(enquiry.panCardVerified).toBe(true);
+      expect(enquiry.addressProofVerified).toBe(true);
+      expect(enquiry.incomeProofVerified).toBe(true);
+      expect(enquiry.gstDetailsVerified).toBe(true);
+    });
+
+    it('defaults the 4 Document Checklist booleans to false when omitted', async () => {
+      const enquiry = await service.createDirect(validDto(), actor);
+      expect(enquiry.panCardVerified).toBe(false);
+      expect(enquiry.addressProofVerified).toBe(false);
+      expect(enquiry.incomeProofVerified).toBe(false);
+      expect(enquiry.gstDetailsVerified).toBe(false);
+    });
+  });
+
+  // -------------------------------------------------------------------
   // issue #29 (FR-06, AC3) — mirrors leads.service.spec.ts's duplicate-audit
   // block exactly.
   // -------------------------------------------------------------------

@@ -81,10 +81,12 @@ describe('field-config migrations (issue #27 Task 1.1)', () => {
     // AddResultingStatusToFollowups1700000000012 (issue #32),
     // CreateTestDrives1700000000013 / SeedDemoVehicles1700000000014 (issue
     // #34), TestDriveConflictPrevention1700000000015 (issue #36),
-    // AddLeadCustomerDetails1700000000016 (issue #114), and
-    // AddEnquiryConversionDetails1700000000017 (issue #124) were all added
+    // AddLeadCustomerDetails1700000000016 (issue #114),
+    // AddEnquiryConversionDetails1700000000017 (issue #124), and
+    // AddEnquiryCustomerDetails1700000000018 (issue #134) were all added
     // after this migration; undo those first, in reverse order, then undo
     // this migration itself.
+    await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
