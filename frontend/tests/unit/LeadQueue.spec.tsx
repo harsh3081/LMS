@@ -342,6 +342,17 @@ describe('LeadQueue — professional table redesign (issue #116)', () => {
     await screen.findByText('Asha Rao');
   });
 
+  it('renders an avatar-style Recipient cell with initials, keeping the full name text accessible', async () => {
+    mockedApi.getMyLeads.mockResolvedValue([openLead]);
+    mockedApi.getConfig.mockResolvedValue({ newLeadEnabled: true, convertLeadEnabled: true, directEnquiryEnabled: true });
+
+    renderQueue();
+
+    expect(await screen.findByText('Asha Rao')).toBeInTheDocument();
+    // "Asha Rao" -> "AR" initials badge (issue #138).
+    expect(screen.getByText('AR')).toBeInTheDocument();
+  });
+
   it('truncates a long customer name visually but keeps the full text accessible', async () => {
     const longNameLead: Lead = {
       ...openLead,
@@ -356,5 +367,54 @@ describe('LeadQueue — professional table redesign (issue #116)', () => {
     const cell = await screen.findByText(longNameLead.customerName!);
     expect(cell).toHaveClass('truncate');
     expect(cell).toHaveAttribute('title', longNameLead.customerName);
+  });
+});
+
+describe('LeadQueue — search box (issue #138)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockedApi.getConfig.mockResolvedValue({ newLeadEnabled: true, convertLeadEnabled: true, directEnquiryEnabled: true });
+  });
+
+  it('filters rows by customer name as the user types, and clearing the box restores every row', async () => {
+    mockedApi.getMyLeads.mockResolvedValue([openLead, secondOpenLead]);
+    renderQueue();
+    const user = userEvent.setup();
+
+    await screen.findByText('Asha Rao');
+    expect(screen.getByText('Priya Nair')).toBeInTheDocument();
+
+    await user.type(screen.getByRole('searchbox', { name: /search leads/i }), 'Priya');
+
+    expect(screen.queryByText('Asha Rao')).not.toBeInTheDocument();
+    expect(screen.getByText('Priya Nair')).toBeInTheDocument();
+
+    await user.clear(screen.getByRole('searchbox', { name: /search leads/i }));
+
+    expect(screen.getByText('Asha Rao')).toBeInTheDocument();
+    expect(screen.getByText('Priya Nair')).toBeInTheDocument();
+  });
+
+  it('matches case-insensitively across mobile, model, source, and owner too', async () => {
+    mockedApi.getMyLeads.mockResolvedValue([openLead]);
+    renderQueue();
+    const user = userEvent.setup();
+
+    await screen.findByText('Asha Rao');
+    await user.type(screen.getByRole('searchbox', { name: /search leads/i }), 'hatchback');
+
+    expect(screen.getByText('Asha Rao')).toBeInTheDocument();
+  });
+
+  it('shows a "no leads match" row when the search term matches nothing', async () => {
+    mockedApi.getMyLeads.mockResolvedValue([openLead]);
+    renderQueue();
+    const user = userEvent.setup();
+
+    await screen.findByText('Asha Rao');
+    await user.type(screen.getByRole('searchbox', { name: /search leads/i }), 'nonexistent-zzz');
+
+    expect(screen.queryByText('Asha Rao')).not.toBeInTheDocument();
+    expect(await screen.findByText(/no leads match your search/i)).toBeInTheDocument();
   });
 });

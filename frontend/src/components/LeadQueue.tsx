@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLeads } from '../hooks/useLeads';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
@@ -12,12 +12,32 @@ import {
   TableCell,
   StatusPill,
   SlideOver,
+  TextInput,
   buttonStyles,
 } from './ui';
 
 const CONVERTED_STATUS = 'Converted';
 const COLUMN_COUNT = 8;
 const SKELETON_ROW_COUNT = 5;
+
+/** Two-letter initials for the row avatar (issue #138) — e.g. "Asha Rao" ->
+ * "AR". Falls back to "?" for a missing/blank name rather than rendering an
+ * empty circle. */
+function getInitials(name: string | null | undefined): string {
+  const parts = (name ?? '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  const first = parts[0][0];
+  const last = parts.length > 1 ? parts[parts.length - 1][0] : '';
+  return `${first}${last}`.toUpperCase();
+}
+
+/** Case-insensitive substring match across the columns a DSE would actually
+ * search by (issue #138) — real, working filtering over the already-fetched
+ * `leads` array, not a decorative search box. */
+function matchesSearch(lead: { customerName: string | null; mobile: string | null; modelName?: string | null; sourceName?: string | null; ownerName?: string | null }, term: string): boolean {
+  const haystack = [lead.customerName, lead.mobile, lead.modelName, lead.sourceName, lead.ownerName];
+  return haystack.some((field) => field?.toLowerCase().includes(term));
+}
 
 /** DSE's own Lead list/queue (AC6) — newest first, reflects new creates
  * immediately via the useCreateLead cache update (no full page reload).
@@ -66,12 +86,28 @@ export function LeadQueue() {
   // the class doc comment above for why a single leadId (rather than a
   // per-row boolean) is the right piece of state here.
   const [openLeadId, setOpenLeadId] = useState<string | null>(null);
+  // issue #138: real client-side search over the already-fetched queue.
+  const [searchTerm, setSearchTerm] = useState('');
 
   const convertLeadEnabled = config?.convertLeadEnabled !== false;
   const rows = leads ?? [];
+  const filteredRows = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    return term ? (leads ?? []).filter((lead) => matchesSearch(lead, term)) : (leads ?? []);
+  }, [leads, searchTerm]);
 
   return (
     <>
+      <div className="mb-3 flex justify-end">
+        <TextInput
+          type="search"
+          value={searchTerm}
+          onChange={(event) => setSearchTerm(event.target.value)}
+          placeholder="Search leads…"
+          aria-label="Search leads"
+          className="max-w-xs"
+        />
+      </div>
       <Table aria-label="My Leads">
         <TableHead>
           <TableRow>
@@ -102,14 +138,33 @@ export function LeadQueue() {
                 No leads yet — create one to get started.
               </TableCell>
             </TableRow>
+          ) : filteredRows.length === 0 ? (
+            <TableRow className="hover:bg-transparent">
+              <TableCell colSpan={COLUMN_COUNT} className="py-10 text-center text-sm text-slate-500">
+                No leads match your search.
+              </TableCell>
+            </TableRow>
           ) : (
-            rows.map((lead) => (
+            filteredRows.map((lead) => (
               <TableRow key={lead.leadId}>
-                <TableCell
-                  className="max-w-[14rem] truncate font-medium text-slate-900"
-                  title={lead.customerName ?? undefined}
-                >
-                  {lead.customerName ?? '—'}
+                <TableCell>
+                  <div className="flex items-center gap-3">
+                    <div
+                      aria-hidden="true"
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-100 text-xs font-semibold text-brand-700"
+                    >
+                      {getInitials(lead.customerName)}
+                    </div>
+                    <div className="min-w-0">
+                      <p
+                        className="max-w-[12rem] truncate font-medium text-slate-900"
+                        title={lead.customerName ?? undefined}
+                      >
+                        {lead.customerName ?? '—'}
+                      </p>
+                      {lead.email && <p className="truncate text-xs text-slate-400">{lead.email}</p>}
+                    </div>
+                  </div>
                 </TableCell>
                 <TableCell>{lead.mobile ?? '—'}</TableCell>
                 <TableCell>{lead.modelName ?? '—'}</TableCell>
