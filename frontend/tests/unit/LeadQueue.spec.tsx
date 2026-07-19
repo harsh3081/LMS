@@ -3,15 +3,20 @@
  * The per-row "Convert to Enquiry" action renders only for non-Converted
  * rows and only when convertLeadEnabled (AC1, CC-11).
  *
- * REDESIGNED (issue #124, AC1): "Convert to Enquiry" is no longer a button
- * that inline-expands `ConvertLeadForm` below the table — it is now a
- * `Link` navigating to the dedicated `/leads/:leadId/convert` route
- * (`ConvertLeadPage`). This file's assertions were updated to match (link,
- * not button; href assertion instead of exercising the old inline form).
- * The "row leaves the queue on a successful conversion" behavior (AC5) now
- * lives in useConvertLead's cache-update mechanism, already covered by
+ * REDESIGNED (issue #124, AC1) then REVERSED (issue #132): issue #124
+ * changed "Convert to Enquiry" from a button that inline-expanded the old
+ * 4-field `ConvertLeadForm` below the table into a `Link` navigating to a
+ * dedicated `/leads/:leadId/convert` route (`ConvertLeadPage`). Issue #132
+ * reverses that: it is a `<button>` again, but now opens the NEW 8-section
+ * `ConvertLeadForm` (unchanged since #124's rewrite) in a right-docked
+ * `SlideOver` panel — mirroring exactly how "New Lead" (issue #118) opens
+ * its own SlideOver from LeadManagementPage. This file's assertions were
+ * updated to match: button (not link) role for the trigger, and new tests
+ * covering panel-open/panel-close/one-panel-at-a-time behavior. The "row
+ * leaves the queue on a successful conversion" behavior (AC5) still lives in
+ * useConvertLead's cache-update mechanism, already covered by
  * useEnquiries.spec.tsx — ConvertLeadForm.spec.tsx covers the new form's own
- * submission behavior directly.
+ * submission behavior directly, including its issue #132 auto-close.
  *
  * EXTENDED (issue #116, AC1/AC2/AC3): LeadQueue was redesigned into an
  * 8-column professional table (Name, Mobile, Model of Interest, Source,
@@ -19,14 +24,15 @@
  * columns (including the denormalized modelName/sourceName/ownerName), the
  * new "View" link into LeadDetailPage, and the new loading/empty states.
  * Wrapped in a MemoryRouter (mirrors EnquiryQueue.spec.tsx's convention)
- * since LeadQueue now renders react-router `Link`s for both "Convert to
- * Enquiry" and "View".
+ * since LeadQueue still renders a react-router `Link` for "View".
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { LeadQueue } from '../../src/components/LeadQueue';
+import { SUCCESS_AUTO_CLOSE_MS } from '../../src/components/ConvertLeadForm';
 import { api } from '../../src/api/client';
 import type { Lead } from '../../src/api/client';
 
@@ -38,6 +44,13 @@ vi.mock('../../src/api/client', async (importOriginal) => {
       ...actual.api,
       getMyLeads: vi.fn(),
       getConfig: vi.fn(),
+      // issue #132: the Convert to Enquiry slide-over panel mounts the real
+      // ConvertLeadForm once opened, so its data reads/mutation are mocked
+      // here too (mirrors ConvertLeadForm.spec.tsx's mock set).
+      getLead: vi.fn(),
+      getVehicleModels: vi.fn(),
+      getConsultants: vi.fn(),
+      convertLead: vi.fn(),
     },
   };
 });
@@ -74,6 +87,23 @@ const convertedLead: Lead = {
   createdAt: new Date().toISOString(),
 };
 
+// issue #132: a second open Lead, distinct from `openLead`, used by the
+// "only one panel open at a time" test below.
+const secondOpenLead: Lead = {
+  leadId: 'lead-open-2',
+  customerName: 'Priya Nair',
+  mobile: '9876543212',
+  sourceId: 1,
+  sourceName: 'Walk-in',
+  modelId: 101,
+  modelName: 'Compact Hatchback LX',
+  status: 'New',
+  ownerId: 'owner-1',
+  ownerName: 'Dealer Sales Executive Loc1-A',
+  locationId: 'loc-1',
+  createdAt: new Date().toISOString(),
+};
+
 function renderQueue() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -99,8 +129,8 @@ describe('LeadQueue — Convert to Enquiry action (Task 4.5.1)', () => {
     const openRow = (await screen.findByText('Asha Rao')).closest('tr')!;
     const convertedRow = screen.getByText('Rohan Iyer').closest('tr')!;
 
-    expect(within(openRow).getByRole('link', { name: /convert to enquiry/i })).toBeInTheDocument();
-    expect(within(convertedRow).queryByRole('link', { name: /convert to enquiry/i })).not.toBeInTheDocument();
+    expect(within(openRow).getByRole('button', { name: /convert to enquiry/i })).toBeInTheDocument();
+    expect(within(convertedRow).queryByRole('button', { name: /convert to enquiry/i })).not.toBeInTheDocument();
   });
 
   it('CC-11: hides the Convert to Enquiry action entirely when convertLeadEnabled is false', async () => {
@@ -111,16 +141,139 @@ describe('LeadQueue — Convert to Enquiry action (Task 4.5.1)', () => {
 
     await screen.findByText('Asha Rao');
     await waitFor(() => expect(mockedApi.getConfig).toHaveBeenCalled());
-    expect(screen.queryByRole('link', { name: /convert to enquiry/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /convert to enquiry/i })).not.toBeInTheDocument();
+  });
+});
+
+describe('LeadQueue — Convert to Enquiry slide-over panel (issue #132)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockedApi.getConfig.mockResolvedValue({ newLeadEnabled: true, convertLeadEnabled: true, directEnquiryEnabled: true });
+    mockedApi.getVehicleModels.mockResolvedValue([{ modelId: 101, name: 'Compact Hatchback LX' }]);
+    mockedApi.getConsultants.mockResolvedValue([]);
   });
 
-  it('issue #124 AC1: the Convert to Enquiry action navigates to /leads/:leadId/convert', async () => {
+  it('AC1: clicking "Convert to Enquiry" opens a slide-over (not a navigation) with that row\'s ConvertLeadForm', async () => {
     mockedApi.getMyLeads.mockResolvedValue([openLead]);
-    mockedApi.getConfig.mockResolvedValue({ newLeadEnabled: true, convertLeadEnabled: true, directEnquiryEnabled: true });
+    mockedApi.getLead.mockResolvedValue(openLead);
 
     renderQueue();
-    const link = await screen.findByRole('link', { name: /convert to enquiry/i });
-    expect(link).toHaveAttribute('href', '/leads/lead-open/convert');
+    const user = userEvent.setup();
+    const button = await screen.findByRole('button', { name: /convert to enquiry/i });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    await user.click(button);
+
+    const dialog = await screen.findByRole('dialog', { name: /convert to enquiry/i });
+    expect(dialog).toBeInTheDocument();
+    // The queue table is still mounted underneath — this is an overlay, not
+    // a page replacement (AC1: "not a page navigation").
+    expect(screen.getByRole('table', { name: /my leads/i })).toBeInTheDocument();
+    expect(mockedApi.getLead).toHaveBeenCalledWith('lead-open');
+    // AC2: the panel shows the full 8-section form.
+    expect(await within(dialog).findByLabelText(/budget/i)).toBeInTheDocument();
+  });
+
+  it('closing the panel via the close button removes it and leaves the queue intact', async () => {
+    mockedApi.getMyLeads.mockResolvedValue([openLead]);
+    mockedApi.getLead.mockResolvedValue(openLead);
+
+    renderQueue();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: /convert to enquiry/i }));
+    await screen.findByRole('dialog', { name: /convert to enquiry/i });
+
+    await user.click(screen.getByRole('button', { name: /close/i }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByText('Asha Rao')).toBeInTheDocument();
+  });
+
+  it('only one row\'s panel is open at a time — opening a second row\'s panel swaps to that lead', async () => {
+    mockedApi.getMyLeads.mockResolvedValue([openLead, secondOpenLead]);
+    mockedApi.getLead.mockImplementation((leadId: string) =>
+      Promise.resolve(leadId === openLead.leadId ? openLead : secondOpenLead),
+    );
+
+    renderQueue();
+    const user = userEvent.setup();
+    const ashaRow = (await screen.findByText('Asha Rao')).closest('tr')!;
+    const priyaRow = screen.getByText('Priya Nair').closest('tr')!;
+
+    await user.click(within(ashaRow).getByRole('button', { name: /convert to enquiry/i }));
+    await screen.findByRole('dialog', { name: /convert to enquiry/i });
+    expect(mockedApi.getLead).toHaveBeenLastCalledWith('lead-open');
+    // Only a single dialog is ever rendered — verified below by exercising
+    // the row-switch itself rather than by counting dialogs (there is only
+    // ever one SlideOver instance, per this component's implementation).
+
+    await user.click(within(priyaRow).getByRole('button', { name: /convert to enquiry/i }));
+    await waitFor(() => expect(mockedApi.getLead).toHaveBeenLastCalledWith('lead-open-2'));
+    expect(screen.getAllByRole('dialog')).toHaveLength(1);
+  });
+
+  it('AC3: on a successful conversion, the success message shows briefly, then the panel auto-closes', async () => {
+    mockedApi.getMyLeads.mockResolvedValue([openLead]);
+    mockedApi.getLead.mockResolvedValue(openLead);
+    mockedApi.convertLead.mockResolvedValue({
+      enquiryId: 'enq-1',
+      leadId: 'lead-open',
+      entryType: 'CONVERTED',
+      customerName: null,
+      mobile: null,
+      sourceId: null,
+      modelId: 101,
+      budget: 500000,
+      variant: 'LX',
+      exchangeInterest: true,
+      financeInterest: false,
+      convertedBy: 'owner-1',
+      convertedAt: new Date().toISOString(),
+      status: 'New',
+      ownerId: 'owner-1',
+      locationId: 'loc-1',
+    });
+
+    // Same targeted setTimeout spy as ConvertLeadForm.spec.tsx's /
+    // NewLeadForm.spec.tsx's auto-close tests — deterministic control over
+    // the SUCCESS_AUTO_CLOSE_MS timer, no real wall-clock wait.
+    const originalSetTimeout = window.setTimeout;
+    let capturedCallback: (() => void) | null = null;
+    const setTimeoutSpy = vi
+      .spyOn(window, 'setTimeout')
+      .mockImplementation(((fn: TimerHandler, delay?: number, ...args: unknown[]) => {
+        if (delay === SUCCESS_AUTO_CLOSE_MS) {
+          capturedCallback = fn as () => void;
+          return 0 as unknown as ReturnType<typeof setTimeout>;
+        }
+        return originalSetTimeout(fn as TimerHandler, delay, ...args);
+      }) as typeof setTimeout);
+
+    renderQueue();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: /convert to enquiry/i }));
+    const dialog = await screen.findByRole('dialog', { name: /convert to enquiry/i });
+    await within(dialog).findByText('Asha Rao');
+
+    // `openLead` carries no `variant`, so Vehicle Information's pre-fill
+    // leaves it blank — fill it in explicitly since it's one of the 4
+    // fields whose required-ness ConvertLeadForm kept unchanged (AC3).
+    await user.type(within(dialog).getByLabelText(/^variant$/i), 'LX');
+    await user.type(within(dialog).getByLabelText(/budget/i), '500000');
+    await user.selectOptions(within(dialog).getByLabelText(/exchange interest/i), 'true');
+    await user.selectOptions(within(dialog).getByLabelText(/finance interest/i), 'false');
+    await user.click(within(dialog).getByRole('button', { name: /^convert to enquiry$/i }));
+
+    expect(await within(dialog).findByText(/converted|enquiry created|success/i)).toBeInTheDocument();
+    // Still open immediately after success — the panel has not been asked
+    // to close yet.
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    expect(capturedCallback).not.toBeNull();
+    await act(async () => capturedCallback!());
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    setTimeoutSpy.mockRestore();
   });
 });
 

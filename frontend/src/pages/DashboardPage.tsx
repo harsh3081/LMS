@@ -6,11 +6,14 @@ import { Card } from '../components/ui';
  * as "Dashboard" and has moved to `/leads` (see `LeadManagementPage.tsx`).
  * This is a genuinely new, deliberately minimal page: a real Dashboard will
  * be designed in a later step. Every existing "Back to Dashboard" link
- * across the app (ConvertLeadPage, LeadDetailPage, LogFollowupPage,
- * TestDriveSchedulerPage, UpcomingFollowupsPage, UpcomingTestDrivesPage)
- * already points to `/` and needs no change — `/` continues to be
- * "Dashboard", now with real (if placeholder) content instead of
- * accidentally being Lead Management. */
+ * across the app (LeadDetailPage, LogFollowupPage, TestDriveSchedulerPage,
+ * UpcomingFollowupsPage, UpcomingTestDrivesPage) already points to `/` and
+ * needs no change — `/` continues to be "Dashboard", now with real (if
+ * placeholder) content instead of accidentally being Lead Management.
+ * (ConvertLeadPage, which used to be in this list, was removed entirely in
+ * issue #132 — "Convert to Enquiry" is now a LeadQueue slide-over panel, not
+ * a page, so there is no "Back to Dashboard" link to account for there
+ * anymore.) */
 export function DashboardPage() {
   return (
     <AppShell>
