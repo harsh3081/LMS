@@ -188,6 +188,9 @@ describe('enquiry conversion-details migration (issue #124 Task 1)', () => {
 
   it('down-migration reverses cleanly: drops all new columns and constraints', async () => {
     dataSource = await createTestDataSource();
+    // issue #134 added AddEnquiryCustomerDetails1700000000018 after this
+    // one; undo that first, then undo this migration itself.
+    await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
 
     const columns: { column_name: string }[] = await dataSource.query(

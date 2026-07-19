@@ -10,7 +10,11 @@ import { ApiProperty } from '@nestjs/swagger';
  * MODIFIED (issue #124, AC5): 30 new fields added, one per new Enquiry
  * column — mirrors EnquiryEntity exactly, so every new field captured by the
  * rewritten Convert-to-Enquiry form is "retrievable wherever Enquiry details
- * are already surfaced". */
+ * are already surfaced".
+ * MODIFIED (issue #134, AC2): 5 new Customer Details fields added
+ * (email/customerType/city/pinCode/preferredLanguage), populated for Direct
+ * Enquiries (and, going forward, any Enquiry) — mirrors EnquiryEntity's new
+ * columns exactly. */
 export class EnquiryResponseDto {
   @ApiProperty() enquiryId!: string;
   @ApiProperty({ nullable: true, type: String }) leadId!: string | null;
@@ -31,6 +35,13 @@ export class EnquiryResponseDto {
    * EnquiriesService.reassignOwner; no endpoint calls it yet in this Story). */
   @ApiProperty({ nullable: true, type: String }) ownerUpdatedAt!: string | null;
   @ApiProperty() locationId!: string;
+
+  // ---- issue #134 Section 0: Customer Details ----
+  @ApiProperty({ nullable: true, type: String }) email!: string | null;
+  @ApiProperty({ nullable: true, type: String }) customerType!: string | null;
+  @ApiProperty({ nullable: true, type: String }) city!: string | null;
+  @ApiProperty({ nullable: true, type: String }) pinCode!: string | null;
+  @ApiProperty({ nullable: true, type: String }) preferredLanguage!: string | null;
 
   // ---- issue #124 Section 1: Vehicle Information ----
   @ApiProperty({ nullable: true, type: String }) fuelType!: string | null;

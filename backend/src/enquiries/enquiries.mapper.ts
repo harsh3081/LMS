@@ -26,6 +26,13 @@ export function toEnquiryResponse(enquiry: EnquiryEntity): EnquiryResponseDto {
       enquiry.ownerUpdatedAt instanceof Date ? enquiry.ownerUpdatedAt.toISOString() : enquiry.ownerUpdatedAt,
     locationId: enquiry.locationId,
 
+    // ---- issue #134 Section 0: Customer Details ----
+    email: enquiry.email,
+    customerType: enquiry.customerType,
+    city: enquiry.city,
+    pinCode: enquiry.pinCode,
+    preferredLanguage: enquiry.preferredLanguage,
+
     // ---- issue #124 Section 1: Vehicle Information ----
     fuelType: enquiry.fuelType,
     transmission: enquiry.transmission,

@@ -261,7 +261,10 @@ export interface ConvertLeadInput {
  * `entryType` and the Lead-equivalent fields were added (populated only for
  * Direct Enquiries, null for ones converted from a Lead).
  * MODIFIED (issue #124, AC5): 30 new fields added, one per new Enquiry
- * column — mirrors EnquiryResponseDto exactly. */
+ * column — mirrors EnquiryResponseDto exactly.
+ * MODIFIED (issue #134, AC2): 5 new Customer Details fields added
+ * (email/customerType/city/pinCode/preferredLanguage) — mirrors
+ * EnquiryResponseDto exactly. */
 export interface Enquiry {
   enquiryId: string;
   leadId: string | null;
@@ -279,6 +282,12 @@ export interface Enquiry {
   status: string;
   ownerId: string;
   locationId: string;
+
+  email?: string | null;
+  customerType?: string | null;
+  city?: string | null;
+  pinCode?: string | null;
+  preferredLanguage?: string | null;
 
   fuelType?: string | null;
   transmission?: string | null;
@@ -326,16 +335,76 @@ export interface Enquiry {
  * (mirrors ConvertLeadInput), captured in one step (AC2). */
 /** MODIFIED (issue #27): the four Lead-equivalent fields are now optional —
  * mirrors CreateLeadInput's same modification exactly (config-driven
- * mandatory-ness). The qualifying-details fields stay required. */
+ * mandatory-ness). The qualifying-details fields stay required.
+ * EXTENDED (issue #134): 5 new Customer Details fields (verbatim mirror of
+ * CreateLeadInput's own Customer Details fields) plus the full Sections 1-7
+ * optional field set (verbatim mirror of ConvertLeadInput's own optional
+ * fields) — all optional (AC3), same required-ness contract unchanged. */
 export interface CreateDirectEnquiryInput {
   customerName?: string;
   mobile?: string;
   sourceId?: number;
   modelId?: number;
+
+  // ---- issue #134: 0. Customer Details ----
+  email?: string;
+  customerType?: (typeof CUSTOMER_TYPES)[number];
+  city?: string;
+  pinCode?: string;
+  preferredLanguage?: (typeof PREFERRED_LANGUAGES)[number];
+
   budget: number;
   variant: string;
   exchangeInterest: boolean;
   financeInterest: boolean;
+
+  // ---- issue #134: 1. Vehicle Information ----
+  fuelType?: (typeof FUEL_TYPES)[number];
+  transmission?: (typeof TRANSMISSIONS)[number];
+  colorFirstPreference?: string;
+  colorSecondPreference?: string;
+  accessoriesInterest?: string;
+  competitorConsideration?: string;
+
+  // ---- 2. Qualification ----
+  contactVerified?: (typeof CONTACT_VERIFIED_OPTIONS)[number];
+  intentRating?: (typeof INTENT_RATINGS)[number];
+  expectedClosureDate?: string;
+  showroomVisits?: (typeof SHOWROOM_VISIT_OPTIONS)[number];
+
+  // ---- 3. Commercial ----
+  quotationNumber?: string;
+  quotedOnRoadPrice?: number;
+  discountDiscussed?: string;
+  insurancePreference?: (typeof INSURANCE_PREFERENCES)[number];
+  extendedWarrantyInterest?: (typeof WARRANTY_INTEREST_OPTIONS)[number];
+  corporateDiscountEligible?: string;
+
+  // ---- 4. Finance ----
+  financeApplicationStatus?: (typeof FINANCE_APPLICATION_STATUSES)[number];
+  financier?: (typeof FINANCIER_OPTIONS)[number];
+  loanAmountSought?: number;
+  tenureAndEmiDiscussed?: string;
+
+  // ---- 5. Exchange Evaluation ----
+  exchangeEvaluationStatus?: (typeof EXCHANGE_EVALUATION_STATUSES)[number];
+  exchangeEvaluatedBy?: string;
+  exchangeEvaluatedPrice?: number;
+  exchangeCustomerExpectation?: number;
+
+  // ---- 6. Test Drive & Engagement ----
+  testDriveStatus?: (typeof TEST_DRIVE_STATUSES)[number];
+  testDriveDateTime?: string;
+  quotationSharedVia?: (typeof QUOTATION_SHARED_VIA_OPTIONS)[number];
+  nextActionOwnerId?: string;
+  testDriveFeedback?: string;
+
+  // ---- 7. Document Checklist ----
+  panCardVerified?: boolean;
+  addressProofVerified?: boolean;
+  incomeProofVerified?: boolean;
+  gstDetailsVerified?: boolean;
+
   /** NEW (issue #29, AC3) — mirrors CreateLeadInput.acknowledgeDuplicate exactly. */
   acknowledgeDuplicate?: boolean;
 }

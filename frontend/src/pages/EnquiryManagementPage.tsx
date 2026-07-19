@@ -22,6 +22,11 @@ import { buttonStyles, SlideOver } from '../components/ui';
  * A newly created Enquiry appears in the already-visible "My Enquiries"
  * table via useCreateDirectEnquiry's existing cache write (issue #26) — no
  * extra wiring needed, same convention as LeadManagementPage/useCreateLead.
+ *
+ * MODIFIED (issue #134): the SlideOver's `maxWidthClassName` is widened from
+ * `max-w-2xl` to `max-w-4xl` to accommodate the redesigned 8-section
+ * NewEnquiryForm (much larger than the original 17-field single-column
+ * form) — matches LeadQueue's Convert-to-Enquiry panel width (issue #132).
  */
 export function EnquiryManagementPage() {
   const { data: config } = useFeatureFlags();
@@ -52,7 +57,7 @@ export function EnquiryManagementPage() {
         open={isNewEnquiryOpen}
         onClose={() => setIsNewEnquiryOpen(false)}
         title="New Enquiry"
-        maxWidthClassName="max-w-2xl"
+        maxWidthClassName="max-w-4xl"
       >
         <NewEnquiryForm onSuccess={() => setIsNewEnquiryOpen(false)} />
       </SlideOver>

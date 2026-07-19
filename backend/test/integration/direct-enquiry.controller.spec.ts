@@ -192,6 +192,79 @@ describe('POST /api/v1/enquiries (Task 2.5, issue #26)', () => {
     expect(dseCList.body.some((e: { enquiryId: string }) => e.enquiryId === created.body.enquiryId)).toBe(false);
   });
 
+  // -------------------------------------------------------------------
+  // issue #134 — extended field set (Customer Details + Sections 1-7)
+  // -------------------------------------------------------------------
+  it('AC2: persists and returns the 5 new Customer Details fields plus a sampling of Sections 1-7', async () => {
+    const payload = {
+      ...validPayload(),
+      email: 'asha.rao@example.com',
+      customerType: 'Individual',
+      city: 'Pune',
+      pinCode: '411001',
+      preferredLanguage: 'Hindi',
+      fuelType: 'Petrol',
+      transmission: 'Manual',
+      contactVerified: 'OTP Verified',
+      intentRating: 'Hot',
+      financeApplicationStatus: 'Login Done',
+      exchangeEvaluationStatus: 'Completed',
+      testDriveStatus: 'Completed',
+      quotationSharedVia: 'WhatsApp',
+      panCardVerified: true,
+    };
+    const res = await dseAAgent.post(ENQUIRIES_PATH).send(payload);
+    expect(res.status).toBe(201);
+    expect(res.body.email).toBe(payload.email);
+    expect(res.body.customerType).toBe(payload.customerType);
+    expect(res.body.city).toBe(payload.city);
+    expect(res.body.pinCode).toBe(payload.pinCode);
+    expect(res.body.preferredLanguage).toBe(payload.preferredLanguage);
+    expect(res.body.fuelType).toBe(payload.fuelType);
+    expect(res.body.transmission).toBe(payload.transmission);
+    expect(res.body.contactVerified).toBe(payload.contactVerified);
+    expect(res.body.intentRating).toBe(payload.intentRating);
+    expect(res.body.financeApplicationStatus).toBe(payload.financeApplicationStatus);
+    expect(res.body.exchangeEvaluationStatus).toBe(payload.exchangeEvaluationStatus);
+    expect(res.body.testDriveStatus).toBe(payload.testDriveStatus);
+    expect(res.body.quotationSharedVia).toBe(payload.quotationSharedVia);
+    expect(res.body.panCardVerified).toBe(true);
+  });
+
+  it('AC3: every new field remains optional — a bare valid payload with none of them still succeeds', async () => {
+    const res = await dseAAgent.post(ENQUIRIES_PATH).send(validPayload());
+    expect(res.status).toBe(201);
+    expect(res.body.email).toBeNull();
+    expect(res.body.customerType).toBeNull();
+    expect(res.body.city).toBeNull();
+    expect(res.body.pinCode).toBeNull();
+    expect(res.body.preferredLanguage).toBeNull();
+  });
+
+  it('server-side: an invalid email -> 400 referencing the field', async () => {
+    const res = await dseAAgent.post(ENQUIRIES_PATH).send({ ...validPayload(), email: 'not-an-email' });
+    expect(res.status).toBe(400);
+    expect(JSON.stringify(res.body).toLowerCase()).toContain('email');
+  });
+
+  it('server-side: an out-of-vocabulary customerType -> 400 referencing the field', async () => {
+    const res = await dseAAgent.post(ENQUIRIES_PATH).send({ ...validPayload(), customerType: 'Bogus' });
+    expect(res.status).toBe(400);
+    expect(JSON.stringify(res.body).toLowerCase()).toContain('customertype');
+  });
+
+  it('server-side: a malformed pinCode -> 400 referencing the field', async () => {
+    const res = await dseAAgent.post(ENQUIRIES_PATH).send({ ...validPayload(), pinCode: '12' });
+    expect(res.status).toBe(400);
+    expect(JSON.stringify(res.body).toLowerCase()).toContain('pincode');
+  });
+
+  it('server-side: an out-of-vocabulary preferredLanguage -> 400 referencing the field', async () => {
+    const res = await dseAAgent.post(ENQUIRIES_PATH).send({ ...validPayload(), preferredLanguage: 'Klingon' });
+    expect(res.status).toBe(400);
+    expect(JSON.stringify(res.body).toLowerCase()).toContain('preferredlanguage');
+  });
+
   it('regression: POST /api/v1/leads still succeeds unaffected by the Direct-Enquiry slice', async () => {
     // NEW (issue #114, AC2): communicationConsentVerified is a hard,
     // always-required compliance gate on CreateLeadDto — added here so this

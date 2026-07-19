@@ -157,8 +157,10 @@ describe('lead customer-details migration (issue #114 Task 1)', () => {
 
   it('down-migration reverses cleanly: drops all new columns', async () => {
     dataSource = await createTestDataSource();
-    // issue #124 added AddEnquiryConversionDetails1700000000017 after this
-    // one; undo that first, then undo this migration itself.
+    // issue #124 added AddEnquiryConversionDetails1700000000017 and issue
+    // #134 added AddEnquiryCustomerDetails1700000000018 after this one; undo
+    // those first, then undo this migration itself.
+    await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
     await dataSource.undoLastMigration();
 

@@ -1,13 +1,16 @@
 import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn, UpdateDateColumn, ValueTransformer } from 'typeorm';
 import { jsonbTransformer } from '../../common/jsonb.transformer';
-import { FUEL_TYPES, TRANSMISSIONS } from '../../leads/entities/lead.entity';
+import { FUEL_TYPES, TRANSMISSIONS, CUSTOMER_TYPES, PREFERRED_LANGUAGES } from '../../leads/entities/lead.entity';
 
 /** Re-exported so ConvertLeadDto / enquiries.mapper.ts can import the closed-
  * set vocabulary from this module without also reaching into
  * leads/entities/lead.entity.ts directly (issue #124 migration comment point
  * 2 — this is a deliberate intra-backend cross-module reuse, not the
- * frontend/backend duplication convention). */
-export { FUEL_TYPES, TRANSMISSIONS };
+ * frontend/backend duplication convention). NEW (issue #134):
+ * `CUSTOMER_TYPES`/`PREFERRED_LANGUAGES` re-exported the same way, so
+ * `CreateDirectEnquiryDto` can import every closed-set vocabulary it needs
+ * from this single module. */
+export { FUEL_TYPES, TRANSMISSIONS, CUSTOMER_TYPES, PREFERRED_LANGUAGES };
 
 /**
  * Closed-set dropdown vocabularies NEW for issue #124 ("Rewrite Convert Lead
@@ -188,6 +191,32 @@ export class EnquiryEntity {
   /** Reserved for FR-04 configurable fields; provisioned, unused this Story. */
   @Column({ name: 'custom_fields', type: 'jsonb', default: () => "'{}'", transformer: jsonbTransformer })
   customFields!: Record<string, unknown>;
+
+  // ==========================================================================
+  // NEW (issue #134, migration 1700000000018-AddEnquiryCustomerDetails): 5
+  // nullable columns backing the redesigned Direct Enquiry form's editable
+  // Section 0 "Customer Details". Mirrors LeadEntity's own Customer Details
+  // columns (issue #114) exactly, including reusing CUSTOMER_TYPES/
+  // PREFERRED_LANGUAGES imported above rather than redeclaring them.
+  // ==========================================================================
+
+  @Column({ type: 'varchar', nullable: true })
+  email!: string | null;
+
+  /** Closed set — see CUSTOMER_TYPES (imported/re-exported from lead.entity.ts). */
+  @Column({ name: 'customer_type', type: 'varchar', nullable: true })
+  customerType!: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  city!: string | null;
+
+  /** India 6-digit postal code (first digit 1-9). */
+  @Column({ name: 'pin_code', type: 'varchar', length: 6, nullable: true })
+  pinCode!: string | null;
+
+  /** Closed set — see PREFERRED_LANGUAGES (imported/re-exported from lead.entity.ts). */
+  @Column({ name: 'preferred_language', type: 'varchar', nullable: true })
+  preferredLanguage!: string | null;
 
   // ==========================================================================
   // NEW (issue #124, migration 1700000000017-AddEnquiryConversionDetails):

@@ -114,4 +114,126 @@ describe('CreateDirectEnquiryDto', () => {
       expect(declaredKeys.has(forbidden)).toBe(false);
     }
   });
+
+  // -------------------------------------------------------------------
+  // issue #134 — 5 new Customer Details fields, verbatim-mirrored decorators
+  // from CreateLeadDto (see create-lead.dto.spec.ts's equivalent block).
+  // -------------------------------------------------------------------
+  describe('new Customer Details fields (issue #134)', () => {
+    it('passes validation with all 5 Customer Details fields valid', async () => {
+      const errors = await validateDto({
+        ...validPayload,
+        email: 'asha.rao@example.com',
+        customerType: 'Individual',
+        city: 'Pune',
+        pinCode: '411001',
+        preferredLanguage: 'Hindi',
+      });
+      expect(errors).toHaveLength(0);
+    });
+
+    it('accepts a well-formed email', async () => {
+      const errors = await validateDto({ ...validPayload, email: 'asha.rao@example.com' });
+      expect(errors.some((e) => e.property === 'email')).toBe(false);
+    });
+
+    it('rejects a malformed email', async () => {
+      const errors = await validateDto({ ...validPayload, email: 'not-an-email' });
+      expect(errors.some((e) => e.property === 'email')).toBe(true);
+    });
+
+    it('accepts a valid 6-digit India pin code', async () => {
+      const errors = await validateDto({ ...validPayload, pinCode: '411001' });
+      expect(errors.some((e) => e.property === 'pinCode')).toBe(false);
+    });
+
+    const invalidPinCases = ['0000', '12345', '1234567', 'ABCDEF', '012345'];
+    for (const value of invalidPinCases) {
+      it(`rejects an invalid pin code — "${value}"`, async () => {
+        const errors = await validateDto({ ...validPayload, pinCode: value });
+        expect(errors.some((e) => e.property === 'pinCode')).toBe(true);
+      });
+    }
+
+    it('rejects an out-of-vocabulary customerType', async () => {
+      const errors = await validateDto({ ...validPayload, customerType: 'Bogus' });
+      expect(errors.some((e) => e.property === 'customerType')).toBe(true);
+    });
+
+    it('accepts every CUSTOMER_TYPES option', async () => {
+      for (const value of ['Individual', 'Corporate', 'Government', 'Fleet']) {
+        const errors = await validateDto({ ...validPayload, customerType: value });
+        expect(errors.some((e) => e.property === 'customerType')).toBe(false);
+      }
+    });
+
+    it('rejects an out-of-vocabulary preferredLanguage', async () => {
+      const errors = await validateDto({ ...validPayload, preferredLanguage: 'Klingon' });
+      expect(errors.some((e) => e.property === 'preferredLanguage')).toBe(true);
+    });
+
+    it('accepts a plain city string with no format constraint', async () => {
+      const errors = await validateDto({ ...validPayload, city: 'Pune' });
+      expect(errors.some((e) => e.property === 'city')).toBe(false);
+    });
+  });
+
+  // -------------------------------------------------------------------
+  // issue #134 — Sections 1-7, verbatim-mirrored from ConvertLeadDto's own
+  // optional field set (same decorators/imported constants).
+  // -------------------------------------------------------------------
+  describe('Sections 1-7 fields (issue #134, mirrors ConvertLeadDto)', () => {
+    it('passes validation with a full set of optional Section 1-7 fields', async () => {
+      const errors = await validateDto({
+        ...validPayload,
+        fuelType: 'Petrol',
+        transmission: 'Manual',
+        colorFirstPreference: 'White',
+        contactVerified: 'OTP Verified',
+        intentRating: 'Hot',
+        showroomVisits: '1',
+        quotedOnRoadPrice: 550000,
+        insurancePreference: 'Dealer In-house',
+        extendedWarrantyInterest: 'Interested',
+        financeApplicationStatus: 'Login Done',
+        financier: 'HDFC Bank',
+        loanAmountSought: 400000,
+        exchangeEvaluationStatus: 'Completed',
+        exchangeEvaluatedPrice: 250000,
+        exchangeCustomerExpectation: 280000,
+        testDriveStatus: 'Completed',
+        quotationSharedVia: 'WhatsApp',
+        panCardVerified: true,
+        addressProofVerified: true,
+        incomeProofVerified: true,
+        gstDetailsVerified: true,
+      });
+      expect(errors).toHaveLength(0);
+    });
+
+    it('rejects an out-of-vocabulary fuelType', async () => {
+      const errors = await validateDto({ ...validPayload, fuelType: 'Coal' });
+      expect(errors.some((e) => e.property === 'fuelType')).toBe(true);
+    });
+
+    it('rejects an out-of-vocabulary transmission', async () => {
+      const errors = await validateDto({ ...validPayload, transmission: 'Semi-Auto' });
+      expect(errors.some((e) => e.property === 'transmission')).toBe(true);
+    });
+
+    it('rejects a non-positive quotedOnRoadPrice', async () => {
+      const errors = await validateDto({ ...validPayload, quotedOnRoadPrice: 0 });
+      expect(errors.some((e) => e.property === 'quotedOnRoadPrice')).toBe(true);
+    });
+
+    it('rejects an out-of-vocabulary testDriveStatus', async () => {
+      const errors = await validateDto({ ...validPayload, testDriveStatus: 'Postponed' });
+      expect(errors.some((e) => e.property === 'testDriveStatus')).toBe(true);
+    });
+
+    it('rejects a non-boolean panCardVerified', async () => {
+      const errors = await validateDto({ ...validPayload, panCardVerified: 'yes' });
+      expect(errors.some((e) => e.property === 'panCardVerified')).toBe(true);
+    });
+  });
 });
