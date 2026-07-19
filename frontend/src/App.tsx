@@ -2,7 +2,6 @@ import { Route, Routes } from 'react-router-dom';
 import { DashboardPage } from './pages/DashboardPage';
 import { LeadManagementPage } from './pages/LeadManagementPage';
 import { LeadDetailPage } from './pages/LeadDetailPage';
-import { ConvertLeadPage } from './pages/ConvertLeadPage';
 import { EnquiryManagementPage } from './pages/EnquiryManagementPage';
 import { LoginPage } from './pages/LoginPage';
 import { FieldConfigPage } from './pages/FieldConfigPage';
@@ -19,7 +18,6 @@ export function App() {
       <Route path="/" element={<DashboardPage />} />
       <Route path="/leads" element={<LeadManagementPage />} />
       <Route path="/leads/:leadId" element={<LeadDetailPage />} />
-      <Route path="/leads/:leadId/convert" element={<ConvertLeadPage />} />
       <Route path="/enquiries" element={<EnquiryManagementPage />} />
       <Route path="/enquiries/:enquiryId/follow-up" element={<LogFollowupPage />} />
       <Route path="/follow-ups/upcoming" element={<UpcomingFollowupsPage />} />

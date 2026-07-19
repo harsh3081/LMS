@@ -7,12 +7,21 @@
  * the original 4 fields (AC3), optional-field submission mapping (AC4), and
  * server field-error mapping — with the api client mocked (the real HTTP
  * path is proven by the backend Supertest suite).
+ *
+ * MODIFIED (issue #132): `onConverted` no longer fires synchronously — it is
+ * now scheduled via `setTimeout(SUCCESS_AUTO_CLOSE_MS)`, mirroring
+ * NewLeadForm's issue #118 `onSuccess` mechanism exactly. The "AC4/AC5"
+ * success test below was updated to control that timer deterministically
+ * (same targeted `window.setTimeout` spy pattern as
+ * NewLeadForm.spec.tsx's "onSuccess auto-close" block) instead of a bare
+ * `waitFor`, and a new "onConverted auto-close" describe block was added,
+ * mirroring NewLeadForm.spec.tsx's equivalent block.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ConvertLeadForm } from '../../src/components/ConvertLeadForm';
+import { ConvertLeadForm, SUCCESS_AUTO_CLOSE_MS } from '../../src/components/ConvertLeadForm';
 import { api, ApiError } from '../../src/api/client';
 import type { Lead } from '../../src/api/client';
 
@@ -59,6 +68,30 @@ function renderForm(onConverted?: () => void) {
       <ConvertLeadForm leadId="lead-1" onConverted={onConverted} />
     </QueryClientProvider>,
   );
+}
+
+/** issue #132 (mirrors NewLeadForm.spec.tsx's identical helper for its
+ * `onSuccess` timer, issue #118): spies on `window.setTimeout` scoped to
+ * exactly the SUCCESS_AUTO_CLOSE_MS delay so the pending onConverted call
+ * can be captured and invoked directly — deterministic, no real 1.5s
+ * wall-clock wait — while every other setTimeout call (Testing Library's
+ * own polling included) passes through untouched. */
+function spyOnSuccessAutoCloseTimer() {
+  const originalSetTimeout = window.setTimeout;
+  let capturedCallback: (() => void) | null = null;
+  const spy = vi
+    .spyOn(window, 'setTimeout')
+    .mockImplementation(((fn: TimerHandler, delay?: number, ...args: unknown[]) => {
+      if (delay === SUCCESS_AUTO_CLOSE_MS) {
+        capturedCallback = fn as () => void;
+        return 0 as unknown as ReturnType<typeof setTimeout>;
+      }
+      return originalSetTimeout(fn as TimerHandler, delay, ...args);
+    }) as typeof setTimeout);
+  return {
+    spy,
+    getCapturedCallback: () => capturedCallback,
+  };
 }
 
 describe('ConvertLeadForm (issue #124 sectioned rewrite)', () => {
@@ -162,6 +195,7 @@ describe('ConvertLeadForm (issue #124 sectioned rewrite)', () => {
 
   it('AC4/AC5: submitting only the 4 original required fields succeeds — every new field is optional', async () => {
     const onConverted = vi.fn();
+    const { spy, getCapturedCallback } = spyOnSuccessAutoCloseTimer();
     mockedApi.convertLead.mockResolvedValue({
       enquiryId: 'enq-1',
       leadId: 'lead-1',
@@ -203,7 +237,16 @@ describe('ConvertLeadForm (issue #124 sectioned rewrite)', () => {
     expect(input.panCardVerified).toBeUndefined();
 
     expect(await screen.findByText(/converted|enquiry created|success/i)).toBeInTheDocument();
-    await waitFor(() => expect(onConverted).toHaveBeenCalled());
+    // onConverted is deferred behind SUCCESS_AUTO_CLOSE_MS (issue #132) —
+    // not called yet immediately after the success message appears.
+    expect(onConverted).not.toHaveBeenCalled();
+
+    const capturedCallback = getCapturedCallback();
+    expect(capturedCallback).not.toBeNull();
+    await act(async () => capturedCallback!());
+    expect(onConverted).toHaveBeenCalledTimes(1);
+
+    spy.mockRestore();
   });
 
   it('AC5: a fully populated submission maps every section field into the ConvertLeadInput payload', async () => {
@@ -288,5 +331,80 @@ describe('ConvertLeadForm (issue #124 sectioned rewrite)', () => {
     renderForm();
     await screen.findByText('Asha Rao');
     expect(await screen.findByRole('option', { name: 'DSE One' })).toBeInTheDocument();
+  });
+
+  /**
+   * RED->GREEN — issue #132: optional `onConverted` prop, used by the
+   * LeadQueue per-row Convert to Enquiry slide-over panel to auto-close
+   * itself shortly after a successful conversion. Mirrors NewLeadForm's
+   * identical "onSuccess auto-close" block (issue #118) exactly, including
+   * its rationale for spying on `window.setTimeout` rather than
+   * `vi.useFakeTimers()` (documented on that file).
+   */
+  describe('onConverted auto-close (issue #132)', () => {
+    function successResponse() {
+      return {
+        enquiryId: 'enq-1',
+        leadId: 'lead-1',
+        entryType: 'CONVERTED' as const,
+        customerName: null,
+        mobile: null,
+        sourceId: null,
+        modelId: 101,
+        budget: 500000,
+        variant: 'LX',
+        exchangeInterest: true,
+        financeInterest: false,
+        convertedBy: 'owner-1',
+        convertedAt: new Date().toISOString(),
+        status: 'New',
+        ownerId: 'owner-1',
+        locationId: 'loc-1',
+      };
+    }
+
+    async function submitMinimalValidForm(user: ReturnType<typeof userEvent.setup>) {
+      await screen.findByText('Asha Rao');
+      await user.type(screen.getByLabelText(/budget/i), '500000');
+      await user.selectOptions(screen.getByLabelText(/exchange interest/i), 'true');
+      await user.selectOptions(screen.getByLabelText(/finance interest/i), 'false');
+      await user.click(screen.getByRole('button', { name: /convert to enquiry/i }));
+    }
+
+    it('calls onConverted ~1.5s after a successful conversion, once the success message has shown', async () => {
+      mockedApi.convertLead.mockResolvedValue(successResponse());
+      const onConverted = vi.fn();
+      const { spy, getCapturedCallback } = spyOnSuccessAutoCloseTimer();
+      const user = userEvent.setup();
+      renderForm(onConverted);
+
+      await submitMinimalValidForm(user);
+
+      expect(await screen.findByText(/converted|enquiry created|success/i)).toBeInTheDocument();
+      expect(onConverted).not.toHaveBeenCalled();
+
+      const capturedCallback = getCapturedCallback();
+      expect(capturedCallback).not.toBeNull();
+      await act(async () => capturedCallback!());
+      expect(onConverted).toHaveBeenCalledTimes(1);
+
+      spy.mockRestore();
+    });
+
+    it('does not call onConverted when the prop is omitted', async () => {
+      mockedApi.convertLead.mockResolvedValue(successResponse());
+      const { spy, getCapturedCallback } = spyOnSuccessAutoCloseTimer();
+      const user = userEvent.setup();
+      renderForm();
+
+      await submitMinimalValidForm(user);
+
+      expect(await screen.findByText(/converted|enquiry created|success/i)).toBeInTheDocument();
+      // No onConverted prop was passed, so ConvertLeadForm never schedules
+      // the SUCCESS_AUTO_CLOSE_MS timer at all — nothing was captured.
+      expect(getCapturedCallback()).toBeNull();
+
+      spy.mockRestore();
+    });
   });
 });

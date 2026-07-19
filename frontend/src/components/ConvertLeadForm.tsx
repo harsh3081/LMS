@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useConvertLead } from '../hooks/useEnquiries';
 import { useLead } from '../hooks/useLeads';
@@ -22,6 +22,17 @@ import {
 } from '../api/client';
 import { Button, Checkbox, DetailField, FormField, Select, TextInput, Textarea } from './ui';
 import { LeadFormSectionNav, LeadFormSection } from './LeadFormSectionNav';
+import { SUCCESS_AUTO_CLOSE_MS } from './NewLeadForm';
+
+/** issue #132: re-exported so callers (e.g. the LeadQueue per-row Convert to
+ * Enquiry slide-over panel and this file's own spec) can import the
+ * auto-close delay from ConvertLeadForm directly, without reaching into
+ * NewLeadForm's module. The constant itself is NOT duplicated — see the
+ * import above and NOTES.md ("ConvertLeadForm delayed-close mechanism") for
+ * why reusing NewLeadForm's single exported value was judged cleaner than
+ * defining a second, identically-valued constant here. Mirrors
+ * NewEnquiryForm.tsx's identical re-export (issue #130). */
+export { SUCCESS_AUTO_CLOSE_MS };
 
 /** Positive-integer-only pattern (whole rupees) — mirrors the frozen
  * server-side rule exactly (AC3): backend/src/enquiries/dto/convert-lead.dto.ts
@@ -151,7 +162,13 @@ function displayText(value: string | null | undefined): string {
 
 export interface ConvertLeadFormProps {
   leadId: string;
-  /** Called after a successful conversion (e.g. so a host page can navigate away). */
+  /** Optional — called ~1.5s (SUCCESS_AUTO_CLOSE_MS) after a successful
+   * conversion (once the "Enquiry created successfully." message has been
+   * shown), letting a parent (e.g. the LeadQueue per-row Convert to Enquiry
+   * slide-over panel, issue #132) close itself. Mirrors NewLeadForm's
+   * `onSuccess` prop / NewEnquiryForm's `onSuccess` prop exactly (issue
+   * #118/#130) — the delay exists so the success message is visible for a
+   * beat rather than flashing and vanishing the instant the panel closes. */
   onConverted?: () => void;
 }
 
@@ -176,6 +193,17 @@ export interface ConvertLeadFormProps {
  * `budget`/`variant`/`exchangeInterest`/`financeInterest` keep their EXACT
  * original required-ness and client-side validation (AC3) — every other
  * field is optional (AC4), mirroring ConvertLeadDto's server-side contract.
+ *
+ * MODIFIED (issue #132): this form now renders inside a right-docked
+ * `SlideOver` panel (LeadQueue's per-row "Convert to Enquiry" action) rather
+ * than a dedicated `/leads/:leadId/convert` page. `onConverted` used to fire
+ * synchronously the instant conversion succeeded, which would have made the
+ * success message flash and vanish instantly if wired straight to close a
+ * panel — this now uses the same delayed-close mechanism as
+ * NewLeadForm/NewEnquiryForm (`successTimeoutRef` + `SUCCESS_AUTO_CLOSE_MS`),
+ * scheduled only when `onConverted` was actually passed, and cleared on
+ * unmount. This component's internal 8-section field layout/logic is
+ * otherwise unchanged.
  */
 export function ConvertLeadForm({ leadId, onConverted }: ConvertLeadFormProps) {
   const { data: lead } = useLead(leadId);
@@ -184,6 +212,19 @@ export function ConvertLeadForm({ leadId, onConverted }: ConvertLeadFormProps) {
   const convertLead = useConvertLead();
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  // issue #132 (mirrors NewLeadForm's issue #118 AC4): tracks the pending
+  // auto-close timer so it can be cleared on unmount (e.g. the slide-over
+  // panel is closed/re-opened before the timer fires) — avoids calling
+  // onConverted or touching state after unmount.
+  const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (successTimeoutRef.current) {
+        clearTimeout(successTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const {
     register,
@@ -272,7 +313,11 @@ export function ConvertLeadForm({ leadId, onConverted }: ConvertLeadFormProps) {
     try {
       await convertLead.mutateAsync({ leadId, input });
       setSuccessMessage('Lead converted — Enquiry created successfully.');
-      onConverted?.();
+      if (onConverted) {
+        successTimeoutRef.current = setTimeout(() => {
+          onConverted();
+        }, SUCCESS_AUTO_CLOSE_MS);
+      }
     } catch (err) {
       if (err instanceof ApiError && err.fieldErrors) {
         for (const fieldError of err.fieldErrors) {
