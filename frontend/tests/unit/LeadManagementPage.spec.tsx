@@ -207,7 +207,7 @@ describe('LeadManagementPage entry point / feature toggle (CC-10)', () => {
       await waitFor(() => expect(screen.getByRole('option', { name: 'Walk-in' })).toBeInTheDocument());
 
       await user.type(screen.getByLabelText(/customer name/i), 'Panel E2E');
-      await user.type(screen.getByLabelText(/mobile/i), '9876543210');
+      await user.type(screen.getByLabelText(/phone number/i), '9876543210');
       await user.selectOptions(screen.getByLabelText(/source/i), '1');
       await user.selectOptions(screen.getByLabelText(/model/i), '101');
       await user.click(screen.getByLabelText(/customer consents/i));
