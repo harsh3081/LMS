@@ -41,3 +41,34 @@ describe('POST /api/v1/auth/login', () => {
     expect(res.status).toBe(401);
   });
 });
+
+describe('POST /api/v1/auth/logout', () => {
+  let ctx: TestAppContext;
+
+  beforeAll(async () => {
+    ctx = await createTestApp();
+  });
+
+  afterAll(async () => {
+    await closeTestApp(ctx);
+  });
+
+  it('clears the session so a subsequent authenticated request is rejected with 401', async () => {
+    const dseA = ctx.seed.users['dseA'];
+    const agent = request.agent(ctx.app.getHttpServer());
+    await agent.post('/api/v1/auth/login').send({ email: dseA.email, password: dseA.password });
+
+    // Confirm the session actually works before logging out.
+    expect((await agent.get('/api/v1/leads')).status).toBe(200);
+
+    const logoutRes = await agent.post('/api/v1/auth/logout');
+    expect(logoutRes.status).toBe(200);
+
+    expect((await agent.get('/api/v1/leads')).status).toBe(401);
+  });
+
+  it('is idempotent — succeeds with 200 even without an existing session', async () => {
+    const res = await request(ctx.app.getHttpServer()).post('/api/v1/auth/logout');
+    expect(res.status).toBe(200);
+  });
+});

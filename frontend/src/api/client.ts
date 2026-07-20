@@ -580,6 +580,8 @@ export const api = {
   login: (email: string, password: string) =>
     request<{ ok: true }>('/api/v1/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
 
+  logout: () => request<{ ok: true }>('/api/v1/auth/logout', { method: 'POST' }),
+
   getConfig: () =>
     request<{ newLeadEnabled: boolean; convertLeadEnabled: boolean; directEnquiryEnabled: boolean }>(
       '/api/v1/config',
