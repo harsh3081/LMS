@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
+import { api } from '../../api/client';
 
 interface NavItem {
   label: string;
@@ -105,6 +107,20 @@ function AdminIcon({ className }: { className?: string }) {
         d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"
         stroke="currentColor"
         strokeWidth="1.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function LogoutIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <path
+        d="M15 17l5-5-5-5M20 12H9m3 8H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7"
+        stroke="currentColor"
+        strokeWidth="1.6"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
@@ -248,6 +264,28 @@ function subNavLinkClassName({ isActive }: { isActive: boolean }): string {
  * latter has no billing/trial concept in this app — see NOTES.md.
  */
 export function Sidebar() {
+  // NEW — Logout action: calls the session-clearing endpoint, then does a
+  // full page navigation (not react-router's client-side `navigate`) so
+  // every in-memory cache (react-query, component state) is dropped along
+  // with the session, mirroring api/client.ts's existing 401 -> /login
+  // redirect. Best-effort: even if the network call fails, the user still
+  // ends up at /login rather than stuck on a "logging out…" button — the
+  // httpOnly session cookie can only be cleared server-side, and /login
+  // itself doesn't require a valid session to load.
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  async function handleLogout() {
+    setIsLoggingOut(true);
+    try {
+      await api.logout();
+    } catch {
+      // Best-effort — proceed to redirect below regardless (see comment
+      // above); swallowed here so a failed request doesn't surface as an
+      // unhandled rejection from this fire-and-forget click handler.
+    } finally {
+      window.location.href = '/login';
+    }
+  }
+
   return (
     <nav
       aria-label="Primary"
@@ -303,6 +341,20 @@ export function Sidebar() {
           </div>
         );
       })}
+
+      <button
+        type="button"
+        onClick={handleLogout}
+        disabled={isLoggingOut}
+        className={
+          'mt-auto flex items-center gap-2.5 rounded-lg border-t border-slate-200 px-3 pb-2 pt-4 text-sm ' +
+          'text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 focus:outline-none ' +
+          'focus:ring-2 focus:ring-brand-500 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60'
+        }
+      >
+        <LogoutIcon className="h-5 w-5 shrink-0" />
+        {isLoggingOut ? 'Logging out…' : 'Log out'}
+      </button>
     </nav>
   );
 }

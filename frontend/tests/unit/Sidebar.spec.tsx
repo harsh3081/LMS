@@ -13,10 +13,18 @@
  * #130 text mistakenly omitted it — see Sidebar.tsx's NAV_ENTRIES comment
  * and .phoenix-os/project/specs/130/NOTES.md for the full story.
  */
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { Sidebar } from '../../src/components/layout/Sidebar';
+import { api } from '../../src/api/client';
+
+vi.mock('../../src/api/client', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../src/api/client')>();
+  return { ...actual, api: { ...actual.api, logout: vi.fn() } };
+});
+const mockedApi = vi.mocked(api, true);
 
 function renderSidebar(initialEntry = '/') {
   return render(
@@ -121,5 +129,58 @@ describe('Sidebar (issue #130 restructuring)', () => {
     renderSidebar('/test-drives/new');
     expect(screen.getByRole('link', { name: 'Lead Management' })).not.toHaveAttribute('aria-current');
     expect(screen.getByRole('link', { name: 'Dashboard' })).not.toHaveAttribute('aria-current');
+  });
+});
+
+describe('Sidebar — Log out', () => {
+  let originalLocation: Location;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    originalLocation = window.location;
+    // Sidebar navigates via `window.location.href = '/login'` (a full page
+    // reload, mirroring api/client.ts's existing 401 redirect) rather than
+    // react-router's client-side `navigate` — jsdom doesn't implement real
+    // navigation, so `window.location` is swapped for a plain stub whose
+    // `href` assignment we can observe directly.
+    Object.defineProperty(window, 'location', {
+      value: { href: 'http://localhost/leads' },
+      writable: true,
+      configurable: true,
+    });
+  });
+
+  afterEach(() => {
+    Object.defineProperty(window, 'location', { value: originalLocation, writable: true, configurable: true });
+  });
+
+  it('calls the logout endpoint, disables the button while in flight, and redirects to /login on success', async () => {
+    let resolveLogout: (() => void) | null = null;
+    mockedApi.logout.mockReturnValue(
+      new Promise((resolve) => {
+        resolveLogout = () => resolve({ ok: true });
+      }),
+    );
+
+    renderSidebar();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /^log out$/i }));
+
+    expect(mockedApi.logout).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('button', { name: /logging out/i })).toBeDisabled();
+
+    expect(resolveLogout).not.toBeNull();
+    resolveLogout!();
+    await waitFor(() => expect(window.location.href).toBe('/login'));
+  });
+
+  it('still redirects to /login even if the logout request fails', async () => {
+    mockedApi.logout.mockRejectedValue(new Error('network error'));
+
+    renderSidebar();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /^log out$/i }));
+
+    await waitFor(() => expect(window.location.href).toBe('/login'));
   });
 });
