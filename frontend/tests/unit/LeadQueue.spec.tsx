@@ -418,3 +418,43 @@ describe('LeadQueue — search box (issue #138)', () => {
     expect(await screen.findByText(/no leads match your search/i)).toBeInTheDocument();
   });
 });
+
+describe('LeadQueue — status filter (issue #140)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockedApi.getConfig.mockResolvedValue({ newLeadEnabled: true, convertLeadEnabled: true, directEnquiryEnabled: true });
+  });
+
+  it('filters rows by status, and "All Statuses" restores every row', async () => {
+    mockedApi.getMyLeads.mockResolvedValue([openLead, convertedLead]);
+    renderQueue();
+    const user = userEvent.setup();
+
+    await screen.findByText('Asha Rao');
+    expect(screen.getByText('Rohan Iyer')).toBeInTheDocument();
+
+    await user.selectOptions(screen.getByRole('combobox', { name: /filter by status/i }), 'Converted');
+
+    expect(screen.queryByText('Asha Rao')).not.toBeInTheDocument();
+    expect(screen.getByText('Rohan Iyer')).toBeInTheDocument();
+
+    await user.selectOptions(screen.getByRole('combobox', { name: /filter by status/i }), 'All');
+
+    expect(screen.getByText('Asha Rao')).toBeInTheDocument();
+    expect(screen.getByText('Rohan Iyer')).toBeInTheDocument();
+  });
+
+  it('combines with the search box — both must match', async () => {
+    mockedApi.getMyLeads.mockResolvedValue([openLead, convertedLead]);
+    renderQueue();
+    const user = userEvent.setup();
+
+    await screen.findByText('Asha Rao');
+    await user.selectOptions(screen.getByRole('combobox', { name: /filter by status/i }), 'New');
+    await user.type(screen.getByRole('searchbox', { name: /search leads/i }), 'Rohan');
+
+    expect(screen.queryByText('Asha Rao')).not.toBeInTheDocument();
+    expect(screen.queryByText('Rohan Iyer')).not.toBeInTheDocument();
+    expect(await screen.findByText(/no leads match your search or filter/i)).toBeInTheDocument();
+  });
+});

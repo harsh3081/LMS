@@ -115,7 +115,12 @@ function AdminIcon({ className }: { className?: string }) {
 /** Purely decorative brand mark (issue #138) — a small rounded square with
  * an abstract bar-chart glyph, in the same violet accent as the reference
  * design's logo. Not a link/button: this app has no "home" concept distinct
- * from the Dashboard link right below it. */
+ * from the Dashboard link right below it.
+ *
+ * SHORTENED (issue #140): the label is just "LMS" now, not the full
+ * "LMS · Lead Management" — the AppShell header already spells that out in
+ * full right next to this Sidebar, so repeating it here was redundant
+ * (the reference's own sidebar logo is similarly short: just "CRM"). */
 function LogoMark() {
   return (
     <div className="mb-6 flex items-center gap-2 px-2">
@@ -130,10 +135,7 @@ function LogoMark() {
           />
         </svg>
       </div>
-      <span className="text-base font-semibold text-slate-900">
-        LMS <span className="text-brand-600">·</span>{' '}
-        <span className="font-normal text-slate-500">Lead Management</span>
-      </span>
+      <span className="text-base font-semibold text-slate-900">LMS</span>
     </div>
   );
 }
@@ -199,14 +201,18 @@ const NAV_ENTRIES: NavEntry[] = [
   },
 ];
 
-/** REDESIGNED (issue #138): flat rounded "pill" active state (light slate
- * fill, bold dark text) replacing the old left-border-accent treatment, to
- * match the reference design. Icon color follows the same active/inactive
- * split as the text. */
+/** REDESIGNED (issue #138): flat rounded "pill" active state replacing the
+ * old left-border-accent treatment, to match the reference design. Icon
+ * color follows the same active/inactive split as the text.
+ *
+ * RECOLORED (issue #140): active state uses a violet tint (bg-brand-50,
+ * text-brand-700) rather than neutral slate — a clearer copy of the
+ * reference screenshot showed the active item's fill and text are both
+ * violet-tinted, not gray. */
 const linkBase =
   'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors focus:outline-none ' +
   'focus:ring-2 focus:ring-brand-500 focus:ring-offset-1';
-const linkActive = 'bg-slate-100 font-semibold text-slate-900';
+const linkActive = 'bg-brand-50 font-semibold text-brand-700';
 const linkInactive = 'text-slate-600 hover:bg-slate-50 hover:text-slate-900';
 
 function navLinkClassName({ isActive }: { isActive: boolean }): string {
@@ -216,7 +222,7 @@ function navLinkClassName({ isActive }: { isActive: boolean }): string {
 const subLinkBase =
   'block rounded-lg px-3 py-1.5 text-sm transition-colors focus:outline-none ' +
   'focus:ring-2 focus:ring-brand-500 focus:ring-offset-1';
-const subLinkActive = 'bg-slate-100 font-semibold text-slate-900';
+const subLinkActive = 'bg-brand-50 font-semibold text-brand-700';
 const subLinkInactive = 'text-slate-500 hover:bg-slate-50 hover:text-slate-900';
 
 function subNavLinkClassName({ isActive }: { isActive: boolean }): string {
@@ -272,7 +278,7 @@ export function Sidebar() {
                 to={entry.to}
                 className={(state) =>
                   `mb-1 flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
-                    state.isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                    state.isActive ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                   }`
                 }
               >
