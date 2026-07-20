@@ -13,12 +13,20 @@ import {
   StatusPill,
   SlideOver,
   TextInput,
+  Select,
   buttonStyles,
 } from './ui';
 
 const CONVERTED_STATUS = 'Converted';
 const COLUMN_COUNT = 8;
 const SKELETON_ROW_COUNT = 5;
+
+/** The only 2 statuses a Lead actually has (see LEAD_STATUS_NEW /
+ * LEAD_STATUS_CONVERTED on the backend entity) — issue #140's status filter
+ * offers exactly these, plus "All", rather than the reference design's
+ * generic Qualified/Lost options this app's data model doesn't have. */
+const STATUS_FILTER_OPTIONS = ['All', 'New', 'Converted'] as const;
+type StatusFilter = (typeof STATUS_FILTER_OPTIONS)[number];
 
 /** Two-letter initials for the row avatar (issue #138) — e.g. "Asha Rao" ->
  * "AR". Falls back to "?" for a missing/blank name rather than rendering an
@@ -88,17 +96,22 @@ export function LeadQueue() {
   const [openLeadId, setOpenLeadId] = useState<string | null>(null);
   // issue #138: real client-side search over the already-fetched queue.
   const [searchTerm, setSearchTerm] = useState('');
+  // issue #140: real client-side status filter, combined with search.
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('All');
 
   const convertLeadEnabled = config?.convertLeadEnabled !== false;
   const rows = leads ?? [];
   const filteredRows = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
-    return term ? (leads ?? []).filter((lead) => matchesSearch(lead, term)) : (leads ?? []);
-  }, [leads, searchTerm]);
+    return (leads ?? []).filter(
+      (lead) =>
+        (statusFilter === 'All' || lead.status === statusFilter) && (!term || matchesSearch(lead, term)),
+    );
+  }, [leads, searchTerm, statusFilter]);
 
   return (
     <>
-      <div className="mb-3 flex justify-end">
+      <div className="mb-3 flex justify-end gap-3">
         <TextInput
           type="search"
           value={searchTerm}
@@ -107,6 +120,18 @@ export function LeadQueue() {
           aria-label="Search leads"
           className="max-w-xs"
         />
+        <Select
+          value={statusFilter}
+          onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
+          aria-label="Filter by status"
+          className="w-auto"
+        >
+          {STATUS_FILTER_OPTIONS.map((option) => (
+            <option key={option} value={option}>
+              {option === 'All' ? 'All Statuses' : option}
+            </option>
+          ))}
+        </Select>
       </div>
       <Table aria-label="My Leads">
         <TableHead>
@@ -141,7 +166,7 @@ export function LeadQueue() {
           ) : filteredRows.length === 0 ? (
             <TableRow className="hover:bg-transparent">
               <TableCell colSpan={COLUMN_COUNT} className="py-10 text-center text-sm text-slate-500">
-                No leads match your search.
+                No leads match your search or filter.
               </TableCell>
             </TableRow>
           ) : (
